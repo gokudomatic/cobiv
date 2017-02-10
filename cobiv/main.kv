@@ -1,0 +1,19 @@
+#:kivy 1.8
+
+<MainContainer>:
+    cmd_input: cmd_input
+    current_view: current_view
+
+    size_hint: 1,1
+    Button:
+        id: current_view
+        text: "essai"
+    ConsoleInput:
+        id: cmd_input
+        text: ""
+        multiline: False
+        size_hint: 1,None
+        height: self.minimum_height
+        background_color: 0,0,0,0.2
+        foreground_color: 1,1,1,1
+        on_focus: root.on_cmd_focus(args[0],args[1])
