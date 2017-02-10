@@ -8,7 +8,7 @@
     Button:
         id: current_view
         text: "essai"
-    ConsoleInput:
+    TextInput:
         id: cmd_input
         text: ""
         multiline: False
@@ -17,3 +17,4 @@
         background_color: 0,0,0,0.2
         foreground_color: 1,1,1,1
         on_focus: root.on_cmd_focus(args[0],args[1])
+        on_text_validate: root.on_enter_cmd(self.text)
