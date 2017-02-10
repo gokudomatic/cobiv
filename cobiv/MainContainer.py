@@ -30,23 +30,14 @@ class MainContainer(FloatLayout):
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
 
-        modcode = 0
-        for m in modifiers:
-            if m == "shift":
-                modcode += 1
-            elif m == "alt":
-                modcode += 2
-            elif m == "ctrl":
-                modcode += 4
-            elif m == "meta":
-                modcode += 8
+        modcode = self.get_modifiers_code(modifiers)
 
         # Keycode is composed of an integer + a string
         # If we hit escape, release the keyboard
         if keycode[0] == 27L and self.cmd_visible:
             self._set_cmd_visible(False)
         elif not self.cmd_visible:
-            if keycode[0] == 46L and 'shift' in modifiers:
+            if keycode[0] == 46L and modcode==1:
                 self._toggle_cmd(":")
             elif keycode[0] == 267:
                 self._set_cmd_visible(True, "/")
@@ -58,6 +49,20 @@ class MainContainer(FloatLayout):
                 print "code : " + str(keycode) + " {" + str(text) + "} " + str(modifiers)
 
         return True
+
+    def get_modifiers_code(self, modifiers):
+        modcode = 0
+        for m in modifiers:
+            if m == "shift":
+                modcode += 1
+            elif m == "alt":
+                modcode += 2
+            elif m == "ctrl":
+                modcode += 4
+            elif m == "meta":
+                modcode += 8
+
+        return modcode
 
     def _toggle_cmd(self, prefix=""):
         self._set_cmd_visible(not self.cmd_visible, prefix)
