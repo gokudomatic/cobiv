@@ -6,8 +6,8 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 from kivy.clock import Clock
 
-cmd_actions = {}
-cmd_hotkeys = {}
+from cobiv.viewlist import available_views, cmd_actions, cmd_hotkeys
+import cobiv.modules.help.helpview
 
 
 class MainContainer(FloatLayout):
@@ -25,8 +25,13 @@ class MainContainer(FloatLayout):
 
         cmd_actions["q"] = {"default": self.quit}
         cmd_actions["fullscreen"] = {"default": self.toggle_fullscreen}
-        cmd_hotkeys[292] = {0: "fullscreen"}
-        cmd_hotkeys[113L] = {0: "q"}
+        cmd_hotkeys[292] = {"default": {0: "fullscreen"}}
+        cmd_hotkeys[113L] = {"default": {0: "q"}}
+
+        # test
+        ViewClass = available_views["help"]
+        self.current_view.clear_widgets()
+        self.current_view.add_widget(ViewClass())
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
 
@@ -37,16 +42,18 @@ class MainContainer(FloatLayout):
         if keycode[0] == 27L and self.cmd_visible:
             self._set_cmd_visible(False)
         elif not self.cmd_visible:
-            if keycode[0] == 46L and modcode==1:
+            if keycode[0] == 46L and modcode == 1:
                 self._toggle_cmd(":")
             elif keycode[0] == 267:
                 self._set_cmd_visible(True, "/")
             elif cmd_hotkeys.has_key(keycode[0]):
-                hotkeys = cmd_hotkeys[keycode[0]]
-                if hotkeys.has_key(modcode):
-                    self.execute_cmd(hotkeys[modcode])
+                hotkeys_profiles = cmd_hotkeys[keycode[0]]
+                if hotkeys_profiles.has_key("default"):
+                    hotkeys=hotkeys_profiles["default"]
+                    if hotkeys.has_key(modcode):
+                        self.execute_cmd(hotkeys[modcode])
             else:
-                print "code : " + str(keycode) + " {" + str(text) + "} " + str(modifiers)
+                print "code : " + str(keycode) + " " + str(modifiers)
 
         return True
 

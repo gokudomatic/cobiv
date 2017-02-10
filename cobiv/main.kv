@@ -1,13 +1,12 @@
-#:kivy 1.8
+#:kivy 1.9.1
 
 <MainContainer>:
     cmd_input: cmd_input
     current_view: current_view
 
     size_hint: 1,1
-    Button:
+    BoxLayout:
         id: current_view
-        text: "essai"
     TextInput:
         id: cmd_input
         text: ""
