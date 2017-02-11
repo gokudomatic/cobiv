@@ -1,11 +1,9 @@
 import os
 
-from kivy.properties import StringProperty
 from kivy.lang import Builder
 from kivy.uix.rst import RstDocument
 
-from cobiv.modules.view import View
-from cobiv.common import *
+from cobiv.modules.view import *
 
 Builder.load_file('modules/help/help.kv')
 

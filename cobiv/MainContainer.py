@@ -5,9 +5,12 @@ from kivy.properties import ObjectProperty
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 from kivy.clock import Clock
+import glob
 
 from cobiv.common import *
 import cobiv.modules.help.helpview
+import cobiv.modules.viewer.Viewer
+from cobiv.modules.imageset.ImageSet import current_imageset
 
 
 class MainContainer(FloatLayout):
@@ -29,9 +32,18 @@ class MainContainer(FloatLayout):
         set_hotkey(113L,"q")
 
         # test
-        ViewClass = available_views["help"]
+        self.switch_view("help")
+
+        current_imageset.uris=glob.glob("C:\\Users\\edwin\\Pictures\\*.jpg")
+
+        self.switch_view("viewer")
+
+
+    def switch_view(self,view_name):
+        clazz = available_views[view_name]
         self.current_view.clear_widgets()
-        self.current_view.add_widget(ViewClass())
+        self.current_view.add_widget(clazz())
+
 
     def get_view_name(self):
         return self.current_view.children[0].get_name()
