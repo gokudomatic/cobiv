@@ -6,7 +6,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 from kivy.clock import Clock
 
-from cobiv.viewlist import available_views, cmd_actions, cmd_hotkeys
+from cobiv.common import *
 import cobiv.modules.help.helpview
 
 
@@ -23,15 +23,18 @@ class MainContainer(FloatLayout):
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self._set_cmd_visible(False)
 
-        cmd_actions["q"] = {"default": self.quit}
-        cmd_actions["fullscreen"] = {"default": self.toggle_fullscreen}
-        cmd_hotkeys[292] = {"default": {0: "fullscreen"}}
-        cmd_hotkeys[113L] = {"default": {0: "q"}}
+        set_action("q",self.quit)
+        set_action("fullscreen",self.toggle_fullscreen)
+        set_hotkey(292,"fullscreen")
+        set_hotkey(113L,"q")
 
         # test
         ViewClass = available_views["help"]
         self.current_view.clear_widgets()
         self.current_view.add_widget(ViewClass())
+
+    def get_view_name(self):
+        return self.current_view.children[0].get_name()
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
 
@@ -47,11 +50,14 @@ class MainContainer(FloatLayout):
             elif keycode[0] == 267:
                 self._set_cmd_visible(True, "/")
             elif cmd_hotkeys.has_key(keycode[0]):
-                hotkeys_profiles = cmd_hotkeys[keycode[0]]
-                if hotkeys_profiles.has_key("default"):
-                    hotkeys=hotkeys_profiles["default"]
-                    if hotkeys.has_key(modcode):
-                        self.execute_cmd(hotkeys[modcode])
+                command=get_hotkey_command(keycode[0],modcode)
+                if command:
+                    self.execute_cmd(command)
+                else:
+                    view_name=self.get_view_name()
+                    command=get_hotkey_command(keycode[0],modcode,view_name)
+                    if command:
+                        self.execute_cmd(command)
             else:
                 print "code : " + str(keycode) + " " + str(modifiers)
 
@@ -102,11 +108,14 @@ class MainContainer(FloatLayout):
         line = shlex.split(command)
         action = line[0]
         args = line[1:]
-        print args
         if cmd_actions.has_key(action):
             list_func = cmd_actions[action]
-            func = list_func["default"]
-            func(*args)
+            profile_name="default"
+            if list_func.has_key(self.get_view_name()):
+                profile_name=self.get_view_name()
+            if list_func.has_key(profile_name):
+                func = list_func[profile_name]
+                func(*args)
 
     def quit(self, *args):
         App.get_running_app().stop()
