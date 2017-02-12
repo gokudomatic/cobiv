@@ -1,5 +1,6 @@
 #:kivy 1.9.1
+#:import win kivy.core.window
 
 <Viewer>:
-    size_hint: 1,1
-    loop: True
+    size: win.Window.size
+    size_hint: 1, 1

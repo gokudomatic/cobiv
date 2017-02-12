@@ -5,8 +5,12 @@
     current_view: current_view
 
     size_hint: 1,1
-    BoxLayout:
+    GridLayout:
+        cols: 1
         id: current_view
+        size_hint: 1,1
+        size: root.size
+
     TextInput:
         id: cmd_input
         text: ""
