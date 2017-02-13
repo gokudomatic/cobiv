@@ -34,7 +34,7 @@ class MainContainer(FloatLayout):
         # test
         self.switch_view("help")
 
-        current_imageset.uris=glob.glob("C:\\Users\\edwin\\Pictures\\1487700_Bao_Sanniang_Diao_Chan_Dynasty_Warriors_SketchLanza_Zhang_Chunhua.jpg")
+        current_imageset.uris=glob.glob("C:\\Users\\edwin\\Pictures\\*.jpg")
 
         self.switch_view("viewer")
 
