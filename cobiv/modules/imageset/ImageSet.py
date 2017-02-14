@@ -1,3 +1,4 @@
+from __future__ import division
 from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.properties import NumericProperty, ObjectProperty
@@ -32,7 +33,7 @@ class Slide(AsyncImage):
     def on_texture_size(self, instance, value):
         if self.is_loaded:
             self.mode = self.load_mode
-            print self.load_mode
+            self.size = self.texture_size
 
     def on_image_loaded(self, *args):
         self.is_loaded = True
@@ -46,7 +47,11 @@ class Slide(AsyncImage):
             self.size_hint = (1, 1)
         else:
             self.size_hint = (None, None)
+
+        if value!=SlideMode.NORMAL:
             self.size = self.texture_size
+
+    def reset_zoom(self):
         self.size = self.texture_size
 
     def on_width(self, obj, value):
@@ -89,5 +94,9 @@ class ImageSet:
         else:
             return idx - 1
 
+    def remove(self,idx):
+        filename=self.uris[idx]
+        self.uris.remove(filename)
+        return idx if idx<len(self.uris) else 0
 
 current_imageset = ImageSet()

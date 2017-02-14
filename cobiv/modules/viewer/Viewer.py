@@ -26,20 +26,23 @@ class Viewer(View, ScrollView):
         self.set_action("scroll-left", self.scroll_left)
         self.set_action("scroll-right", self.scroll_right)
 
+        self.set_action("rm", self.remove_slide)
+
         self.set_action("zoom-in", self.zoom_in)
         self.set_action("zoom-out", self.zoom_out)
         self.set_action("zoom-1", self.zoom_1)
         self.set_action("fit-width", self.fit_width)
         self.set_action("fit-height", self.fit_height)
         self.set_action("fit-screen", self.fit_screen)
-        self.set_action("next",self.load_next)
-        self.set_action("previous",self.load_previous)
-        self.set_action("first",self.load_first)
-        self.set_action("last",self.load_last)
-        self.set_hotkey(275,"next")
-        self.set_hotkey(276,"previous")
-        self.set_hotkey(103L,"first")
-        self.set_hotkey(103L,"last",1)
+        self.set_action("go", self.jump_to_slide)
+        self.set_action("next", self.load_next)
+        self.set_action("previous", self.load_previous)
+        self.set_action("first", self.load_first)
+        self.set_action("last", self.load_last)
+        self.set_hotkey(275, "next")
+        self.set_hotkey(276, "previous")
+        self.set_hotkey(103L, "first")
+        self.set_hotkey(103L, "last", 1)
         self.set_hotkey(105L, "scroll-up")
         self.set_hotkey(107L, "scroll-down")
         self.set_hotkey(106L, "scroll-left")
@@ -48,15 +51,19 @@ class Viewer(View, ScrollView):
         self.set_hotkey(57L, "zoom-out")
 
     def load_slide(self, instance, value):
-        if self.slide_cache.has_key(value):
-            image = self.slide_cache[value]
-            #image.mode = self.fit_mode
-        else:
-            image = current_imageset.image(value,self.fit_mode)
-            self.slide_cache[value] = image
+        image=False
+        if 0<=value<self.count():
+            filename=current_imageset.uris[value]
+            if self.slide_cache.has_key(filename):
+                image = self.slide_cache[filename]
+                # image.mode = self.fit_mode
+            else:
+                image = current_imageset.image(value, self.fit_mode)
+                self.slide_cache[filename] = image
 
         self.clear_widgets()
-        self.add_widget(image)
+        if image:
+            self.add_widget(image)
 
     def load_next(self):
         self.slide_index = current_imageset.next(self.slide_index)
@@ -66,6 +73,12 @@ class Viewer(View, ScrollView):
 
     def load_first(self):
         self.slide_index = 0
+
+    def count(self):
+        return len(current_imageset.uris)
+
+    def jump_to_slide(self, value):
+        self.slide_index = int(value) % self.count()
 
     def load_last(self):
         self.slide_index = len(current_imageset.uris) - 1
@@ -90,16 +103,20 @@ class Viewer(View, ScrollView):
         d = int(dist)
         (dx, dy) = self.convert_distance_to_scroll(0, d * (1 if up else -1))
         self.scroll_y += dy
+        self.update_from_scroll()
 
     def _cmd_scroll_x(self, left=False, dist=20):
         d = int(dist)
-        (dx, dy) = self.convert_distance_to_scroll(d * (1 if left else -1), 0)
+        (dx, dy) = self.convert_distance_to_scroll(d * (1 if not left else -1), 0)
         self.scroll_x += dx
+        self.update_from_scroll()
 
     def zoom_in(self):
+        self._set_fit_mode(SlideMode.NORMAL)
         self._set_zoom(0.05)
 
     def zoom_out(self):
+        self._set_fit_mode(SlideMode.NORMAL)
         self._set_zoom(-0.05)
 
     def zoom_1(self):
@@ -123,5 +140,10 @@ class Viewer(View, ScrollView):
         self.children[0].mode = mode
         self.update_from_scroll()
 
+    def remove_slide(self):
+        old_idx=self.slide_index
+        self.slide_index=current_imageset.remove(self.slide_index)
+        if self.slide_index>0 or old_idx==0:
+            self.load_slide(self,self.slide_index)
 
 available_views[Viewer.get_name()] = Viewer
