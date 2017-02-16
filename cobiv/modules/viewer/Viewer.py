@@ -27,6 +27,7 @@ class Viewer(View, ScrollView):
         self.set_action("scroll-right", self.scroll_right)
 
         self.set_action("rm", self.remove_slide)
+        self.set_action("load-set", self.load_set)
 
         self.set_action("zoom-in", self.zoom_in)
         self.set_action("zoom-out", self.zoom_out)
@@ -50,16 +51,26 @@ class Viewer(View, ScrollView):
         self.set_hotkey(48L, "zoom-in")
         self.set_hotkey(57L, "zoom-out")
 
+    def load_set(self):
+        self.slide_cache.clear()
+        self.slide_index = -1
+        self.slide_index = 0
+
     def load_slide(self, instance, value):
+        if value<0:
+            return
+
         image=False
-        if 0<=value<self.count():
-            filename=current_imageset.uris[value]
-            if self.slide_cache.has_key(filename):
-                image = self.slide_cache[filename]
-                # image.mode = self.fit_mode
-            else:
-                image = current_imageset.image(value, self.fit_mode)
-                self.slide_cache[filename] = image
+        if current_imageset!=None and len(current_imageset.uris)>0:
+            if 0<=value<self.count():
+                filename=current_imageset.uris[value]
+                print "loading "+filename
+                if self.slide_cache.has_key(filename):
+                    image = self.slide_cache[filename]
+                    # image.mode = self.fit_mode
+                else:
+                    image = current_imageset.image(value, self.fit_mode)
+                    self.slide_cache[filename] = image
 
         self.clear_widgets()
         if image:

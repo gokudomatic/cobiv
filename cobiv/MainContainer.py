@@ -1,17 +1,19 @@
 import shlex
 
+import sys
 from kivy.app import App
 from kivy.properties import ObjectProperty
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 from kivy.clock import Clock
-import glob
 
 from cobiv.common import *
 import cobiv.modules.help.helpview
 import cobiv.modules.viewer.Viewer
 from cobiv.modules.imageset.ImageSet import current_imageset
+import cobiv.modules.grapheekdb.db
 
+this = sys.modules[__name__]
 
 class MainContainer(FloatLayout):
     cmd_input = ObjectProperty(None)
@@ -32,9 +34,7 @@ class MainContainer(FloatLayout):
         set_hotkey(113L,"q")
 
         # test
-        self.switch_view("help")
-
-        current_imageset.uris=glob.glob("C:\\Users\\edwin\\Pictures\\*.jpg")
+        # self.switch_view("help")
 
         self.switch_view("viewer")
 

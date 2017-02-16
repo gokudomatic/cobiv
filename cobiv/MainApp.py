@@ -7,10 +7,15 @@ from kivy.lang import Builder
 
 Builder.load_file('main.kv')
 
+
 class MainApp(App):
 
+    root=None
+
     def build(self):
-        return MainContainer()
+        self.root=MainContainer()
+        return self.root
+
 
 if __name__ == '__main__':
     MainApp().run()
