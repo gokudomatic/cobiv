@@ -71,7 +71,8 @@ class MainContainer(FloatLayout):
                     if command:
                         self.execute_cmd(command)
             else:
-                print "code : " + str(keycode) + " " + str(modifiers)
+                pass
+                # print "code : " + str(keycode) + " " + str(modifiers)
 
         return True
 

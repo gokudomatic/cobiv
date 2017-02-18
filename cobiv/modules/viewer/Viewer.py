@@ -64,7 +64,7 @@ class Viewer(View, ScrollView):
         if current_imageset!=None and len(current_imageset.uris)>0:
             if 0<=value<self.count():
                 filename=current_imageset.uris[value]
-                print "loading "+filename
+                current_imageset.current=[filename]
                 if self.slide_cache.has_key(filename):
                     image = self.slide_cache[filename]
                     # image.mode = self.fit_mode

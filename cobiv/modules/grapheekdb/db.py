@@ -26,13 +26,14 @@ class Database:
             self.init_database()
 
         # add actions
-        set_action("search",self.search_tag,"viewer")
-        set_action("add-tag",self.add_tag,"viewer")
-        set_action("rm-tag",self.remove_tag,"viewer")
+        set_action("search", self.search_tag, "viewer")
+        set_action("add-tag", self.add_tag, "viewer")
+        set_action("rem-tag", self.remove_tag, "viewer")
+        set_action("ls-tag", self.list_tags, "viewer")
 
     def init_database(self):
-        cat=self.create_catalogue("default")
-        self.add_repository(cat,"C:\\Users\\edwin\\Pictures")
+        cat = self.create_catalogue("default")
+        self.add_repository(cat, "C:\\Users\\edwin\\Pictures")
 
     def create_catalogue(self, name):
         return self.g.add_node(name=name, kind=NODE_TYPE_CATALOGUE)
@@ -79,28 +80,87 @@ class Database:
         if img.info:
             for i, v in img.info.iteritems():
                 if i == "tags":
-                    tag_list=v.split(",")
+                    tag_list = v.split(",")
                     for tag in tag_list:
-                        tag_node=self._create_tag(tag.strip())
+                        tag_node = self._create_tag(tag.strip())
                         self.g.add_edge(node, tag_node, kind="has")
 
-    def _create_tag(self,value):
+    def _create_tag(self, value):
         tn = self.g.V(kind=NODE_TYPE_TAG, type=TAG_TYPE_TAG, value=value)
         if tn.count() > 0:
             return tn[0]
         else:
             return self.g.add_node(kind=NODE_TYPE_TAG, type=TAG_TYPE_TAG, value=value)
 
-    def search_tag(self,*args):
+    def search_tag(self, *args):
         print current_imageset
-        root=App.get_running_app().root
-        current_imageset.uris=[n.name for n in self.g.V(kind=NODE_TYPE_FILE)]
+        root = App.get_running_app().root
+
+
+        to_include=[]
+        to_exclude=[]
+
+        for arg in args:
+            if arg[0]=="-":
+                to_exclude.append(arg[1:])
+            else:
+                to_include.append(arg)
+
+        if len(to_include)==0:
+            resultset=self.g.V(kind=NODE_TYPE_FILE)
+        else:
+            first = True
+            for arg in to_include:
+                if ":" in arg:
+                    fields=arg.split(":")
+                    kind=fields[0]
+                    value=fields[1]
+                else:
+                    kind=TAG_TYPE_TAG
+                    value=arg
+
+                if first:
+                    resultset=self.g.V(kind=NODE_TYPE_TAG,type=kind,value__startswith=value).inE(kind="has").inV(kind=NODE_TYPE_FILE)
+                    first=False
+                else:
+                    resultset=resultset.aka("x").outE(kind="has").outV(kind=NODE_TYPE_TAG,type=kind,value__startswith=value).collect("x")
+
+        filenames=[n.name for n in resultset]
+
+        for arg in to_exclude:
+            if ":" in arg:
+                fields = arg.split(":")
+                kind = fields[0]
+                value = fields[1]
+            else:
+                kind = TAG_TYPE_TAG
+                value = arg
+
+            for n in self.g.V(kind=NODE_TYPE_TAG,type=kind,value__startswith=value).inE(kind="has").inV(kind=NODE_TYPE_FILE):
+                filenames.remove(n.name)
+
+
+        current_imageset.uris = filenames
+
         root.execute_cmd("load-set")
 
-    def add_tag(self,*args):
-        print("idx = "+str(current_imageset.current))
+    def add_tag(self, *args):
+        for filename in current_imageset.current:
+            for n in self.g.V(name=filename, kind=NODE_TYPE_FILE):
+                for tag in args:
+                    if n.outE(kind="has").outV(kind=NODE_TYPE_TAG, type=TAG_TYPE_TAG, value=tag).count() == 0:
+                        tag_node = self._create_tag(tag.strip())
+                        self.g.add_edge(n, tag_node, kind="has")
 
-    def remove_tag(self,*args):
-        pass
+    def remove_tag(self, *args):
+        for filename in current_imageset.current:
+            for n in self.g.V(name=filename, kind=NODE_TYPE_FILE):
+                for tag in args:
+                    n.outE(kind="has").outV(kind=NODE_TYPE_TAG, type=TAG_TYPE_TAG, value=tag).remove()
+
+    def list_tags(self):
+        for filename in current_imageset.current:
+            for n in self.g.V(name=filename, kind=NODE_TYPE_FILE).outE(kind="has").outV(kind=NODE_TYPE_TAG, type=TAG_TYPE_TAG):
+                print n.value
 
 db = Database()
