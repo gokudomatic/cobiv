@@ -1,1 +1,1 @@
-__all__ = ["View"]
+__all__ = ["View","Component"]

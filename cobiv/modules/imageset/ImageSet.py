@@ -5,10 +5,12 @@ from kivy.properties import NumericProperty, ObjectProperty
 from kivy.uix.image import AsyncImage
 from enum import Enum
 
+from cobiv.modules.entity import Entity
+
 Builder.load_file('modules/imageset/slide.kv')
 
 
-class SlideMode(Enum):
+class SlideMode():
     NORMAL = 0
     FIT_SCREEN = 1
     FIT_WIDTH = 2
@@ -17,13 +19,13 @@ class SlideMode(Enum):
 
 class Slide(AsyncImage):
     mode = ObjectProperty(None)
-    load_mode=None
+    load_mode = None
 
     is_loaded = False
 
     def __init__(self, load_mode=SlideMode.NORMAL, **kwargs):
         super(Slide, self).__init__(**kwargs)
-        self.load_mode=load_mode
+        self.load_mode = load_mode
         self._coreimage.bind(on_load=self.on_image_loaded)
         self.bind(width=self.on_width)
         self.bind(height=self.on_height)
@@ -48,7 +50,7 @@ class Slide(AsyncImage):
         else:
             self.size_hint = (None, None)
 
-        if value!=SlideMode.NORMAL:
+        if value != SlideMode.NORMAL:
             self.size = self.texture_size
 
     def reset_zoom(self):
@@ -73,14 +75,14 @@ class Slide(AsyncImage):
             self.height = self.texture_size[1] * value
 
 
-class ImageSet:
+class ImageSet(Entity):
     uris = []
 
-    current=None
+    current = None
 
-    def image(self, idx,fit_mode):
+    def image(self, idx, fit_mode):
         if 0 <= idx <= len(self.uris):
-            return Slide(source=self.uris[idx],load_mode=fit_mode)
+            return Slide(source=self.uris[idx], load_mode=fit_mode)
         else:
             return None
 
@@ -96,9 +98,7 @@ class ImageSet:
         else:
             return idx - 1
 
-    def remove(self,idx):
-        filename=self.uris[idx]
+    def remove(self, idx):
+        filename = self.uris[idx]
         self.uris.remove(filename)
-        return idx if idx<len(self.uris) else 0
-
-current_imageset = ImageSet()
+        return idx if idx < len(self.uris) else 0

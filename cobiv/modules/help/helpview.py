@@ -17,10 +17,6 @@ class HelpView(View, RstDocument):
         self.set_action("up",self.cmd_scroll_up)
         self.set_action("down",self.cmd_scroll_down)
 
-        self.set_hotkey(273,"up 20")
-        self.set_hotkey(274,"down 20")
-
-    @staticmethod
     def get_name(instance=None):
         return "help"
 
@@ -35,5 +31,9 @@ class HelpView(View, RstDocument):
         (dx, dy) = self.convert_distance_to_scroll(0, d * (1 if up else -1))
         self.scroll_y += dy
 
-
-available_views[HelpView.get_name()] = HelpView
+    def build_config(self,config):
+        Component.build_config(self,config)
+        section=HelpView.get_config_hotkeys_section(self)
+        config.add_section(section)
+        config.set(section, "up 20", "273")  # up arrow
+        config.set(section, "down 20", "274")  # down arrow

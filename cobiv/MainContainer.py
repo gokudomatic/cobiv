@@ -10,16 +10,18 @@ from kivy.clock import Clock
 from cobiv.common import *
 import cobiv.modules.help.helpview
 import cobiv.modules.viewer.Viewer
-from cobiv.modules.imageset.ImageSet import current_imageset
-import cobiv.modules.grapheekdb.db
+import cobiv.modules.grapheekdb.nodedb
 
 this = sys.modules[__name__]
+
 
 class MainContainer(FloatLayout):
     cmd_input = ObjectProperty(None)
     current_view = ObjectProperty(None)
 
     cmd_visible = True
+
+    available_views = {}
 
     def __init__(self, **kwargs):
         super(MainContainer, self).__init__(**kwargs)
@@ -28,25 +30,30 @@ class MainContainer(FloatLayout):
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self._set_cmd_visible(False)
 
-        set_action("q",self.quit)
-        set_action("fullscreen",self.toggle_fullscreen)
-        set_hotkey(292,"fullscreen")
-        set_hotkey(113L,"q")
+        set_action("q", self.quit)
+        set_action("fullscreen", self.toggle_fullscreen)
+        set_action("switch-view", self.switch_view)
 
-        # test
-        # self.switch_view("help")
+        config = App.get_running_app().config
 
-        self.switch_view("viewer")
+        for binding, value in config.items("main_hotkeys"):
+            if "/" in value:
+                b = value.split("/")
+                set_hotkey(long(b[0]), binding, int(b[1]))
+            else:
+                set_hotkey(long(value), binding)
 
-
-    def switch_view(self,view_name):
-        clazz = available_views[view_name]
+    def switch_view(self, view_name):
         self.current_view.clear_widgets()
-        self.current_view.add_widget(clazz())
-
+        if view_name in self.available_views.keys():
+            view = self.available_views[view_name]
+            self.current_view.add_widget(view)
 
     def get_view_name(self):
-        return self.current_view.children[0].get_name()
+        if len(self.current_view.children) > 0:
+            return self.current_view.children[0].get_name()
+        else:
+            return None
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
 
@@ -54,6 +61,8 @@ class MainContainer(FloatLayout):
 
         # Keycode is composed of an integer + a string
         # If we hit escape, release the keyboard
+
+        # if escape, close term
         if keycode[0] == 27L and self.cmd_visible:
             self._set_cmd_visible(False)
         elif not self.cmd_visible:
@@ -62,12 +71,12 @@ class MainContainer(FloatLayout):
             elif keycode[0] == 267:
                 self._set_cmd_visible(True, "/")
             elif cmd_hotkeys.has_key(keycode[0]):
-                command=get_hotkey_command(keycode[0],modcode)
+                command = get_hotkey_command(keycode[0], modcode)
                 if command:
                     self.execute_cmd(command)
                 else:
-                    view_name=self.get_view_name()
-                    command=get_hotkey_command(keycode[0],modcode,view_name)
+                    view_name = self.get_view_name()
+                    command = get_hotkey_command(keycode[0], modcode, view_name)
                     if command:
                         self.execute_cmd(command)
             else:
@@ -123,9 +132,9 @@ class MainContainer(FloatLayout):
         args = line[1:]
         if cmd_actions.has_key(action):
             list_func = cmd_actions[action]
-            profile_name="default"
+            profile_name = "default"
             if list_func.has_key(self.get_view_name()):
-                profile_name=self.get_view_name()
+                profile_name = self.get_view_name()
             if list_func.has_key(profile_name):
                 func = list_func[profile_name]
                 func(*args)
@@ -135,3 +144,9 @@ class MainContainer(FloatLayout):
 
     def toggle_fullscreen(self, *args):
         Window.toggle_fullscreen()
+
+
+def build_main_config(config):
+    config.add_section("main_hotkeys")
+    config.set("main_hotkeys", "q", "113")  # q
+    config.set("main_hotkeys", "fullscreen", "292")  # F11

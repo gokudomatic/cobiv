@@ -2,8 +2,9 @@ from kivy.lang import Builder
 from kivy.properties import ObjectProperty, NumericProperty
 from kivy.uix.scrollview import ScrollView
 
-from cobiv.modules.imageset.ImageSet import current_imageset, SlideMode
-from cobiv.modules.view import *
+from cobiv.modules.component import Component
+from cobiv.modules.imageset.ImageSet import SlideMode
+from cobiv.modules.view import View
 
 Builder.load_file('modules/viewer/viewer.kv')
 
@@ -11,6 +12,8 @@ Builder.load_file('modules/viewer/viewer.kv')
 class Viewer(View, ScrollView):
     fit_mode = ObjectProperty(SlideMode.FIT_SCREEN)
     slide_index = NumericProperty(None)
+
+    current_imageset=None
 
     slide_cache = {}
 
@@ -51,6 +54,10 @@ class Viewer(View, ScrollView):
         self.set_hotkey(48L, "zoom-in")
         self.set_hotkey(57L, "zoom-out")
 
+    def ready(self):
+        Component.ready(self)
+        self.current_imageset=self.get_app().lookup("imageset","Entity")
+
     def load_set(self):
         self.slide_cache.clear()
         self.slide_index = -1
@@ -61,15 +68,15 @@ class Viewer(View, ScrollView):
             return
 
         image=False
-        if current_imageset!=None and len(current_imageset.uris)>0:
+        if self.current_imageset!=None and len(self.current_imageset.uris)>0:
             if 0<=value<self.count():
-                filename=current_imageset.uris[value]
-                current_imageset.current=[filename]
+                filename=self.current_imageset.uris[value]
+                self.current_imageset.current=[filename]
                 if self.slide_cache.has_key(filename):
                     image = self.slide_cache[filename]
                     # image.mode = self.fit_mode
                 else:
-                    image = current_imageset.image(value, self.fit_mode)
+                    image = self.current_imageset.image(value, self.fit_mode)
                     self.slide_cache[filename] = image
 
         self.clear_widgets()
@@ -77,22 +84,22 @@ class Viewer(View, ScrollView):
             self.add_widget(image)
 
     def load_next(self):
-        self.slide_index = current_imageset.next(self.slide_index)
+        self.slide_index = self.current_imageset.next(self.slide_index)
 
     def load_previous(self):
-        self.slide_index = current_imageset.previous(self.slide_index)
+        self.slide_index = self.current_imageset.previous(self.slide_index)
 
     def load_first(self):
         self.slide_index = 0
 
     def count(self):
-        return len(current_imageset.uris)
+        return len(self.current_imageset.uris)
 
     def jump_to_slide(self, value):
         self.slide_index = int(value) % self.count()
 
     def load_last(self):
-        self.slide_index = len(current_imageset.uris) - 1
+        self.slide_index = len(self.current_imageset.uris) - 1
 
     @staticmethod
     def get_name(instance=None):
@@ -153,8 +160,7 @@ class Viewer(View, ScrollView):
 
     def remove_slide(self):
         old_idx=self.slide_index
-        self.slide_index=current_imageset.remove(self.slide_index)
+        self.slide_index=self.current_imageset.remove(self.slide_index)
         if self.slide_index>0 or old_idx==0:
             self.load_slide(self,self.slide_index)
 
-available_views[Viewer.get_name()] = Viewer
