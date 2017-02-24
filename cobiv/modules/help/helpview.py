@@ -33,7 +33,7 @@ class HelpView(View, RstDocument):
 
     def build_config(self,config):
         Component.build_config(self,config)
-        section=HelpView.get_config_hotkeys_section(self)
+        section=self.get_config_hotkeys_section()
         config.add_section(section)
         config.set(section, "up 20", "273")  # up arrow
         config.set(section, "down 20", "274")  # down arrow

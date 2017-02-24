@@ -5,12 +5,11 @@ from kivy.properties import NumericProperty, ObjectProperty
 from kivy.uix.image import AsyncImage
 from enum import Enum
 
-from cobiv.modules.entity import Entity
 
 Builder.load_file('modules/imageset/slide.kv')
 
 
-class SlideMode():
+class SlideMode(Enum):
     NORMAL = 0
     FIT_SCREEN = 1
     FIT_WIDTH = 2
@@ -75,7 +74,7 @@ class Slide(AsyncImage):
             self.height = self.texture_size[1] * value
 
 
-class ImageSet(Entity):
+class ImageSet():
     uris = []
 
     current = None

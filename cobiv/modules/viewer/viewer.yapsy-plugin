@@ -1,0 +1,8 @@
+[Core]
+Name = viewer
+Module = Viewer
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Display images with Kivy internal Image component

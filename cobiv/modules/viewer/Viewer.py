@@ -13,7 +13,7 @@ class Viewer(View, ScrollView):
     fit_mode = ObjectProperty(SlideMode.FIT_SCREEN)
     slide_index = NumericProperty(None)
 
-    current_imageset=None
+    current_imageset = None
 
     slide_cache = {}
 
@@ -43,20 +43,27 @@ class Viewer(View, ScrollView):
         self.set_action("previous", self.load_previous)
         self.set_action("first", self.load_first)
         self.set_action("last", self.load_last)
-        self.set_hotkey(275, "next")
-        self.set_hotkey(276, "previous")
-        self.set_hotkey(103L, "first")
-        self.set_hotkey(103L, "last", 1)
-        self.set_hotkey(105L, "scroll-up")
-        self.set_hotkey(107L, "scroll-down")
-        self.set_hotkey(106L, "scroll-left")
-        self.set_hotkey(108L, "scroll-right")
-        self.set_hotkey(48L, "zoom-in")
-        self.set_hotkey(57L, "zoom-out")
+
+    def build_config(self, config):
+        Component.build_config(self, config)
+        section = self.get_config_hotkeys_section()
+        config.add_section(section)
+        config.set(section, "up 20", "273")  # up arrow
+        config.set(section, "down 20", "274")  # down arrow
+        config.set(section, "next", "275")
+        config.set(section, "previous", "276")
+        config.set(section, "first", "103")
+        config.set(section, "last", "103/1")
+        config.set(section, "scroll-up", "105", )
+        config.set(section, "scroll-down", "107")
+        config.set(section, "scroll-left", "106")
+        config.set(section, "scroll-right", "108")
+        config.set(section, "zoom-in", "48")
+        config.set(section, "zoom-out", "57")
 
     def ready(self):
         Component.ready(self)
-        self.current_imageset=self.get_app().lookup("imageset","Entity")
+        self.current_imageset = self.get_app().lookup("session", "Entity").get_currentset()
 
     def load_set(self):
         self.slide_cache.clear()
@@ -64,14 +71,14 @@ class Viewer(View, ScrollView):
         self.slide_index = 0
 
     def load_slide(self, instance, value):
-        if value<0:
+        if value < 0:
             return
 
-        image=False
-        if self.current_imageset!=None and len(self.current_imageset.uris)>0:
-            if 0<=value<self.count():
-                filename=self.current_imageset.uris[value]
-                self.current_imageset.current=[filename]
+        image = False
+        if self.current_imageset != None and len(self.current_imageset.uris) > 0:
+            if 0 <= value < self.count():
+                filename = self.current_imageset.uris[value]
+                self.current_imageset.current = [filename]
                 if self.slide_cache.has_key(filename):
                     image = self.slide_cache[filename]
                     # image.mode = self.fit_mode
@@ -159,8 +166,7 @@ class Viewer(View, ScrollView):
         self.update_from_scroll()
 
     def remove_slide(self):
-        old_idx=self.slide_index
-        self.slide_index=self.current_imageset.remove(self.slide_index)
-        if self.slide_index>0 or old_idx==0:
-            self.load_slide(self,self.slide_index)
-
+        old_idx = self.slide_index
+        self.slide_index = self.current_imageset.remove(self.slide_index)
+        if self.slide_index > 0 or old_idx == 0:
+            self.load_slide(self, self.slide_index)

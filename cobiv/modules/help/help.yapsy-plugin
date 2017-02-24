@@ -1,0 +1,8 @@
+[Core]
+Name = help
+Module = HelpView
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Inline documentation for cobiv
