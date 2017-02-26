@@ -1,0 +1,36 @@
+#:import win kivy.core.window
+#:import math math
+
+<Thumb>:
+    orientation: 'vertical'
+    size_hint: None, None
+    size: root.cell_size, root.cell_size
+    padding: 5
+    canvas:
+        Color:
+            rgba: 0.25,0.8,1,0.8
+        Rectangle:
+            pos: self.pos
+            size: self.size
+    AsyncImage:
+        source: root.source
+        mipmap: True
+        allow_stretch: True
+        keep_ratio: True
+    Label:
+        text:root.caption
+        size_hint: 1, None
+        height: self.texture_size[1]
+
+<Browser>:
+    grid: grid_layout
+    BoxLayout:
+        ScrollView:
+            id: scroll_view
+            GridLayout:
+                id: grid_layout
+                cell_size: root.cell_size
+                cols: int(self.width/self.cell_size)
+                size_hint: None,None
+                width: win.Window.width
+                height: int(self.cell_size * math.ceil(1+len(self.children)/self.cols))

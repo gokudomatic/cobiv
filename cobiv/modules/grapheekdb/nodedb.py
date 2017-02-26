@@ -30,6 +30,7 @@ class NodeDb(Entity):
 
         # add actions
         set_action("search", self.search_tag, "viewer")
+        set_action("search", self.search_tag, "browser")
         set_action("add-tag", self.add_tag, "viewer")
         set_action("rem-tag", self.remove_tag, "viewer")
         set_action("ls-tag", self.list_tags, "viewer")

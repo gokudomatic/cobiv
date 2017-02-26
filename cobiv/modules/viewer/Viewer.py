@@ -81,7 +81,6 @@ class Viewer(View, ScrollView):
                 self.current_imageset.current = [filename]
                 if self.slide_cache.has_key(filename):
                     image = self.slide_cache[filename]
-                    # image.mode = self.fit_mode
                 else:
                     image = self.current_imageset.image(value, self.fit_mode)
                     self.slide_cache[filename] = image

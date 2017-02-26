@@ -1,23 +1,23 @@
 import math
 from kivy.app import App
-from kivy.uix.label import Label
 
-from cobiv.magnet import Magnet
 from kivy.uix.image import Image
 from kivy.properties import ObjectProperty
 from kivy.lang import Builder
 from kivy.clock import Clock
-from kivy.graphics import Color
-from kivy.core.window import Window
 
 
 from os import listdir
+
+from cobiv.libs.magnet import Magnet
 
 IMAGEDIR = 'C:\\Users\\edwin\\Pictures\\'
 
 IMAGES = filter(
     lambda x: x.endswith('.jpg'),
     listdir(IMAGEDIR))
+
+CELL_SIZE=256
 
 kv = '''
 #:import win kivy.core.window
@@ -29,10 +29,11 @@ FloatLayout:
             id: scroll_view
             GridLayout:
                 id: grid_layout
-                cols: int(self.width/128)
+                cell_size: 128
+                cols: int(self.width/self.cell_size)
                 size_hint: None,None
                 width: win.Window.width
-                height: int(128 * math.ceil(1+len(self.children)/self.cols))
+                height: int(self.cell_size * math.ceil(1+len(self.children)/self.cols))
 '''
 
 
@@ -54,7 +55,6 @@ class DraggableImage(Magnet):
 
             abs_pos=self.app.root.ids.scroll_view.to_parent(touch.pos[0],touch.pos[1])
 
-            self.center = abs_pos
             self.img.center = abs_pos
 
             return True
@@ -68,19 +68,18 @@ class DraggableImage(Magnet):
             abs_pos=self.app.root.ids.scroll_view.to_parent(touch.pos[0],touch.pos[1])
 
             self.img.center = abs_pos
-            if grid_layout.collide_point(*touch.pos):
-                grid_layout.remove_widget(self)
 
-                cnt_max = len(grid_layout.children)
-                pos=(touch.pos[0],grid_layout.height-touch.pos[1])
-                idx=min(grid_layout.cols*math.floor(pos[1]/128)+math.floor(pos[0]/128),cnt_max)
+            grid_layout.remove_widget(self)
 
-                i=int(cnt_max-idx)
+            cnt_max = len(grid_layout.children)
+            idx=min(grid_layout.cols*math.floor((grid_layout.height-touch.pos[1])/CELL_SIZE)+math.floor(touch.pos[0]/CELL_SIZE),cnt_max)
 
-                if i>0:
-                    grid_layout.add_widget(self, i )
-                else:
-                    grid_layout.add_widget(self)
+            i=int(cnt_max-idx)
+
+            if i>0:
+                grid_layout.add_widget(self, i )
+            else:
+                grid_layout.add_widget(self)
 
         return super(DraggableImage, self).on_touch_move(touch, *args)
 
@@ -98,16 +97,16 @@ class DraggableImage(Magnet):
 class DnDMagnet(App):
     def build(self):
         self.root = Builder.load_string(kv)
+        self.root.ids.grid_layout.cell_size=CELL_SIZE
         cnt=0
         for i in IMAGES:
             cnt+=1
 
-            #label= Label(text=str(cnt))
-            image = Image(source=IMAGEDIR + i, size=(128, 128),
+            image = Image(source=IMAGEDIR + i, size=(CELL_SIZE, CELL_SIZE),
                           size_hint=(None, None))
             draggable = DraggableImage(img=image, app=self,
                                        size_hint=(None, None),
-                                       size=(128, 128))
+                                       size=(CELL_SIZE, CELL_SIZE))
             self.root.ids.grid_layout.add_widget(draggable)
 
         return self.root
