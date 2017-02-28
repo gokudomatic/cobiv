@@ -16,6 +16,19 @@ The highlight features of this application are:
 * Capability to connect to various filesystems (NAS, zip files, ftp, WebDAV...).
 * Multiplatform.
 
+## Original purpose
+While lot of free image viewer applications exist already with more or less specific features, I didn't find any that let me both :
+* browse multiple images with keys to navigate
+* have an uncluttered fullscreen UI
+* search images with tags, with inclusion and exclusion
+* easily tag images on the fly when browsing
+* import images in some kind of big repository and automatically remove duplicates
+* prevent deleted unwanted images to be imported again
+* handle comics as a set sorted by filename but search the set as a single entry, allowing to manage a catalog of comics
+
+And while I didn't really wanted to go on a full development of an application, the fact is, I need those features. And since I got already some neat and interesting experience with Kivy, the idea of making a very basic but pragmatic viewer, implementing only what I need even if it looks incredibly rough on the edges, seemed then to be realistical and not much time consuming. But then, as a developer, I like to keep things reusable, customizable and powerful. Cue the idea of using VI's concept, which is famous for being all of that. Downside of VI is its huge learning curve. But with Kivy and Python, there's a whole playground for interesting new UI to invent.
+
+
 ## VI
 Cobiv was build with extensibility in mind. Also, the initial needs were a minimal UI totally controlable with either keyboard or touch screen only (no need for a mouse). And since this viewer isn't targeting a beginner audience rather power users, the architecture of VI was the inspiration of the core of Cobiv. Every action is initially a command that can be entered by pressing ":" and then the command name. On top of that are implemented hotkeys, gestures, and visual components that call the same commands. Commands can be contextual or global, as well as the hotkeys.
 Thanks to this system, it is possible to integrate macros and bind a key to any kind of action or macro. Also, it allows plugins to easily add features through new commands.
