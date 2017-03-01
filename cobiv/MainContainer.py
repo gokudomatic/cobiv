@@ -9,7 +9,7 @@ from kivy.clock import Clock
 
 from cobiv.common import *
 import cobiv.modules.help.helpview
-import cobiv.modules.viewer.Viewer
+import cobiv.modules.viewer.viewer
 import cobiv.modules.grapheekdb.nodedb
 
 this = sys.modules[__name__]
@@ -20,6 +20,8 @@ class MainContainer(FloatLayout):
     current_view = ObjectProperty(None)
 
     cmd_visible = True
+
+    is_enter_command=False
 
     available_views = {}
 
@@ -44,10 +46,12 @@ class MainContainer(FloatLayout):
                 set_hotkey(long(value), binding)
 
     def switch_view(self, view_name):
+        #print "switch to "+view_name
         self.current_view.clear_widgets()
         if view_name in self.available_views.keys():
             view = self.available_views[view_name]
             self.current_view.add_widget(view)
+            view.on_switch()
 
     def get_view_name(self):
         if len(self.current_view.children) > 0:
@@ -70,18 +74,22 @@ class MainContainer(FloatLayout):
                 self._toggle_cmd(":")
             elif keycode[0] == 267:
                 self._set_cmd_visible(True, "/")
-            elif cmd_hotkeys.has_key(keycode[0]):
-                command = get_hotkey_command(keycode[0], modcode)
+            elif cmd_hotkeys.has_key(keycode[0]) and not self.is_enter_command:
+                if keycode[0]==13L:
+                    print "enter pressed"
+                view_name = self.get_view_name()
+                command = get_hotkey_command(keycode[0], modcode, view_name)
                 if command:
                     self.execute_cmd(command)
                 else:
-                    view_name = self.get_view_name()
-                    command = get_hotkey_command(keycode[0], modcode, view_name)
+                    command = get_hotkey_command(keycode[0], modcode)
                     if command:
                         self.execute_cmd(command)
             else:
+                print "code : " + str(keycode) + " " + str(modifiers)
                 pass
-                # print "code : " + str(keycode) + " " + str(modifiers)
+
+            self.is_enter_command=False
 
         return True
 
@@ -123,6 +131,7 @@ class MainContainer(FloatLayout):
             self._set_cmd_visible(False)
 
     def on_enter_cmd(self, text):
+        self.is_enter_command=True
         if text[0] == ":":
             self.execute_cmd(text[1:])
 

@@ -1,9 +1,10 @@
 from kivy.app import App
+from yapsy.IPlugin import IPlugin
 
 from cobiv.common import set_action, set_hotkey
 
 
-class Component:
+class Component():
     def build_config(config):
         pass
 
@@ -35,6 +36,6 @@ class Component:
             for binding, value in config.items(self.get_config_hotkeys_section()):
                 if "/" in value:
                     b = value.split("/")
-                    set_hotkey(long(b[0]), binding, int(b[1]))
+                    set_hotkey(long(b[0]), binding, modifier=int(b[1]),profile=self.get_name())
                 else:
-                    set_hotkey(long(value), binding)
+                    set_hotkey(long(value), binding,profile=self.get_name())

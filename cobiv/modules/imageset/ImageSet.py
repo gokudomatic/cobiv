@@ -79,6 +79,9 @@ class ImageSet():
 
     current = None
 
+    def __len__(self):
+        return len(self.uris)
+
     def image(self, idx, fit_mode):
         if 0 <= idx <= len(self.uris):
             return Slide(source=self.uris[idx], load_mode=fit_mode)

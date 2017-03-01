@@ -41,10 +41,10 @@ class Cobiv(App):
         for plugin in self.plugin_manager.getPluginsOfCategory("View"):
             self.root.available_views[plugin.plugin_object.get_name()]=plugin.plugin_object
 
-        self.root.switch_view("browser")
-
         for plugin in self.plugin_manager.getAllPlugins():
             plugin.plugin_object.ready()
+
+        self.root.switch_view("browser")
 
         return self.root
 

@@ -8,10 +8,14 @@
     padding: 5
     canvas:
         Color:
-            rgba: 0.25,0.8,1,0.8
+            rgba: 0.25,0.8,1,0.7 if root.marked else 0
         Rectangle:
             pos: self.pos
             size: self.size
+        Color:
+            rgba: 1,0,0,1 if root.selected else 0
+        Line:
+            rectangle: self.pos[0]+2,self.pos[1]+2,self.size[0]-4,self.size[1]-4
     AsyncImage:
         source: root.source
         mipmap: True

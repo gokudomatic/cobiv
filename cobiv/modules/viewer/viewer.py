@@ -3,6 +3,7 @@ from kivy.properties import ObjectProperty, NumericProperty
 from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.component import Component
+from cobiv.modules.entity import Entity
 from cobiv.modules.imageset.ImageSet import SlideMode
 from cobiv.modules.view import View
 
@@ -11,18 +12,15 @@ Builder.load_file('modules/viewer/viewer.kv')
 
 class Viewer(View, ScrollView):
     fit_mode = ObjectProperty(SlideMode.FIT_SCREEN)
-    slide_index = NumericProperty(None)
-
+    slide_index = NumericProperty(-1)
     current_imageset = None
-
     slide_cache = {}
+    session = None
 
     def __init__(self, **kwargs):
         super(Viewer, self).__init__(**kwargs)
 
         self.bind(slide_index=self.load_slide)
-
-        self.slide_index = 0
 
         self.set_action("scroll-up", self.scroll_up)
         self.set_action("scroll-down", self.scroll_down)
@@ -63,15 +61,21 @@ class Viewer(View, ScrollView):
 
     def ready(self):
         Component.ready(self)
-        self.current_imageset = self.get_app().lookup("session", "Entity").get_currentset()
+        self.session=self.get_app().lookup("session", "Entity")
+        self.current_imageset = self.session.get_currentset()
+
+        self.slide_index = 0
+
+    def on_switch(self):
+        self.load_set()
 
     def load_set(self):
         self.slide_cache.clear()
         self.slide_index = -1
-        self.slide_index = 0
+        self.slide_index = self.session.current_imageset_index
 
     def load_slide(self, instance, value):
-        if value < 0:
+        if value == -1:
             return
 
         image = False
@@ -88,6 +92,8 @@ class Viewer(View, ScrollView):
         self.clear_widgets()
         if image:
             self.add_widget(image)
+
+        self.session.current_imageset_index=value
 
     def load_next(self):
         self.slide_index = self.current_imageset.next(self.slide_index)
@@ -107,7 +113,6 @@ class Viewer(View, ScrollView):
     def load_last(self):
         self.slide_index = len(self.current_imageset.uris) - 1
 
-    @staticmethod
     def get_name(instance=None):
         return "viewer"
 

@@ -66,6 +66,7 @@ class Item(Magnet):
             self.container.remove_widget(self.img)
             self.add_widget(self.img)
             touch.ungrab(self)
+            self.container.on_image_touch_up(self)
             return True
 
         return super(Item, self).on_touch_up(touch, *args)
