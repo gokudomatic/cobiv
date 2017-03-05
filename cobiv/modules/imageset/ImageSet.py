@@ -1,7 +1,8 @@
 from __future__ import division
 from kivy.core.window import Window
+from kivy.event import EventDispatcher
 from kivy.lang import Builder
-from kivy.properties import NumericProperty, ObjectProperty
+from kivy.properties import NumericProperty, ObjectProperty, ListProperty
 from kivy.uix.image import AsyncImage
 from enum import Enum
 
@@ -74,13 +75,17 @@ class Slide(AsyncImage):
             self.height = self.texture_size[1] * value
 
 
-class ImageSet():
+class ImageSet(EventDispatcher):
     uris = []
+    marked = ListProperty([])
 
     current = None
 
     def __len__(self):
         return len(self.uris)
+
+    def index_of(self,value):
+        return self.uris.index(value)
 
     def image(self, idx, fit_mode):
         if 0 <= idx <= len(self.uris):
@@ -104,3 +109,24 @@ class ImageSet():
         filename = self.uris[idx]
         self.uris.remove(filename)
         return idx if idx < len(self.uris) else 0
+
+    def mark_all(self,value=None):
+        if value==None:
+            value=len(self.marked)<len(self.uris)
+        if value:
+            self.marked=self.uris[:]
+        else:
+            self.marked=[]
+
+    def mark_invert(self):
+        self.marked=list(set(self.uris)-set(self.marked))
+
+    def mark(self,items,value=None):
+        for item in items:
+            is_marked=item in self.marked
+            if value==None:
+                value=not is_marked
+            if value and not is_marked:
+                self.marked.append(item)
+            elif not value and is_marked:
+                self.marked.remove(item)

@@ -32,6 +32,7 @@ class Cobiv(App):
     def build_config(self, config):
         build_main_config(config)
         for plugin in self.plugin_manager.getAllPlugins():
+            print plugin.plugin_object
             plugin.plugin_object.build_config(config)
             plugin.plugin_object.read_config()
 

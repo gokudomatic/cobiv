@@ -1,8 +1,10 @@
 #:kivy 1.9.1
+#:import HUD cobiv.hud
 
 <MainContainer>:
     cmd_input: cmd_input
     current_view: current_view
+    hud_layout: hud
 
     size_hint: 1,1
     GridLayout:
@@ -21,3 +23,32 @@
         foreground_color: 1,1,1,1
         on_focus: root.on_cmd_focus(args[0],args[1])
         on_text_validate: root.on_enter_cmd(self.text)
+
+    HUD:
+        id: hud
+        size_hint: None, None
+        size: root.size
+        pos: 0,0 if self.visible else self.height
+        background_color: 1,1,1,0
+
+        AnchorLayout:
+            anchor_x: "center"
+            anchor_y: "center"
+            GridLayout:
+                cols: 1
+                height: self.minimum_height
+                size_hint:0.5, None
+                Label:
+                    text: "Loading...\nImporting file 1 of 3000"
+                    halign: 'center'
+                    size_hint: 1, None
+                    height: self.texture_size[1]
+                ProgressBar:
+                    value:50
+                    size_hint: 1, None
+                    height: sp(10)
+                Button:
+                    text: "quit"
+                    size_hint: 1, None
+                    height: sp(40)
+                    on_press: print("hello")

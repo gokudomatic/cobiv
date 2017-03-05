@@ -29,6 +29,10 @@ class Browser(View, FloatLayout):
     selected_idx = NumericProperty(None)
     old_selected_image = None
     grid = ObjectProperty(None)
+    max_rows=NumericProperty(None)
+    max_scroll_ratio=NumericProperty(20)
+
+    global_scroll_pos=NumericProperty(0)
 
     session = None
 
@@ -43,12 +47,19 @@ class Browser(View, FloatLayout):
         self.set_action("previous", self.select_previous)
         self.set_action("up", self.select_up)
         self.set_action("mark", self.mark_current)
+        self.set_action("mark-all", self.mark_all)
+        self.set_action("mark-invert", self.mark_invert)
+
 
     def get_name(self):
         return "browser"
 
     def build_config(self, config):
         Component.build_config(self, config)
+
+        config.add_section(self.get_name())
+        config.set
+
         section = self.get_config_hotkeys_section()
         config.add_section(section)
         config.set(section, "next", "275")
@@ -56,12 +67,16 @@ class Browser(View, FloatLayout):
         config.set(section, "down", "274")  # down arrow
         config.set(section, "up", "273")  # up arrow
         config.set(section, "mark", "32")  # space
-        config.set(section, "switch-view viewer", "13")  # space
+        config.set(section, "switch-view viewer", "13")  # enter
+        config.set(section, "mark-all", "97")  # a
+        config.set(section, "mark-invert", "105")  # i
 
     def ready(self):
         Component.ready(self)
         self.session = self.get_app().lookup("session", "Entity")
         self.current_imageset = self.session.get_currentset()
+
+        self.current_imageset.bind(marked=self.on_marked_change)
 
     def on_switch(self):
         self.load_set()
@@ -77,6 +92,9 @@ class Browser(View, FloatLayout):
         if self.current_imageset==None:
             return
 
+        max_count=self.max_rows*self.grid.cols
+
+        count=0
         for filename in self.current_imageset.uris:
             name=os.path.basename(filename)
             if len(name)>12:
@@ -86,9 +104,14 @@ class Browser(View, FloatLayout):
                              cell_size=self.cell_size)
             self.grid.add_widget(draggable)
 
+            count+=1
+            if count>=max_count:
+                break
+
         idx=self.session.current_imageset_index
         self.selected_idx = -1
         self.selected_idx = idx
+
 
     def select_next(self):
         self.selected_idx += 1
@@ -137,8 +160,14 @@ class Browser(View, FloatLayout):
         return len(self.current_imageset) - 1 - self.grid.children.index(img)
 
     def mark_current(self,value=None):
-        thumb=self.old_selected_image
-        if value==None:
-            thumb.img.marked=not thumb.img.marked
-        else:
-            thumb.img.marked=value==True
+        self.current_imageset.mark([self.old_selected_image.img.source],value=value)
+
+    def mark_all(self,value=None):
+        self.current_imageset.mark_all(value)
+
+    def mark_invert(self):
+        self.current_imageset.mark_invert()
+
+    def on_marked_change(self,instance,values):
+        for v in self.grid.children:
+            v.img.marked=(v.img.source in values)

@@ -27,6 +27,7 @@
         height: self.texture_size[1]
 
 <Browser>:
+    max_rows: self.height*100/self.max_scroll_ratio/self.cell_size
     grid: grid_layout
     BoxLayout:
         ScrollView:

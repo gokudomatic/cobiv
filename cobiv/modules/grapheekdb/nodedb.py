@@ -5,6 +5,7 @@ from os import listdir
 from os.path import isfile, join
 from PIL import Image
 from kivy.app import App
+from kivy.properties import NumericProperty
 
 from cobiv.common import set_action
 from cobiv.modules.component import Component
@@ -23,8 +24,11 @@ SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 class NodeDb(Entity):
     current_imageset = None
 
+    db_file_size= 1024*1024*128
+
+
     def __init__(self):
-        self.g = LmdbGraph("db")
+        self.g = LmdbGraph("db", map_size=self.db_file_size)
         if self.g.V().count() == 0:
             self.init_database()
 
@@ -34,6 +38,7 @@ class NodeDb(Entity):
         set_action("add-tag", self.add_tag, "viewer")
         set_action("rem-tag", self.remove_tag, "viewer")
         set_action("ls-tag", self.list_tags, "viewer")
+        set_action("updatedb",self.updatedb)
 
     def init_database(self):
         cat = self.create_catalogue("default")
@@ -57,6 +62,10 @@ class NodeDb(Entity):
             repo_node = self.g.add_node(name=name, path=path, kind=NODE_TYPE_REPOSITORY, recursive=recursive)
             self.g.add_edge(catalogue, repo_node, kind="own")
         self.update_dir(repo_node, path, recursive)
+
+    def updatedb(self):
+        for repo in self.g.V(kind=NODE_TYPE_REPOSITORY):
+            self.update_dir(repo,repo.path,repo.recursive)
 
     def update_dir(self, repo, path, recursive):
 

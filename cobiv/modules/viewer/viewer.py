@@ -79,7 +79,7 @@ class Viewer(View, ScrollView):
             return
 
         image = False
-        if self.current_imageset != None and len(self.current_imageset.uris) > 0:
+        if self.current_imageset != None and len(self.current_imageset) > 0:
             if 0 <= value < self.count():
                 filename = self.current_imageset.uris[value]
                 self.current_imageset.current = [filename]

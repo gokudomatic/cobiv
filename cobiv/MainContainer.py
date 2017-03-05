@@ -18,6 +18,7 @@ this = sys.modules[__name__]
 class MainContainer(FloatLayout):
     cmd_input = ObjectProperty(None)
     current_view = ObjectProperty(None)
+    hud_layout = ObjectProperty(None)
 
     cmd_visible = True
 
