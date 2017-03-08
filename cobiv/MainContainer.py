@@ -8,9 +8,7 @@ from kivy.core.window import Window
 from kivy.clock import Clock
 
 from cobiv.common import *
-import cobiv.modules.help.helpview
-import cobiv.modules.viewer.viewer
-import cobiv.modules.grapheekdb.nodedb
+from cobiv.hud import HUD
 
 this = sys.modules[__name__]
 
@@ -19,6 +17,9 @@ class MainContainer(FloatLayout):
     cmd_input = ObjectProperty(None)
     current_view = ObjectProperty(None)
     hud_layout = ObjectProperty(None)
+    modal_hud_layout = ObjectProperty(None)
+    notification_hud_layout = ObjectProperty(None)
+
 
     cmd_visible = True
 
@@ -36,6 +37,7 @@ class MainContainer(FloatLayout):
         set_action("q", self.quit)
         set_action("fullscreen", self.toggle_fullscreen)
         set_action("switch-view", self.switch_view)
+        set_action("hello",self.hello)
 
         config = App.get_running_app().config
 
@@ -154,6 +156,12 @@ class MainContainer(FloatLayout):
 
     def toggle_fullscreen(self, *args):
         Window.toggle_fullscreen()
+
+    def hello(self,*args):
+        notify("Hi "+(args[0] if len(args)>0 else "there")+"!",is_error=True)
+
+def notify(message,is_error=False):
+    App.get_running_app().root.notification_hud_layout.notify(message,error=is_error)
 
 
 def build_main_config(config):

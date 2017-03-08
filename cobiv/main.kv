@@ -1,10 +1,15 @@
 #:kivy 1.9.1
 #:import HUD cobiv.hud
+#:import win kivy.core.window
+
+
 
 <MainContainer>:
     cmd_input: cmd_input
     current_view: current_view
     hud_layout: hud
+    modal_hud_layout: hud_modal
+    notification_hud_layout: hud_notification
 
     size_hint: 1,1
     GridLayout:
@@ -26,29 +31,21 @@
 
     HUD:
         id: hud
-        size_hint: None, None
-        size: root.size
-        pos: 0,0 if self.visible else self.height
-        background_color: 1,1,1,0
+        visible: True
 
+    HUD:
+        id: hud_modal
         AnchorLayout:
             anchor_x: "center"
             anchor_y: "center"
-            GridLayout:
-                cols: 1
-                height: self.minimum_height
-                size_hint:0.5, None
-                Label:
-                    text: "Loading...\nImporting file 1 of 3000"
-                    halign: 'center'
-                    size_hint: 1, None
-                    height: self.texture_size[1]
-                ProgressBar:
-                    value:50
-                    size_hint: 1, None
-                    height: sp(10)
-                Button:
-                    text: "quit"
-                    size_hint: 1, None
-                    height: sp(40)
-                    on_press: print("hello")
+            Widget:
+                canvas:
+                    Color:
+                        rgba: .5,.5,.5,.9
+                    Rectangle:
+                        pos: 0,0
+                        size: root.size
+
+    NotificationHUD:
+        id: hud_notification
+        visible: True

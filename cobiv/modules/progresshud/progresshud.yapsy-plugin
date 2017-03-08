@@ -1,0 +1,8 @@
+[Core]
+Name = progresshud
+Module = ProgressHud
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Progress Bar for HUD

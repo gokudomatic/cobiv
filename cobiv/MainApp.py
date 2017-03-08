@@ -2,6 +2,7 @@ import kivy
 
 from cobiv.modules.component import Component
 from cobiv.modules.entity import Entity
+from cobiv.modules.hud import Hud
 from cobiv.modules.view import View
 
 kivy.require('1.9.1')
@@ -24,7 +25,8 @@ class Cobiv(App):
         self.plugin_manager.setPluginPlaces(["modules"])
         self.plugin_manager.setCategoriesFilter({
             "View":View,
-            "Entity":Entity
+            "Entity":Entity,
+            "Hud":Hud
         })
         self.plugin_manager.locatePlugins()
         self.plugin_manager.loadPlugins()
@@ -32,7 +34,6 @@ class Cobiv(App):
     def build_config(self, config):
         build_main_config(config)
         for plugin in self.plugin_manager.getAllPlugins():
-            print plugin.plugin_object
             plugin.plugin_object.build_config(config)
             plugin.plugin_object.read_config()
 

@@ -1,0 +1,16 @@
+<ProgressHud>:
+    anchor_x: "center"
+    anchor_y: "center"
+    GridLayout:
+        cols: 1
+        height: self.minimum_height
+        size_hint:0.5, None
+        Label:
+            text: "Loading...\nImporting file 1 of 3000"
+            halign: 'center'
+            size_hint: 1, None
+            height: self.texture_size[1]
+        ProgressBar:
+            value: 0
+            size_hint: 1, None
+            height: sp(10)
