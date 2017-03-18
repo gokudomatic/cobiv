@@ -4,7 +4,7 @@ from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.component import Component
 from cobiv.modules.entity import Entity
-from cobiv.modules.imageset.ImageSet import SlideMode
+from cobiv.modules.imageset.ImageSet import SlideMode, Slide
 from cobiv.modules.view import View
 
 Builder.load_file('modules/viewer/viewer.kv')
@@ -13,14 +13,16 @@ Builder.load_file('modules/viewer/viewer.kv')
 class Viewer(View, ScrollView):
     fit_mode = ObjectProperty(SlideMode.FIT_SCREEN)
     slide_index = NumericProperty(-1)
-    current_imageset = None
+    # current_imageset = None
     slide_cache = {}
     session = None
+    cursor = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super(Viewer, self).__init__(**kwargs)
 
         self.bind(slide_index=self.load_slide)
+        self.bind(cursor=self.load_slide)
 
         self.set_action("scroll-up", self.scroll_up)
         self.set_action("scroll-down", self.scroll_down)
@@ -62,7 +64,7 @@ class Viewer(View, ScrollView):
     def ready(self):
         Component.ready(self)
         self.session=self.get_app().lookup("session", "Entity")
-        self.current_imageset = self.session.get_currentset()
+        # self.current_imageset = self.session.get_currentset()
 
         self.slide_index = 0
 
@@ -71,47 +73,58 @@ class Viewer(View, ScrollView):
 
     def load_set(self):
         self.slide_cache.clear()
-        self.slide_index = -1
-        self.slide_index = self.session.current_imageset_index
+        # self.slide_index = -1
+        # self.slide_index = self.session.current_imageset_index
+
+        self.cursor=self.session.cursor
+
 
     def load_slide(self, instance, value):
-        if value == -1:
+        if value is None or self.cursor is None or len(self.cursor)==0:
             return
 
         image = False
-        if self.current_imageset != None and len(self.current_imageset) > 0:
-            if 0 <= value < self.count():
-                filename = self.current_imageset.uris[value]
-                self.current_imageset.current = [filename]
-                if self.slide_cache.has_key(filename):
-                    image = self.slide_cache[filename]
-                else:
-                    image = self.current_imageset.image(value, self.fit_mode)
-                    self.slide_cache[filename] = image
+        filename=self.cursor.filename()
+        if self.slide_cache.has_key(filename):
+            image = self.slide_cache[filename]
+        else:
+            image = Slide(source=filename, load_mode=self.fit_mode)
+            self.slide_cache[filename] = image
 
         self.clear_widgets()
         if image:
             self.add_widget(image)
 
-        self.session.current_imageset_index=value
-
     def load_next(self):
-        self.slide_index = self.current_imageset.next(self.slide_index)
+        # self.slide_index = self.current_imageset.next(self.slide_index)
+        c=self.cursor.get_next()
+        if c==self.cursor:
+            c=self.cursor.get_first()
+        self.cursor=c
 
     def load_previous(self):
-        self.slide_index = self.current_imageset.previous(self.slide_index)
+        # self.slide_index = self.current_imageset.previous(self.slide_index)
+        c=self.cursor.get_previous()
+        if c==self.cursor:
+            c=self.cursor.get_last()
+        self.cursor=c
+
 
     def load_first(self):
-        self.slide_index = 0
+        # self.slide_index = 0
+        self.cursor=self.cursor.get_first()
 
     def count(self):
-        return len(self.current_imageset.uris)
+        # return len(self.current_imageset.uris)
+        return len(self.cursor)
 
     def jump_to_slide(self, value):
-        self.slide_index = int(value) % self.count()
+        # self.slide_index = int(value) % self.count()
+        self.cursor = self.cursor.get_index(value)
 
     def load_last(self):
-        self.slide_index = len(self.current_imageset.uris) - 1
+        # self.slide_index = len(self.current_imageset.uris) - 1
+        self.cursor=self.cursor.get_last()
 
     def get_name(instance=None):
         return "viewer"
@@ -170,7 +183,8 @@ class Viewer(View, ScrollView):
         self.update_from_scroll()
 
     def remove_slide(self):
-        old_idx = self.slide_index
-        self.slide_index = self.current_imageset.remove(self.slide_index)
-        if self.slide_index > 0 or old_idx == 0:
-            self.load_slide(self, self.slide_index)
+        pass
+        # old_idx = self.slide_index
+        # self.slide_index = self.current_imageset.remove(self.slide_index)
+        # if self.slide_index > 0 or old_idx == 0:
+        #     self.load_slide(self, self.slide_index)

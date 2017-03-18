@@ -1,0 +1,8 @@
+[Core]
+Name = db-disabled
+Module = NodeDb
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = A NoSQL nodegraph database to manage images and tags in cobiv

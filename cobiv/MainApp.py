@@ -36,6 +36,7 @@ class Cobiv(App):
         for plugin in self.plugin_manager.getAllPlugins():
             plugin.plugin_object.build_config(config)
             plugin.plugin_object.read_config()
+            print plugin.plugin_object
 
     def build(self):
         self.root=MainContainer()
@@ -44,11 +45,16 @@ class Cobiv(App):
             self.root.available_views[plugin.plugin_object.get_name()]=plugin.plugin_object
 
         for plugin in self.plugin_manager.getAllPlugins():
+
             plugin.plugin_object.ready()
 
-        self.root.switch_view("browser")
+        self.root.switch_view("viewer")
 
         return self.root
+
+    def on_stop(self):
+        for plugin in self.plugin_manager.getAllPlugins():
+            plugin.plugin_object.on_application_quit()
 
     def lookup(self,name,category):
         return self.plugin_manager.getPluginByName(name,category=category).plugin_object

@@ -5,7 +5,7 @@ from kivy.app import App
 from kivy.properties import ObjectProperty
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
-from kivy.clock import Clock
+from kivy.clock import Clock, mainthread
 
 from cobiv.common import *
 from cobiv.hud import HUD
@@ -158,10 +158,34 @@ class MainContainer(FloatLayout):
         Window.toggle_fullscreen()
 
     def hello(self,*args):
-        notify("Hi "+(args[0] if len(args)>0 else "there")+"!",is_error=True)
+        self.notify("Hi "+(args[0] if len(args)>0 else "there")+"!",is_error=True)
 
-def notify(message,is_error=False):
-    App.get_running_app().root.notification_hud_layout.notify(message,error=is_error)
+    @mainthread
+    def show_progressbar(self):
+        self.modal_hud_layout.visible=True
+        progressbar=App.get_running_app().lookup('progresshud','Hud')
+        self.modal_hud_layout.add_widget(progressbar)
+
+    @mainthread
+    def close_progressbar(self):
+        self.modal_hud_layout.visible=False
+        progressbar=App.get_running_app().lookup('progresshud','Hud')
+        self.modal_hud_layout.remove_widget(progressbar)
+
+    @mainthread
+    def set_progressbar_value(self,value,caption=None):
+        progressbar=App.get_running_app().lookup('progresshud','Hud')
+        progressbar.value=value
+        if caption!=None:
+            progressbar.caption=caption
+
+    @mainthread
+    def set_progressbar_caption(self,caption):
+        App.get_running_app().lookup('progresshud', 'Hud').caption = caption
+
+    @mainthread
+    def notify(self,message,is_error=False):
+        self.notification_hud_layout.notify(message,error=is_error)
 
 
 def build_main_config(config):

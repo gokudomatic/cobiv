@@ -1,6 +1,6 @@
 [Core]
 Name = db
-Module = NodeDb
+Module = SqliteDb
 
 [Documentation]
 Author = Edwin Cox
