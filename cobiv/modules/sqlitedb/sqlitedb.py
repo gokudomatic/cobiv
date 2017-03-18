@@ -24,6 +24,7 @@ class SqliteCursor(Cursor):
     set_head_key = None
     con = None
     file_key = None
+    tablename=None
 
     def __init__(self, row, backend=None, current=True):
         self.set_detail_id = row['rowid']
@@ -31,6 +32,7 @@ class SqliteCursor(Cursor):
         self.set_head_key = row['set_head_key']
         self.file_key = row['file_key']
         self.current_set = current
+        self.tablename= 'current_set' if self.current_set else 'set_detail'
 
         self.con = backend
 
@@ -51,19 +53,17 @@ class SqliteCursor(Cursor):
         return self.get(0)
 
     def get_last(self):
-        last_pos_row = self.con.execute('max(position) from ? where set_head_key=?',
-                                        'current_set' if self.current_set else 'set_detail',
+        last_pos_row = self.con.execute('max(position) from %s where set_head_key=?' % self.tablename,
                                         self.set_head_key).fetchone()
         return self if last_pos_row is None else self.get(last_pos_row[0])
 
     def get(self, idx):
-        row = self.con.execute('select * from ? where set_head_key=? and position=?',
-                               'current_set' if self.current_set else 'set_detail', self.set_head_key, idx).fetchone()
+        row = self.con.execute('select * from %s where set_head_key=? and position=?' % self.tablename,
+                                self.set_head_key, idx).fetchone()
         return SqliteCursor(row, self.con, self.current_set) if row is not None else self
 
     def __len__(self):
-        row = self.con.execute('count(1) from ? where set_head_key=?',
-                               'current_set' if self.current_set else 'set_detail',
+        row = self.con.execute('count(1) from %s where set_head_key=?' % self.tablename,
                                self.set_head_key).fetchone()
 
         return 0 if row is None else row[0]
@@ -75,8 +75,8 @@ class SqliteDb(Entity):
     session = None
 
     def __init__(self):
-        self.conn = sqlite3.connect(":memory:", check_same_thread=False)
-        # self.conn = sqlite3.connect("cobiv.db",check_same_thread = False)
+        # self.conn = sqlite3.connect(":memory:", check_same_thread=False)
+        self.conn = sqlite3.connect("cobiv.db", check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
 
         # add actions
@@ -151,18 +151,20 @@ class SqliteDb(Entity):
             repo_id = row[0]
             to_add, to_remove = self._update_get_diff(repo_id, row[1], row[2])
             differences.append((repo_id, to_add, to_remove))
-            thread_max_files += len(to_add) + len(to_remove) + 1 if len(to_add)>0 else 0 + 1 if len(to_remove)>0 else 0
+            thread_max_files += len(to_add) + len(to_remove) + 1 if len(to_add) > 0 else 0 + 1 if len(
+                to_remove) > 0 else 0
             self.tick_progress()
 
-        self.reset_progress("Updating files...")
-        self.set_progress_max_count(thread_max_files)
+        if thread_max_files > 0:
+            self.reset_progress("Updating files...")
+            self.set_progress_max_count(thread_max_files)
 
-        for diff in differences:
-            self._update_dir(diff[0], diff[1], diff[2])
-            if self.cancel_operation:
-                break
+            for diff in differences:
+                self._update_dir(diff[0], diff[1], diff[2])
+                if self.cancel_operation:
+                    break
 
-        self.regenerate_set('*', "select rowid from file", caption="Creating default set...")
+            self.regenerate_set('*', "select rowid from file", caption="Creating default set...")
 
         self.stop_progress()
 
@@ -185,6 +187,12 @@ class SqliteDb(Entity):
         with self.conn:
             c = self.conn.cursor()
 
+            # remove old ones
+            if len(to_rem) > 0:
+                query_to_rem=[(n,) for n in to_rem]
+                self.conn.executemany('delete from file where name=?', query_to_rem)
+                self.tick_progress()
+
             query_to_add = []
             # add new ones
             for f in to_add:
@@ -196,19 +204,15 @@ class SqliteDb(Entity):
             c.executemany('insert into file(repo_key, name, filename, path, ext) values(?,?,?,?,?)', query_to_add)
             self.tick_progress()
             tags_to_add = []
-            for row in c.execute('select rowid, name from file where repo_key=?', (repo_id,)).fetchall():
-                lines = self.read_tags(row['rowid'], row['name'])
+            for f in to_add:
+                id=c.execute('select rowid from file where repo_key=? and name=? limit 1', (repo_id,f)).fetchone()[0]
+                lines = self.read_tags(id, f)
                 if len(lines) > 0:
                     tags_to_add.extend(lines)
                 self.tick_progress()
 
             if len(tags_to_add) > 0:
                 c.executemany('insert into tag values (?,?,?)', tags_to_add)
-                self.tick_progress()
-
-            # remove old ones
-            if len(to_rem) > 0:
-                c.execute('delete from file where name in (?)', (', '.join(to_rem),))
                 self.tick_progress()
 
     def read_tags(self, node_id, name):
@@ -239,11 +243,11 @@ class SqliteDb(Entity):
             self.set_progress_max_count(len(resultset) + 1)
             self.reset_progress(caption)
             lines = []
-            thread_count=0
+            thread_count = 0
             for row in resultset:
                 lines.append((head_key, thread_count, row['rowid']))
                 self.tick_progress()
-                thread_count+=1
+                thread_count += 1
             c.executemany('insert into set_detail (set_head_key, position, file_key) values (?,?,?)',
                           lines)
             self.tick_progress()
@@ -277,7 +281,7 @@ class SqliteDb(Entity):
             self.regenerate_set('current', self.conn.execute(query).fetchall())
 
             row = self.conn.execute('select * from current_set limit 1').fetchone()
-            if row[0] == None:
+            if row is None:
                 self.session.cursor = Cursor(None)
             else:
                 self.session.cursor = SqliteCursor(row, self.conn)
