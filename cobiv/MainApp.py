@@ -4,6 +4,7 @@ from cobiv.modules.component import Component
 from cobiv.modules.entity import Entity
 from cobiv.modules.hud import Hud
 from cobiv.modules.view import View
+from cobiv.modules.viewer.viewer import Viewer
 
 kivy.require('1.9.1')
 from kivy.app import App
@@ -49,6 +50,8 @@ class Cobiv(App):
             plugin.plugin_object.ready()
 
         self.root.switch_view("viewer")
+
+        # v=Viewer()
 
         return self.root
 

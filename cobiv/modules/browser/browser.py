@@ -74,7 +74,7 @@ class Browser(View, FloatLayout):
     def ready(self):
         Component.ready(self)
         self.session = self.get_app().lookup("session", "Entity")
-        self.current_imageset = self.session.get_currentset()
+        # self.current_imageset = self.session.get_currentset()
 
         self.current_imageset.bind(marked=self.on_marked_change)
 

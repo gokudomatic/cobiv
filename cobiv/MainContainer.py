@@ -38,6 +38,7 @@ class MainContainer(FloatLayout):
         set_action("fullscreen", self.toggle_fullscreen)
         set_action("switch-view", self.switch_view)
         set_action("hello",self.hello)
+        set_action("memory",self.memory)
 
         config = App.get_running_app().config
 
@@ -47,6 +48,12 @@ class MainContainer(FloatLayout):
                 set_hotkey(long(b[0]), binding, int(b[1]))
             else:
                 set_hotkey(long(value), binding)
+
+    def memory(self):
+        import os
+        import psutil
+        process = psutil.Process(os.getpid())
+        print(str(process.memory_info().rss / float(2 ** 20))+" MB")
 
     def switch_view(self, view_name):
         #print "switch to "+view_name
