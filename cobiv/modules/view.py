@@ -10,3 +10,6 @@ class View(Component):
 
     def on_switch(self):
         pass
+
+    def on_switch_lose_focus(self):
+        pass

@@ -1,6 +1,6 @@
 [Core]
 Name = browser
-Module = Browserfd
+Module = Browser
 
 [Documentation]
 Author = Edwin Cox

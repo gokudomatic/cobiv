@@ -8,6 +8,8 @@ class Item(Magnet):
     img = ObjectProperty(None, allownone=True)
     container = ObjectProperty(None)
     cell_size = NumericProperty(None)
+    id = NumericProperty(None)
+    position = NumericProperty(None)
 
     def __init__(self, **kwargs):
         super(Item, self).__init__(**kwargs)

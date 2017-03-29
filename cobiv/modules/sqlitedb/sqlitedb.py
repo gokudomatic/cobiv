@@ -2,6 +2,8 @@ import sys
 import os
 from os import listdir
 from os.path import isfile, join
+
+import io
 from PIL import Image
 from kivy.app import App
 from kivy.factory import Factory
@@ -12,6 +14,8 @@ from cobiv.modules.entity import Entity
 
 import threading
 import sqlite3
+
+from cobiv.modules.imageset.ImageSet import create_thumbnail_data
 from cobiv.modules.session.cursor import Cursor, CursorInterface
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
@@ -19,7 +23,6 @@ CURRENT_SET_NAME = '_current'
 
 
 class SqliteCursor(CursorInterface):
-    pos = None
     set_head_key = None
     con = None
     file_key = None
@@ -35,18 +38,15 @@ class SqliteCursor(CursorInterface):
             self.pos = None
             self.set_head_key = None
             self.file_key = None
-            self.filename = None
-            self.id=None
+            self.filename = ''
+            self.id = None
         else:
-            self.id=row['rowid']
             self.pos = row['position']
             self.set_head_key = row['set_head_key']
             self.file_key = row['file_key']
-            row = self.con.execute('select name from file where rowid=?', (self.file_key,)).fetchone()
-            self.filename = row['name'] if row is not None else None
-
-    def get_pos(self):
-        return self.pos
+            row1 = self.con.execute('select name from file where rowid=?', (self.file_key,)).fetchone()
+            self.filename = row1['name'] if row is not None else None
+            self.id = row['rowid']
 
     def go_next(self):
         return self.go(self.pos + 1)
@@ -115,11 +115,11 @@ class SqliteCursor(CursorInterface):
         if self.pos is None:
             return
 
-        new_pos=self.pos
+        new_pos = self.pos
         next = self.get(self.pos + 1)
         if next is None:
             next = self.get(self.pos - 1)
-            new_pos=self.pos-1
+            new_pos = self.pos - 1
         with self.con:
             self.con.execute('delete from current_set where file_key=?', (self.file_key,))
             self.con.execute('delete from marked where file_key=?', (self.file_key,))
@@ -128,9 +128,26 @@ class SqliteCursor(CursorInterface):
 
         self.init_row(next)
 
-        self.pos=new_pos
+        self.pos = new_pos
 
         return True
+
+    def get_cursor_by_pos(self, pos):
+        return SqliteCursor(self.get(pos), self.con)
+
+    def get_thumbnail(self):
+        with self.con:
+            c = self.con.execute('select data from thumbs where file_key=?', (self.file_key,))
+            row = c.fetchone()
+            if row is None:
+                data = create_thumbnail_data(self.filename, 120)
+                datastr = buffer(data)
+                data = io.BytesIO(datastr)
+                c.execute('insert into thumbs (file_key,data) values(?,?)', (self.file_key, datastr))
+            else:
+                datastr = row['data']
+                data = io.BytesIO(datastr)
+        return data
 
 
 class SqliteDb(Entity):
@@ -138,7 +155,6 @@ class SqliteDb(Entity):
     session = None
 
     def __init__(self):
-        # self.conn = sqlite3.connect(":memory:", check_same_thread=False)
         self.conn = sqlite3.connect("cobiv.db", check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
 
@@ -168,7 +184,6 @@ class SqliteDb(Entity):
         if must_initialize:
             self.create_database()
         with self.conn:
-            self.conn.execute('create temporary table thumbs (file_key int primary key, data blob)')
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
 
@@ -180,6 +195,7 @@ class SqliteDb(Entity):
             self.conn.execute('create table tag (file_key int, kind text, value text)')
             self.conn.execute('create table set_head ( name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
+            self.conn.execute('create table thumbs (file_key int primary key, data blob)')
 
             # indexes
             self.conn.execute('create unique index file_idx on file(name)')
@@ -419,7 +435,7 @@ class SqliteDb(Entity):
     def invert_marked(self):
         with self.conn:
             self.conn.execute(
-                'create temporary table marked1 as select cs.file_key from current_set cs left join marked m on m.file_key=cs.file_key'+
+                'create temporary table marked1 as select cs.file_key from current_set cs left join marked m on m.file_key=cs.file_key' +
                 ' where m.file_key is null')
             self.conn.execute('delete from marked')
             self.conn.execute('insert into marked select file_key from marked1')

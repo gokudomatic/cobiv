@@ -6,6 +6,7 @@ from kivy.properties import StringProperty, ObjectProperty, NumericProperty
 class CursorInterface(EventDispatcher):
     filename = StringProperty(None)
     id = NumericProperty(None)
+    pos = NumericProperty(None)
 
     def go_next(self):
         return False
@@ -21,9 +22,6 @@ class CursorInterface(EventDispatcher):
 
     def get_file_key(self):
         return None
-
-    def get_pos(self):
-        return 0
 
     def get(self, idx):
         return self
@@ -46,11 +44,17 @@ class CursorInterface(EventDispatcher):
     def __len__(self):
         return 0
 
+    def get_cursor_by_pos(self,pos):
+        return None
+
+    def get_thumbnail(self):
+        return None
 
 class Cursor(EventDispatcher):
     filename = StringProperty(None)
     implementation = None
     id = NumericProperty(None)
+    pos = NumericProperty(None)
 
     def __init__(self, **kwargs):
         super(Cursor, self).__init__(**kwargs)
@@ -60,19 +64,24 @@ class Cursor(EventDispatcher):
 
     def set_implementation(self, instance):
         if self.implementation is not None:
-            self.implementation.unbind(filename=self.on_filename_change, id=self.on_id_change)
+            self.implementation.unbind(filename=self.on_filename_change, id=self.on_id_change, pos=self.on_pos_change)
         self.implementation = instance
         if instance is not None:
             self.implementation.bind(filename=self.on_filename_change)
             self.implementation.bind(id=self.on_id_change)
-            self.filename = self.implementation.filename
+            self.implementation.bind(pos=self.on_pos_change)
             self.id = self.implementation.id
+            self.pos=self.implementation.pos
+            self.filename = self.implementation.filename
         else:
             self.filename = None
             self.id = None
 
     def on_id_change(self, instance, value):
         self.id = value
+
+    def on_pos_change(self, instance, value):
+        self.pos = value
 
     def on_filename_change(self, instance, value):
         self.filename = value
@@ -91,9 +100,6 @@ class Cursor(EventDispatcher):
 
     def get_file_key(self):
         return self.implementation.get_file_key()
-
-    def get_pos(self):
-        return self.implementation.get_pos()
 
     def get(self, idx):
         return self.implementation.get(idx)
@@ -116,3 +122,9 @@ class Cursor(EventDispatcher):
 
     def __len__(self):
         return self.implementation.__len__()
+
+    def get_cursor_by_pos(self,pos):
+        return self.implementation.get_cursor_by_pos(pos)
+
+    def get_thumbnail(self):
+        return self.implementation.get_thumbnail()

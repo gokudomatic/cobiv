@@ -66,11 +66,14 @@ class Viewer(View, ScrollView):
         Component.ready(self)
         self.session=self.get_app().lookup("session", "Entity")
         self.cursor = self.session.cursor
-        self.cursor.bind(filename=self.on_cursor_change)
 
 
     def on_switch(self):
+        self.cursor.bind(filename=self.on_cursor_change)
         self.load_set()
+
+    def on_switch_lose_focus(self):
+        self.cursor.unbind(filename=self.on_cursor_change)
 
     def load_set(self):
         self.load_slide()

@@ -49,6 +49,10 @@ class MainContainer(FloatLayout):
             else:
                 set_hotkey(long(value), binding)
 
+    def ready(self):
+        # self.execute_cmd("search")
+        pass
+
     def memory(self):
         import os
         import psutil
@@ -57,11 +61,17 @@ class MainContainer(FloatLayout):
 
     def switch_view(self, view_name):
         #print "switch to "+view_name
+        if len(self.current_view.children) > 0:
+            return self.current_view.children[0].on_switch_lose_focus()
+
         self.current_view.clear_widgets()
         if view_name in self.available_views.keys():
             view = self.available_views[view_name]
             self.current_view.add_widget(view)
             view.on_switch()
+
+    def get_view(self):
+        return self.current_view.children[0] if len(self.current_view.children) > 0 else None
 
     def get_view_name(self):
         if len(self.current_view.children) > 0:

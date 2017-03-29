@@ -16,11 +16,6 @@
             rgba: 1,0,0,1 if root.selected else 0
         Line:
             rectangle: self.pos[0]+2,self.pos[1]+2,self.size[0]-4,self.size[1]-4
-    AsyncImage:
-        source: root.source
-        mipmap: True
-        allow_stretch: True
-        keep_ratio: True
     Label:
         text:root.caption
         size_hint: 1, None
@@ -28,9 +23,10 @@
 
 <Browser>:
     max_rows: self.height*100/self.max_scroll_ratio/self.cell_size
+    page_rows: self.height/self.cell_size
     grid: grid_layout
     BoxLayout:
-        ScrollView:
+        ThumbScrollView:
             id: scroll_view
             GridLayout:
                 id: grid_layout
