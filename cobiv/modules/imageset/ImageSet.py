@@ -1,7 +1,9 @@
 from __future__ import division
 
+import os
 from io import BytesIO
 
+import sys
 from kivy.core.window import Window
 from kivy.event import EventDispatcher
 from kivy.lang import Builder
@@ -138,14 +140,21 @@ class ImageSet(EventDispatcher):
                 self.marked.remove(item)
 
 
-def create_thumbnail_data(filename, size):
-    print filename
-    base = size
+def create_thumbnail_data(filename, size,destination):
+    # print "creating thumbnail for "+filename
     img = Image.open(filename)
     try:
         img.load()
+    except SyntaxError as e:
+        path=os.path.dirname(sys.argv[0])
+        destination='C:/Users/edwin/Apps/python/workspace/cobiv/cobiv\\resources\\icons\\image_corrupt.png'
+        # destination=os.path.join(path,"resources","icons","image_corrupt.png")
+        print(destination)
+        return  destination
+        print("error, not possible!")
     except:
         pass
+
     if img.size[1] > img.size[0]:
         baseheight = size
         hpercent = (baseheight / float(img.size[1]))
@@ -156,9 +165,8 @@ def create_thumbnail_data(filename, size):
         wpercent = (basewidth / float(img.size[0]))
         hsize = int((float(img.size[1]) * float(wpercent)))
         wsize = size
-    print str(wsize)+" , "+str(hsize)
     img = img.resize((wsize, hsize), PIL.Image.ANTIALIAS)
 
     image_byte_array = BytesIO()
-    img.convert('RGB').save(image_byte_array, format='PNG',optimize=True)
-    return image_byte_array.getvalue()
+    img.convert('RGB').save(destination, format='PNG',optimize=True)
+    return destination

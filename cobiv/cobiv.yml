@@ -1,0 +1,31 @@
+? ''
+: database: {path: 'C:\Users\edwin\.cobiv\cobiv.db'}
+browser:
+  hotkeys:
+  - {binding: up, key: '273'}
+  - {binding: down, key: '274'}
+  - {binding: next, key: '275'}
+  - {binding: previous, key: '276'}
+  - {binding: mark, key: '32'}
+  - {binding: switch-view viewer, key: '13'}
+  - {binding: mark-all, key: '97'}
+  - {binding: mark-invert, key: '105'}
+main:
+  hotkeys:
+  - {binding: q, key: '113'}
+  - {binding: fullscreen, key: '292'}
+thumbnails: {path: 'C:\Users\edwin\.cobiv\thumbnails'}
+viewer:
+  hotkeys:
+  - {binding: up 20, key: '273'}
+  - {binding: down 20, key: '274'}
+  - {binding: next, key: '275'}
+  - {binding: previous, key: '276'}
+  - {binding: first, key: '103'}
+  - {binding: last, key: '103', modifiers: '1'}
+  - {binding: scroll-up, key: '105'}
+  - {binding: scroll-down, key: '107'}
+  - {binding: scroll-left, key: '106'}
+  - {binding: scroll-right, key: '108'}
+  - {binding: zoom-in, key: '48'}
+  - {binding: zoom-out, key: '57'}

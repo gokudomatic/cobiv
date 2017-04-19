@@ -9,7 +9,6 @@ from kivy.app import App
 from kivy.factory import Factory
 
 from cobiv.common import set_action
-from cobiv.modules.component import Component
 from cobiv.modules.entity import Entity
 
 import threading
@@ -25,28 +24,26 @@ CURRENT_SET_NAME = '_current'
 class SqliteCursor(CursorInterface):
     set_head_key = None
     con = None
-    file_key = None
     current_set = True
 
     def __init__(self, row, backend=None, current=True):
         self.con = backend
         self.current_set = current
         self.init_row(row)
+        self.thumbs_path=App.get_running_app().get_config_value('thumbnails.path')
 
     def init_row(self, row):
         if row is None:
             self.pos = None
             self.set_head_key = None
-            self.file_key = None
             self.filename = ''
-            self.id = None
+            self.file_id = None
         else:
             self.pos = row['position']
             self.set_head_key = row['set_head_key']
-            self.file_key = row['file_key']
-            row1 = self.con.execute('select name from file where rowid=?', (self.file_key,)).fetchone()
+            row1 = self.con.execute('select name from file where rowid=?', (row['file_key'],)).fetchone()
             self.filename = row1['name'] if row is not None else None
-            self.id = row['rowid']
+            self.file_id = row['file_key']
 
     def go_next(self):
         return self.go(self.pos + 1)
@@ -56,9 +53,6 @@ class SqliteCursor(CursorInterface):
 
     def get_tags(self):
         return []
-
-    def get_file_key(self):
-        return self.file_key
 
     def go_first(self):
         return self.go(0)
@@ -80,6 +74,22 @@ class SqliteCursor(CursorInterface):
                                (self.set_head_key, idx)).fetchone()
         return row
 
+    def get_next_ids(self,amount):
+        if self.pos is None:
+            return []
+
+        rows = self.con.execute('select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position>? and c.position<=? order by position',
+                               (self.set_head_key,self.pos,self.pos+amount)).fetchall()
+        return rows
+
+    def get_previous_ids(self,amount):
+        if self.pos is None:
+            return []
+
+        rows = self.con.execute('select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position<? and c.position>=? order by position desc',
+                               (self.set_head_key,self.pos,self.pos-amount)).fetchall()
+        return rows
+
     def go(self, idx):
         if self.pos is None:
             return
@@ -94,14 +104,14 @@ class SqliteCursor(CursorInterface):
             return
         with self.con:
             if self.get_mark():
-                self.con.execute('delete from marked where file_key=?', (self.file_key,))
+                self.con.execute('delete from marked where file_key=?', (self.file_id,))
             else:
-                self.con.execute('insert into marked values (?)', (self.file_key,))
+                self.con.execute('insert into marked values (?)', (self.file_id,))
 
     def get_mark(self):
         if self.pos is None:
             return
-        return self.con.execute('select count(*) from marked where file_key=?', (self.file_key,)).fetchone()[0] > 0
+        return self.con.execute('select count(*) from marked where file_key=?', (self.file_id,)).fetchone()[0] > 0
 
     def __len__(self):
         if self.pos is None:
@@ -121,8 +131,8 @@ class SqliteCursor(CursorInterface):
             next = self.get(self.pos - 1)
             new_pos = self.pos - 1
         with self.con:
-            self.con.execute('delete from current_set where file_key=?', (self.file_key,))
-            self.con.execute('delete from marked where file_key=?', (self.file_key,))
+            self.con.execute('delete from current_set where file_key=?', (self.file_id,))
+            self.con.execute('delete from marked where file_key=?', (self.file_id,))
             self.con.execute('update current_set set position=position-1 where set_head_key=? and position>?',
                              (self.set_head_key, self.pos))
 
@@ -135,27 +145,25 @@ class SqliteCursor(CursorInterface):
     def get_cursor_by_pos(self, pos):
         return SqliteCursor(self.get(pos), self.con)
 
+    def get_thumbnail_filename(self,file_id):
+        return os.path.join(self.thumbs_path,str(file_id)+'.png')
+
     def get_thumbnail(self):
-        with self.con:
-            c = self.con.execute('select data from thumbs where file_key=?', (self.file_key,))
-            row = c.fetchone()
-            if row is None:
-                data = create_thumbnail_data(self.filename, 120)
-                datastr = buffer(data)
-                data = io.BytesIO(datastr)
-                c.execute('insert into thumbs (file_key,data) values(?,?)', (self.file_key, datastr))
-            else:
-                datastr = row['data']
-                data = io.BytesIO(datastr)
-        return data
+        filename=self.get_thumbnail_filename(self.file_id)
+        if not os.path.exists(filename):
+            create_thumbnail_data(self.filename, 120, filename)
+        return filename
 
 
 class SqliteDb(Entity):
     cancel_operation = False
     session = None
 
-    def __init__(self):
-        self.conn = sqlite3.connect("cobiv.db", check_same_thread=False)
+    def ready(self):
+        if not os.path.exists(self.get_app().get_user_path('thumbnails')):
+            os.makedirs(self.get_app().get_user_path('thumbnails'))
+
+        self.conn = sqlite3.connect(self.get_global_config_value('database.path',self.get_app().get_user_path('cobiv.db')), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
 
         self.conn.execute('PRAGMA temp_store = MEMORY')
@@ -171,8 +179,7 @@ class SqliteDb(Entity):
         set_action("mark-all", self.mark_all)
         set_action("invert-mark", self.invert_marked)
 
-    def ready(self):
-        Component.ready(self)
+
         self.session = self.get_app().lookup("session", "Entity")
 
         must_initialize = True
@@ -344,9 +351,9 @@ class SqliteDb(Entity):
                 lines.append((head_key, thread_count, row['rowid']))
                 self.tick_progress()
                 thread_count += 1
-            c.executemany(
-                'insert into %s (set_head_key, position, file_key) values (?,?,?)' % 'current_set' if is_current else 'set_detail',
-                lines)
+
+            query='insert into %s (set_head_key, position, file_key) values (?,?,?)' % ('current_set' if is_current else 'set_detail')
+            c.executemany(query, lines)
             self.tick_progress()
 
     def copy_set_to_current(self, set_name):
@@ -385,7 +392,7 @@ class SqliteDb(Entity):
     def add_tag(self, *args):
         if len(args) == 0:
             return
-        filekey = self.session.cursor.get_file_key()
+        filekey = self.session.cursor.file_id
         if filekey is None:
             return
 
@@ -393,12 +400,12 @@ class SqliteDb(Entity):
             for tag in args:
                 c = self.conn.execute('select 1 from tag where value=? and file_key=? limit 1', (tag, filekey))
                 if c.fetchone() is None:
-                    c.execute('insert into tag values (?,?,?)', (self.session.cursor.get_file_key(), 'tag', tag))
+                    c.execute('insert into tag values (?,?,?)', (self.session.cursor.file_id, 'tag', tag))
 
     def remove_tag(self, *args):
         if len(args) == 0:
             return
-        filekey = self.session.cursor.get_file_key()
+        filekey = self.session.cursor.file_id
         if filekey is None:
             return
 
@@ -407,7 +414,7 @@ class SqliteDb(Entity):
                                                                                     ', '.join(args)))
 
     def list_tags(self):
-        filekey = self.session.cursor.get_file_key()
+        filekey = self.session.cursor.file_id
         if filekey is None:
             return
 
@@ -441,6 +448,13 @@ class SqliteDb(Entity):
             self.conn.execute('insert into marked select file_key from marked1')
             self.conn.execute('drop table marked1')
             self.get_app().root.execute_cmd("refresh-marked")
+
+    def build_yaml_config(self, config):
+        config[self.get_name()]={
+            'database':{
+                'path':self.get_app().get_user_path('cobiv.db')
+            }
+        }
 
 
 Factory.register('Cursor', module=SqliteCursor)

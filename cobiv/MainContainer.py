@@ -1,3 +1,4 @@
+import os
 import shlex
 
 import sys
@@ -9,6 +10,7 @@ from kivy.clock import Clock, mainthread
 
 from cobiv.common import *
 from cobiv.hud import HUD
+from os.path import expanduser
 
 this = sys.modules[__name__]
 
@@ -20,10 +22,9 @@ class MainContainer(FloatLayout):
     modal_hud_layout = ObjectProperty(None)
     notification_hud_layout = ObjectProperty(None)
 
-
     cmd_visible = True
 
-    is_enter_command=False
+    is_enter_command = False
 
     available_views = {}
 
@@ -37,17 +38,8 @@ class MainContainer(FloatLayout):
         set_action("q", self.quit)
         set_action("fullscreen", self.toggle_fullscreen)
         set_action("switch-view", self.switch_view)
-        set_action("hello",self.hello)
-        set_action("memory",self.memory)
-
-        config = App.get_running_app().config
-
-        for binding, value in config.items("main_hotkeys"):
-            if "/" in value:
-                b = value.split("/")
-                set_hotkey(long(b[0]), binding, int(b[1]))
-            else:
-                set_hotkey(long(value), binding)
+        set_action("hello", self.hello)
+        set_action("memory", self.memory)
 
     def ready(self):
         # self.execute_cmd("search")
@@ -57,12 +49,12 @@ class MainContainer(FloatLayout):
         import os
         import psutil
         process = psutil.Process(os.getpid())
-        print(str(process.memory_info().rss / float(2 ** 20))+" MB")
+        print(str(process.memory_info().rss / float(2 ** 20)) + " MB")
 
     def switch_view(self, view_name):
-        #print "switch to "+view_name
+        # print "switch to "+view_name
         if len(self.current_view.children) > 0:
-            return self.current_view.children[0].on_switch_lose_focus()
+            self.current_view.children[0].on_switch_lose_focus()
 
         self.current_view.clear_widgets()
         if view_name in self.available_views.keys():
@@ -95,7 +87,7 @@ class MainContainer(FloatLayout):
             elif keycode[0] == 267:
                 self._set_cmd_visible(True, "/")
             elif cmd_hotkeys.has_key(keycode[0]) and not self.is_enter_command:
-                if keycode[0]==13L:
+                if keycode[0] == 13L:
                     print "enter pressed"
                 view_name = self.get_view_name()
                 command = get_hotkey_command(keycode[0], modcode, view_name)
@@ -109,7 +101,7 @@ class MainContainer(FloatLayout):
                 print "code : " + str(keycode) + " " + str(modifiers)
                 pass
 
-            self.is_enter_command=False
+            self.is_enter_command = False
 
         return True
 
@@ -151,7 +143,7 @@ class MainContainer(FloatLayout):
             self._set_cmd_visible(False)
 
     def on_enter_cmd(self, text):
-        self.is_enter_command=True
+        self.is_enter_command = True
         if text[0] == ":":
             self.execute_cmd(text[1:])
 
@@ -169,43 +161,58 @@ class MainContainer(FloatLayout):
                 func(*args)
 
     def quit(self, *args):
+        if len(self.current_view.children) > 0:
+            self.current_view.children[0].on_switch_lose_focus()
         App.get_running_app().stop()
 
     def toggle_fullscreen(self, *args):
         Window.toggle_fullscreen()
 
-    def hello(self,*args):
-        self.notify("Hi "+(args[0] if len(args)>0 else "there")+"!",is_error=True)
+    def hello(self, *args):
+        self.notify("Hi " + (args[0] if len(args) > 0 else "there") + "!", is_error=True)
 
     @mainthread
     def show_progressbar(self):
-        self.modal_hud_layout.visible=True
-        progressbar=App.get_running_app().lookup('progresshud','Hud')
-        self.modal_hud_layout.add_widget(progressbar)
+        self.modal_hud_layout.visible = True
+        progressbar = App.get_running_app().lookup('progresshud', 'Hud')
+        if not progressbar in self.modal_hud_layout.children:
+            self.modal_hud_layout.add_widget(progressbar)
 
     @mainthread
     def close_progressbar(self):
-        self.modal_hud_layout.visible=False
-        progressbar=App.get_running_app().lookup('progresshud','Hud')
+        self.modal_hud_layout.visible = False
+        progressbar = App.get_running_app().lookup('progresshud', 'Hud')
         self.modal_hud_layout.remove_widget(progressbar)
 
     @mainthread
-    def set_progressbar_value(self,value,caption=None):
-        progressbar=App.get_running_app().lookup('progresshud','Hud')
-        progressbar.value=value
-        if caption!=None:
-            progressbar.caption=caption
+    def set_progressbar_value(self, value, caption=None):
+        progressbar = App.get_running_app().lookup('progresshud', 'Hud')
+        progressbar.value = value
+        if caption != None:
+            progressbar.caption = caption
 
     @mainthread
-    def set_progressbar_caption(self,caption):
+    def set_progressbar_caption(self, caption):
         App.get_running_app().lookup('progresshud', 'Hud').caption = caption
 
     @mainthread
-    def notify(self,message,is_error=False):
-        self.notification_hud_layout.notify(message,error=is_error)
+    def notify(self, message, is_error=False):
+        self.notification_hud_layout.notify(message, error=is_error)
 
+    def read_yaml_main_config(self, config):
+        if config.has_key('main'):
+            for hotkey_config in config['main'].get('hotkeys', []):
+                set_hotkey(long(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0))
 
-def build_main_config(config):
-    config.add_section("main_hotkeys")
-    config.set("main_hotkeys", "q", "113")  # q
-    config.set("main_hotkeys", "fullscreen", "292")  # F11
+    def build_yaml_main_config(self):
+        return {
+            'main': {
+                'hotkeys': [
+                    {'key': '113', 'binding': 'q'},
+                    {'key': '292', 'binding': 'fullscreen'}
+                ]
+            },
+            'thumbnails': {
+                'path': os.path.join(expanduser('~'), '.cobiv', 'thumbnails')
+            }
+        }

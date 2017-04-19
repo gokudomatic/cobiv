@@ -44,7 +44,6 @@ class Viewer(View, ScrollView):
         self.set_action("refresh-marked", self.refresh_marked)
         self.set_action("rm", self.remove_slide)
 
-
     def build_config(self, config):
         Component.build_config(self, config)
         section = self.get_config_hotkeys_section()
@@ -62,11 +61,29 @@ class Viewer(View, ScrollView):
         config.set(section, "zoom-in", "48")
         config.set(section, "zoom-out", "57")
 
+    def build_yaml_config(self, config):
+        config[self.get_name()] = {
+            'hotkeys': [
+                {'key': '273', 'binding': 'up 20'},
+                {'key': '274', 'binding': 'down 20'},
+                {'key': '275', 'binding': 'next'},
+                {'key': '276', 'binding': 'previous'},
+                {'key': '103', 'binding': 'first'},
+                {'key': '103', 'binding': 'last', 'modifiers': '1'},
+                {'key': '105', 'binding': 'scroll-up'},
+                {'key': '107', 'binding': 'scroll-down'},
+                {'key': '106', 'binding': 'scroll-left'},
+                {'key': '108', 'binding': 'scroll-right'},
+                {'key': '48', 'binding': 'zoom-in'},
+                {'key': '57', 'binding': 'zoom-out'}
+            ]
+        }
+        return config
+
     def ready(self):
         Component.ready(self)
-        self.session=self.get_app().lookup("session", "Entity")
+        self.session = self.get_app().lookup("session", "Entity")
         self.cursor = self.session.cursor
-
 
     def on_switch(self):
         self.cursor.bind(filename=self.on_cursor_change)
@@ -86,9 +103,9 @@ class Viewer(View, ScrollView):
             return
 
         image = False
-        filename=self.cursor.filename
+        filename = self.cursor.filename
         if filename is None:
-            image=None
+            image = None
         else:
             image = Slide(source=filename, load_mode=self.fit_mode)
 
@@ -176,7 +193,7 @@ class Viewer(View, ScrollView):
         self.cursor.mark()
 
     def print_mark(self):
-        is_marked=self.cursor.get_mark()
+        is_marked = self.cursor.get_mark()
         self.notify(str(is_marked))
 
     def refresh_marked(self):
