@@ -4,8 +4,8 @@
 <Browser>:
     page_rows: self.height/self.cell_size
     max_rows: self.height*self.max_scroll_ratio/self.cell_size
-    max_items_cache: self.max_rows*3
     grid: grid_layout
+    max_items_cache: self.max_rows * 3
     BoxLayout:
         ThumbScrollView:
             id: scroll_view

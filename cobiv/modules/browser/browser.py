@@ -33,15 +33,18 @@ class VerticalLoadEffect(DampedScrollEffect):
             self.trigger_load_next()
 
     def load_prev(self, dt):
-        App.get_running_app().root.get_view().load_more(direction=False)
+        print("overscoll prev")
+        App.get_running_app().root.get_view().load_more(factor=3, direction=False)
 
     def load_next(self, dt):
-        App.get_running_app().root.get_view().load_more()
+        print("overscoll next")
+        App.get_running_app().root.get_view().load_more(factor=3)
 
 
 class ThumbScrollView(ScrollView):
     def __init__(self, **kwargs):
-        super(ThumbScrollView, self).__init__(effect_y_cls=VerticalLoadEffect, **kwargs)
+        super(ThumbScrollView, self).__init__(**kwargs)
+        self.effect_y = VerticalLoadEffect()
 
 
 class Browser(View, FloatLayout):
@@ -67,11 +70,10 @@ class Browser(View, FloatLayout):
     def __init__(self, **kwargs):
         super(Browser, self).__init__(**kwargs)
 
-        self.tg_select_next=Clock.create_trigger(self.select_next,0.1)
-        self.tg_select_previous=Clock.create_trigger(self.select_previous,0.1)
-        self.tg_select_up=Clock.create_trigger(self.select_up,0.1)
-        self.tg_select_down=Clock.create_trigger(self.select_down,0.1)
-
+        self.tg_select_next = Clock.create_trigger(self.select_next, 0.1)
+        self.tg_select_previous = Clock.create_trigger(self.select_previous, 0.1)
+        self.tg_select_up = Clock.create_trigger(self.select_up, 0.1)
+        self.tg_select_down = Clock.create_trigger(self.select_down, 0.1)
 
         self.set_action("load-set", self.load_set)
         self.set_action("next", self.tg_select_next)
@@ -122,12 +124,30 @@ class Browser(View, FloatLayout):
             Clock.schedule_once(self.scroll_to_image)
         self.thumb_loader.restart()
 
+        self.bind(size=self.on_size_change)
+
     def on_switch_lose_focus(self):
         self.cursor.unbind(file_id=self.on_id_change)
+        self.unbind(size=self.on_size_change)
         self.thumb_loader.stop()
 
     def scroll_to_image(self, dt):
         self.ids.scroll_view.scroll_to(self.selected_image)
+
+    def on_size_change(self, source, size):
+        if self.cursor.filename is None:
+            return
+        diff_amount = self.max_items() - len(self.grid.children)
+        if diff_amount > 0:
+            print "load more : "+str(diff_amount)
+            self.load_more(factor=0, recenter=True)
+        elif diff_amount < 0:
+            print "remove excess : "+str(diff_amount)
+            self.pending_actions.append(self._remove_recenter)
+            self.do_next_action()
+
+    def max_items(self):
+        return self.grid.cols * self.max_rows
 
     #########################################################
     # lazy loading
@@ -145,7 +165,7 @@ class Browser(View, FloatLayout):
         self.do_next_action()
 
     def _load_set(self, dt):
-        max_count = self.max_rows * self.grid.cols
+        max_count = self.max_items()
         self.set_progress_max_count(max_count)
         self.reset_progress()
 
@@ -176,9 +196,9 @@ class Browser(View, FloatLayout):
         self.do_next_action()
 
     def _load_process(self, dt):
-        t0=time.time()
-        if len(self.image_queue) > 0:
-            for i in range(self.grid.cols):
+        queue_len = len(self.image_queue)
+        if queue_len > 0:
+            for i in range(min((queue_len, self.grid.cols))):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
                 thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
 
@@ -196,32 +216,32 @@ class Browser(View, FloatLayout):
 
                 self.tick_progress()
 
-            if len(self.image_queue)>0:
+            if len(self.image_queue) > 0:
                 Clock.schedule_once(self._load_process, 0)
-        print(str(time.time()-t0))
+
         self.stop_progress()
         self.do_next_action(immediat=True)
 
     ####################################################
 
-    def select_next(self,dt):
+    def select_next(self, dt):
         if self.cursor.filename is not None:
             self.cursor.go_next()
-            if self.grid.children[0].position-self.grid.cols<self.cursor.pos:
+            if self.grid.children[0].position - self.grid.cols < self.cursor.pos:
                 self.load_more()
 
-    def select_previous(self,dt):
+    def select_previous(self, dt):
         if self.cursor.filename is not None:
             self.cursor.go_previous()
-            if self.grid.children[-1].position+self.grid.cols>self.cursor.pos:
+            if self.grid.children[-1].position + self.grid.cols > self.cursor.pos:
                 self.load_more(direction=False)
 
-    def select_down(self,dt):
+    def select_down(self, dt):
         if self.cursor.filename is not None:
             if not self.select_row(1):
                 self.cursor.go_last()
 
-    def select_up(self,dt):
+    def select_up(self, dt):
         if self.cursor.filename is not None:
             if not self.select_row(-1):
                 self.cursor.go_first()
@@ -229,19 +249,20 @@ class Browser(View, FloatLayout):
     def select_row(self, diff):
         pos = self.cursor.pos - self.page_cursor.pos
 
-        nb_cols=self.grid.cols
+        nb_cols = self.grid.cols
 
         linenr = pos / nb_cols
         colnr = pos % nb_cols
         new_pos = colnr + (linenr + diff) * nb_cols
 
-        if new_pos>(self.max_rows-1)*nb_cols:
+        print "new pos: " + str(new_pos) + "  /  " + str((self.max_rows - 1) * nb_cols) + " , " + str(nb_cols)
+
+        if new_pos > (self.max_rows - 1) * nb_cols:
             self.load_more()
-        elif new_pos<=nb_cols:
+        elif new_pos <= nb_cols:
             self.load_more(direction=False)
 
         return self.cursor.go(self.page_cursor.pos + new_pos)
-
 
     def on_id_change(self, instance, value):
         if self.cursor.filename is None or self.cursor.filename == '' or value is None or len(self.grid.children) == 0:
@@ -277,7 +298,7 @@ class Browser(View, FloatLayout):
     def mark_invert(self):
         self.get_app().root.execute_cmd("invert-mark")
 
-    def load_more(self, direction=True, factor=1):
+    def load_more(self, direction=True, factor=1, recenter=False):
         if len(self.grid.children) == 0:
             self.do_next_action()
             return
@@ -288,14 +309,14 @@ class Browser(View, FloatLayout):
             last_pos = self.grid.children[-1].position
         c = self.cursor.get_cursor_by_pos(last_pos)
 
-        to_load = self.grid.cols * factor
-        max_count = self.max_items_cache * self.grid.cols
+        to_load = self.grid.cols * factor + max(0, self.max_items() - len(self.grid.children))
+        print "to load=" + str(to_load)
 
         self.image_queue.clear()
         self.append_queue = direction
 
         if direction:
-            list_id = c.get_next_ids(max_count)
+            list_id = c.get_next_ids(self.max_items_cache * self.grid.cols)
         else:
             list_id = c.get_previous_ids(to_load)
 
@@ -310,15 +331,18 @@ class Browser(View, FloatLayout):
 
         if len(self.image_queue) > 0:
             self.pending_actions.append(self._load_process)
-            if direction:
-                self.pending_actions.append(self._remove_firsts)
+            if recenter:
+                self.pending_actions.append(self._remove_recenter)
             else:
-                self.pending_actions.append(self._remove_lasts)
+                if direction:
+                    self.pending_actions.append(self._remove_firsts)
+                else:
+                    self.pending_actions.append(self._remove_lasts)
             self.do_next_action()
         else:
             self.stop_progress()
 
-    def do_next_action(self,immediat=False):
+    def do_next_action(self, immediat=False):
         if len(self.pending_actions) > 0:
             action = self.pending_actions.popleft()
             if immediat:
@@ -328,7 +352,7 @@ class Browser(View, FloatLayout):
 
     def _remove_firsts(self, dt):
         child_count = len(self.grid.children)
-        to_remove = child_count - (self.max_rows * self.grid.cols)
+        to_remove = child_count - self.max_items()
         if to_remove > 0:
             for i in range(to_remove):
                 widget = self.grid.children[-1]
@@ -342,8 +366,7 @@ class Browser(View, FloatLayout):
         self.do_next_action()
 
     def _remove_lasts(self, dt):
-        child_count = len(self.grid.children)
-        to_remove = child_count - (self.max_rows * self.grid.cols)
+        to_remove = len(self.grid.children) - self.max_items()
         if to_remove > 0:
             for i in range(to_remove):
                 widget = self.grid.children[0]
@@ -354,6 +377,35 @@ class Browser(View, FloatLayout):
             self.page_cursor.go(widget.position)
             if self.cursor.pos > self.grid.children[0].position:
                 self.cursor.go(self.grid.children[-1].position)
+
+        self.do_next_action()
+
+    def _remove_recenter(self, dt):
+        total_to_remove = len(self.grid.children) - self.max_items()
+        if total_to_remove > 0:
+            print "is : " + str(len(self.grid.children)) + " / " + str(self.max_items())
+            current_local_pos = self.cursor.pos - self.page_cursor.pos
+            print "cursor : " + str(current_local_pos) + " - " + str(self.max_items() / 2)
+            # remove first items
+            to_delete_before = current_local_pos - self.max_items() / 2
+            to_delete_after = len(self.grid.children) - (current_local_pos + self.max_items() / 2)
+            if to_delete_after < 0:
+                # it means we're at the end of the list
+                to_delete_before += to_delete_after
+            print "to del before : " + str(to_delete_before)
+            if to_delete_before > 0:
+                for i in range(to_delete_before):
+                    widget = self.grid.children[-1]
+                    self.grid.remove_widget(widget)
+                    widget.clear_widgets()
+
+            print "to del after : " + str(len(self.grid.children) - self.max_items())
+            # remove last items
+            self._remove_lasts(0)
+            widget = self.grid.children[-1]
+            self.page_cursor.go(widget.position)
+
+            print "remain : " + str(len(self.grid.children)) + " / " + str(self.max_items())
 
         self.do_next_action()
 

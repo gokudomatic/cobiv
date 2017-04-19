@@ -113,7 +113,10 @@ class Cursor(EventDispatcher):
         return self.implementation.get_previous_ids(amount)
 
     def go(self, idx):
-        return self.implementation.go(idx)
+        if self.pos is not None and idx==self.pos:
+            return True
+        else:
+            return self.implementation.go(idx)
 
     def get_tags(self):
         return self.implementation.get_tags()

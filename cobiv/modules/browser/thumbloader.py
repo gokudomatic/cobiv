@@ -40,20 +40,24 @@ class ThumbLoader():
         thumb_path = self.get_config_value('thumbnails.path')
         self.thread_alive = True
 
-        while self.thread_alive:
-            try:
-                file_id, filename = self.to_cache.popleft()
+        try:
+            while self.thread_alive:
+                try:
+                    file_id, filename = self.to_cache.popleft()
 
-                thumb_filename = os.path.join(thumb_path, str(file_id) + '.png')
-                if not os.path.exists(thumb_filename):
-                    create_thumbnail_data(filename, self.cell_size, thumb_filename)
+                    thumb_filename = os.path.join(thumb_path, str(file_id) + '.png')
+                    if not os.path.exists(thumb_filename):
+                        create_thumbnail_data(filename, self.cell_size, thumb_filename)
+                        time.sleep(0.5)
+
+                    # if Cache.get('browser_items', file_id) is None:
+                    #     Clock.schedule_once(partial(self._create_item, file_id, thumb_filename,filename), 0.1)
+                    #     time.sleep(0.1)
+                except IndexError:
                     time.sleep(0.5)
 
-                # if Cache.get('browser_items', file_id) is None:
-                #     Clock.schedule_once(partial(self._create_item, file_id, thumb_filename,filename), 0.1)
-                #     time.sleep(0.1)
-            except IndexError:
-                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
 
     # def _create_item(self, file_id, filename, original_filename, *largs):
     #     name = self.get_filename_caption(original_filename)

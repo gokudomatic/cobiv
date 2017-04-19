@@ -26,6 +26,7 @@ class Cobiv(App):
             "Entity": Entity,
             "Hud": Hud
         })
+
         self.plugin_manager.locatePlugins()
         self.plugin_manager.loadPlugins()
 
@@ -64,6 +65,9 @@ class Cobiv(App):
         self.root.switch_view("browser")
 
         self.root.ready()
+
+
+
 
         return self.root
 
