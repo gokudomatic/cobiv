@@ -124,11 +124,11 @@ class Browser(View, FloatLayout):
             Clock.schedule_once(self.scroll_to_image)
         self.thumb_loader.restart()
 
-        self.bind(size=self.on_size_change)
+        self.bind(max_rows=self.on_size_change,width=self.on_size_change)
 
     def on_switch_lose_focus(self):
         self.cursor.unbind(file_id=self.on_id_change)
-        self.unbind(size=self.on_size_change)
+        self.unbind(max_rows=self.on_size_change,width=self.on_size_change)
         self.thumb_loader.stop()
 
     def scroll_to_image(self, dt):
@@ -139,7 +139,7 @@ class Browser(View, FloatLayout):
             return
         diff_amount = self.max_items() - len(self.grid.children)
         if diff_amount > 0:
-            print "load more : "+str(diff_amount)
+            print "load more : "+str(diff_amount)+" to get "+str(self.max_items())
             self.load_more(factor=0, recenter=True)
         elif diff_amount < 0:
             print "remove excess : "+str(diff_amount)
@@ -147,6 +147,7 @@ class Browser(View, FloatLayout):
             self.do_next_action()
 
     def max_items(self):
+        print("max rows="+str(self.max_rows)+"  |  max cols="+str(self.grid.cols))
         return self.grid.cols * self.max_rows
 
     #########################################################
@@ -197,6 +198,7 @@ class Browser(View, FloatLayout):
 
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
+        print("to process : "+str(queue_len)+"    |  loaded : "+str(len(self.grid.children)))
         if queue_len > 0:
             for i in range(min((queue_len, self.grid.cols))):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
@@ -255,9 +257,9 @@ class Browser(View, FloatLayout):
         colnr = pos % nb_cols
         new_pos = colnr + (linenr + diff) * nb_cols
 
-        print "new pos: " + str(new_pos) + "  /  " + str((self.max_rows - 1) * nb_cols) + " , " + str(nb_cols)
+        print "new pos: " + str(new_pos) + "  /  " + str(len(self.grid.children)- nb_cols) + " , " + str(nb_cols) + "  /  "+str(len(self.grid.children))
 
-        if new_pos > (self.max_rows - 1) * nb_cols:
+        if new_pos >= len(self.grid.children)- nb_cols:
             self.load_more()
         elif new_pos <= nb_cols:
             self.load_more(direction=False)
@@ -310,7 +312,6 @@ class Browser(View, FloatLayout):
         c = self.cursor.get_cursor_by_pos(last_pos)
 
         to_load = self.grid.cols * factor + max(0, self.max_items() - len(self.grid.children))
-        print "to load=" + str(to_load)
 
         self.image_queue.clear()
         self.append_queue = direction
@@ -329,6 +330,7 @@ class Browser(View, FloatLayout):
                 self.thumb_loader.append((id_file, filename))
             idx += 1
 
+        print "to load=" + str(len(self.image_queue))
         if len(self.image_queue) > 0:
             self.pending_actions.append(self._load_process)
             if recenter:
