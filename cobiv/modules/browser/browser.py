@@ -124,11 +124,11 @@ class Browser(View, FloatLayout):
             Clock.schedule_once(self.scroll_to_image)
         self.thumb_loader.restart()
 
-        self.bind(max_rows=self.on_size_change,width=self.on_size_change)
+        self.bind(max_rows=self.on_size_change, width=self.on_size_change)
 
     def on_switch_lose_focus(self):
         self.cursor.unbind(file_id=self.on_id_change)
-        self.unbind(max_rows=self.on_size_change,width=self.on_size_change)
+        self.unbind(max_rows=self.on_size_change, width=self.on_size_change)
         self.thumb_loader.stop()
 
     def scroll_to_image(self, dt):
@@ -139,15 +139,15 @@ class Browser(View, FloatLayout):
             return
         diff_amount = self.max_items() - len(self.grid.children)
         if diff_amount > 0:
-            print "load more : "+str(diff_amount)+" to get "+str(self.max_items())
             self.load_more(factor=0, recenter=True)
+            self.pending_actions.append(self._scroll_on_widget)
         elif diff_amount < 0:
-            print "remove excess : "+str(diff_amount)
             self.pending_actions.append(self._remove_recenter)
+            self.pending_actions.append(self._scroll_on_widget)
             self.do_next_action()
 
     def max_items(self):
-        print("max rows="+str(self.max_rows)+"  |  max cols="+str(self.grid.cols))
+        print("max rows=" + str(self.max_rows) + "  |  max cols=" + str(self.grid.cols))
         return self.grid.cols * self.max_rows
 
     #########################################################
@@ -177,9 +177,11 @@ class Browser(View, FloatLayout):
 
         count = 0
         for i in range(max_count):
-            thumb_data = c.get_thumbnail()
+            self.thumb_loader.append((c.file_id, c.filename))
 
-            self.image_queue.append((thumb_data, c.file_id, c.pos, c.filename))
+            thumb_filename = os.path.join(self.thumbs_path, str(c.file_id) + '.png')
+
+            self.image_queue.append((thumb_filename, c.file_id, c.pos, c.filename))
 
             count += 1
             if count >= max_count or not c.go_next():
@@ -198,7 +200,7 @@ class Browser(View, FloatLayout):
 
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
-        print("to process : "+str(queue_len)+"    |  loaded : "+str(len(self.grid.children)))
+        print("to process : " + str(queue_len) + "    |  loaded : " + str(len(self.grid.children)))
         if queue_len > 0:
             for i in range(min((queue_len, self.grid.cols))):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
@@ -257,9 +259,7 @@ class Browser(View, FloatLayout):
         colnr = pos % nb_cols
         new_pos = colnr + (linenr + diff) * nb_cols
 
-        print "new pos: " + str(new_pos) + "  /  " + str(len(self.grid.children)- nb_cols) + " , " + str(nb_cols) + "  /  "+str(len(self.grid.children))
-
-        if new_pos >= len(self.grid.children)- nb_cols:
+        if new_pos >= len(self.grid.children) - nb_cols:
             self.load_more()
         elif new_pos <= nb_cols:
             self.load_more(direction=False)
@@ -281,7 +281,6 @@ class Browser(View, FloatLayout):
                 self.selected_image = item
                 self.ids.scroll_view.scroll_to(item)
             else:
-                print("thumbs are empty")
                 if self.cursor.pos > self.grid.children[0].position:
                     self.cursor.go(self.grid.children[0].position)
                 else:
@@ -330,7 +329,6 @@ class Browser(View, FloatLayout):
                 self.thumb_loader.append((id_file, filename))
             idx += 1
 
-        print "to load=" + str(len(self.image_queue))
         if len(self.image_queue) > 0:
             self.pending_actions.append(self._load_process)
             if recenter:
@@ -385,29 +383,24 @@ class Browser(View, FloatLayout):
     def _remove_recenter(self, dt):
         total_to_remove = len(self.grid.children) - self.max_items()
         if total_to_remove > 0:
-            print "is : " + str(len(self.grid.children)) + " / " + str(self.max_items())
             current_local_pos = self.cursor.pos - self.page_cursor.pos
-            print "cursor : " + str(current_local_pos) + " - " + str(self.max_items() / 2)
             # remove first items
             to_delete_before = current_local_pos - self.max_items() / 2
             to_delete_after = len(self.grid.children) - (current_local_pos + self.max_items() / 2)
             if to_delete_after < 0:
                 # it means we're at the end of the list
                 to_delete_before += to_delete_after
-            print "to del before : " + str(to_delete_before)
             if to_delete_before > 0:
                 for i in range(to_delete_before):
                     widget = self.grid.children[-1]
                     self.grid.remove_widget(widget)
                     widget.clear_widgets()
 
-            print "to del after : " + str(len(self.grid.children) - self.max_items())
             # remove last items
             self._remove_lasts(0)
             widget = self.grid.children[-1]
             self.page_cursor.go(widget.position)
 
-            print "remain : " + str(len(self.grid.children)) + " / " + str(self.max_items())
 
         self.do_next_action()
 

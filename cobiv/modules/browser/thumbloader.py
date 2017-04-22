@@ -10,6 +10,7 @@ from kivy.cache import Cache
 from kivy.clock import Clock
 from kivy.uix.image import AsyncImage
 
+from cobiv.modules.browser.ThumbnailImage import ThumbnailImage
 from cobiv.modules.browser.item import Thumb
 from cobiv.modules.imageset.ImageSet import create_thumbnail_data
 
@@ -80,7 +81,8 @@ class ThumbLoader():
         # thumb = Cache.get('browser_items', file_id)
         if thumb is None or force_refresh:
             name = self.get_filename_caption(caption)
-            img = AsyncImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
+            img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
+            # img = AsyncImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
             thumb = Thumb(image=img, cell_size=self.cell_size, caption=name, selected=False)
             # Cache.append('browser_items', file_id, thumb)
         return thumb
