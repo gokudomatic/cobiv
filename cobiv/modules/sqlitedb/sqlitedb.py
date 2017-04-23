@@ -30,7 +30,7 @@ class SqliteCursor(CursorInterface):
         self.con = backend
         self.current_set = current
         self.init_row(row)
-        self.thumbs_path=App.get_running_app().get_config_value('thumbnails.path')
+        self.thumbs_path = App.get_running_app().get_config_value('thumbnails.path')
 
     def init_row(self, row):
         if row is None:
@@ -74,20 +74,22 @@ class SqliteCursor(CursorInterface):
                                (self.set_head_key, idx)).fetchone()
         return row
 
-    def get_next_ids(self,amount):
+    def get_next_ids(self, amount):
         if self.pos is None:
             return []
 
-        rows = self.con.execute('select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position>? and c.position<=? order by position',
-                               (self.set_head_key,self.pos,self.pos+amount)).fetchall()
+        rows = self.con.execute(
+            'select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position>? and c.position<=? order by position',
+            (self.set_head_key, self.pos, self.pos + amount)).fetchall()
         return rows
 
-    def get_previous_ids(self,amount):
+    def get_previous_ids(self, amount):
         if self.pos is None:
             return []
 
-        rows = self.con.execute('select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position<? and c.position>=? order by position desc',
-                               (self.set_head_key,self.pos,self.pos-amount)).fetchall()
+        rows = self.con.execute(
+            'select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position<? and c.position>=? order by position desc',
+            (self.set_head_key, self.pos, self.pos - amount)).fetchall()
         return rows
 
     def go(self, idx):
@@ -145,14 +147,44 @@ class SqliteCursor(CursorInterface):
     def get_cursor_by_pos(self, pos):
         return SqliteCursor(self.get(pos), self.con)
 
-    def get_thumbnail_filename(self,file_id):
-        return os.path.join(self.thumbs_path,str(file_id)+'.png')
+    def get_thumbnail_filename(self, file_id):
+        return os.path.join(self.thumbs_path, str(file_id) + '.png')
 
     def get_thumbnail(self):
-        filename=self.get_thumbnail_filename(self.file_id)
+        filename = self.get_thumbnail_filename(self.file_id)
         if not os.path.exists(filename):
             create_thumbnail_data(self.filename, 120, filename)
         return filename
+
+    def move_to(self, pos):
+        if pos == self.pos:
+            return
+
+        if pos < self.pos:
+            query = 'update current_set set position=position+1 where set_head_key=? and position<? and position>=?'
+        else:
+            query = 'update current_set set position=position-1 where set_head_key=? and position>? and position<=?'
+
+        with self.con:
+            self.con.execute('update current_set set position=-1 where set_head_key=? and position=?',
+                             (self.set_head_key, self.pos))
+            self.con.execute(query, (self.set_head_key, self.pos, pos))
+            self.con.execute('update current_set set position=? where set_head_key=? and position=-1',
+                             (pos, self.set_head_key))
+
+        self.pos = pos
+
+    def get_position_mapping(self, file_id_list):
+        if file_id_list is None:
+            return []
+
+        rows = self.con.execute(
+            'select file_key,position from current_set where set_head_key=? and position in (%s)' % ','.join(
+                '?' * len(file_id_list)),
+            (self.set_head_key,)+tuple(file_id_list)).fetchall()
+
+
+        return rows
 
 
 class SqliteDb(Entity):
@@ -163,7 +195,9 @@ class SqliteDb(Entity):
         if not os.path.exists(self.get_app().get_user_path('thumbnails')):
             os.makedirs(self.get_app().get_user_path('thumbnails'))
 
-        self.conn = sqlite3.connect(self.get_global_config_value('database.path',self.get_app().get_user_path('cobiv.db')), check_same_thread=False)
+        self.conn = sqlite3.connect(
+            self.get_global_config_value('database.path', self.get_app().get_user_path('cobiv.db')),
+            check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
 
         self.conn.execute('PRAGMA temp_store = MEMORY')
@@ -178,7 +212,6 @@ class SqliteDb(Entity):
         set_action("updatedb", self.updatedb)
         set_action("mark-all", self.mark_all)
         set_action("invert-mark", self.invert_marked)
-
 
         self.session = self.get_app().lookup("session", "Entity")
 
@@ -211,7 +244,9 @@ class SqliteDb(Entity):
             self.conn.execute('create unique index set_detail_file_idx on set_detail(set_head_key,file_key)')
 
         self.create_catalogue("default")
-        self.add_repository("default", "C:\\Users\\edwin\\Pictures")
+
+        repos=self.get_global_config_value('repository', self.get_app().get_user_path('Pictures'))
+        self.add_repository("default", repos)
         self.updatedb()
 
     def create_catalogue(self, name):
@@ -352,7 +387,8 @@ class SqliteDb(Entity):
                 self.tick_progress()
                 thread_count += 1
 
-            query='insert into %s (set_head_key, position, file_key) values (?,?,?)' % ('current_set' if is_current else 'set_detail')
+            query = 'insert into %s (set_head_key, position, file_key) values (?,?,?)' % (
+                'current_set' if is_current else 'set_detail')
             c.executemany(query, lines)
             self.tick_progress()
 
@@ -450,9 +486,9 @@ class SqliteDb(Entity):
             self.get_app().root.execute_cmd("refresh-marked")
 
     def build_yaml_config(self, config):
-        config[self.get_name()]={
-            'database':{
-                'path':self.get_app().get_user_path('cobiv.db')
+        config[self.get_name()] = {
+            'database': {
+                'path': self.get_app().get_user_path('cobiv.db')
             }
         }
 

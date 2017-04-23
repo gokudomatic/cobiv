@@ -33,11 +33,9 @@ class VerticalLoadEffect(DampedScrollEffect):
             self.trigger_load_next()
 
     def load_prev(self, dt):
-        print("overscoll prev")
         App.get_running_app().root.get_view().load_more(factor=3, direction=False)
 
     def load_next(self, dt):
-        print("overscoll next")
         App.get_running_app().root.get_view().load_more(factor=3)
 
 
@@ -147,7 +145,6 @@ class Browser(View, FloatLayout):
             self.do_next_action()
 
     def max_items(self):
-        print("max rows=" + str(self.max_rows) + "  |  max cols=" + str(self.grid.cols))
         return self.grid.cols * self.max_rows
 
     #########################################################
@@ -200,7 +197,6 @@ class Browser(View, FloatLayout):
 
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
-        print("to process : " + str(queue_len) + "    |  loaded : " + str(len(self.grid.children)))
         if queue_len > 0:
             for i in range(min((queue_len, self.grid.cols))):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
@@ -286,9 +282,22 @@ class Browser(View, FloatLayout):
                 else:
                     self.cursor.go(self.page_cursor.pos)
 
-    def on_image_touch_up(self, img):
+    def on_image_touch_up(self, img,idx):
         # select item
-        self.cursor.go(img.position)
+        c=self.cursor.get_cursor_by_pos(img.position)
+        if idx is not None:
+            c.move_to(idx+self.page_cursor.pos)
+            self.refresh_positions()
+        self.cursor.go(c.pos)
+
+    def refresh_positions(self):
+        list_id=[item.file_id for item in self.grid.children]
+        mapping=self.cursor.get_position_mapping(list_id)
+        for item in self.grid.children:
+            for m in mapping:
+                if m[0]==item.file_id:
+                    item.position=m[1]
+                    break
 
     def mark_current(self, value=None):
         self.cursor.mark(value)

@@ -53,6 +53,11 @@ class CursorInterface(EventDispatcher):
     def get_thumbnail(self):
         return None
 
+    def move_to(self,idx):
+        return None
+
+    def get_position_mapping(self, file_id_list):
+        return []
 
 class Cursor(EventDispatcher):
     filename = StringProperty(None)
@@ -139,3 +144,9 @@ class Cursor(EventDispatcher):
 
     def get_thumbnail(self):
         return self.implementation.get_thumbnail()
+
+    def move_to(self,idx):
+        return self.implementation.move_to(idx)
+
+    def get_position_mapping(self,file_id_list):
+        return self.implementation.get_position_mapping(file_id_list)

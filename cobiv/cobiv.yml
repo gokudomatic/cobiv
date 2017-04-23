@@ -29,3 +29,4 @@ viewer:
   - {binding: scroll-right, key: '108'}
   - {binding: zoom-in, key: '48'}
   - {binding: zoom-out, key: '57'}
+repository: C:\Users\edwin\Pictures\nums

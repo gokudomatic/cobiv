@@ -15,4 +15,4 @@
                 cols: int(self.width/self.cell_size)
                 size_hint: None,None
                 width: win.Window.width
-                height: int(self.cell_size * math.ceil(1+len(self.children)/self.cols))
+                height: int(self.cell_size * math.ceil(len(self.children)/self.cols))
