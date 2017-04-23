@@ -101,8 +101,6 @@ class Item(Magnet):
 
             i = int(cnt_max - idx)
 
-            print("idx="+str(idx))
-
             self.temp_idx=idx
 
             if i > 0:
@@ -126,3 +124,9 @@ class Item(Magnet):
 
     def set_selected(self, value):
         self.thumb.selected = value
+
+    def set_marked(self,value):
+        if value is None:
+            self.thumb.marked = not self.thumb.marked
+        else:
+            self.thumb.marked = value

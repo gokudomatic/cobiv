@@ -101,11 +101,11 @@ class SqliteCursor(CursorInterface):
             self.init_row(row)
         return row is not None
 
-    def mark(self):
+    def mark(self, value):
         if self.pos is None:
             return
         with self.con:
-            if self.get_mark():
+            if self.get_mark() and value is None or value == False:
                 self.con.execute('delete from marked where file_key=?', (self.file_id,))
             else:
                 self.con.execute('insert into marked values (?)', (self.file_id,))
@@ -114,6 +114,9 @@ class SqliteCursor(CursorInterface):
         if self.pos is None:
             return
         return self.con.execute('select count(*) from marked where file_key=?', (self.file_id,)).fetchone()[0] > 0
+
+    def get_all_marked(self):
+        return [r[0] for r in self.con.execute('select file_key from marked', ).fetchall()]
 
     def __len__(self):
         if self.pos is None:
@@ -181,8 +184,7 @@ class SqliteCursor(CursorInterface):
         rows = self.con.execute(
             'select file_key,position from current_set where set_head_key=? and position in (%s)' % ','.join(
                 '?' * len(file_id_list)),
-            (self.set_head_key,)+tuple(file_id_list)).fetchall()
-
+            (self.set_head_key,) + tuple(file_id_list)).fetchall()
 
         return rows
 
@@ -211,7 +213,7 @@ class SqliteDb(Entity):
         set_action("ls-tag", self.list_tags, "viewer")
         set_action("updatedb", self.updatedb)
         set_action("mark-all", self.mark_all)
-        set_action("invert-mark", self.invert_marked)
+        set_action("mark-invert", self.invert_marked)
 
         self.session = self.get_app().lookup("session", "Entity")
 
@@ -245,7 +247,7 @@ class SqliteDb(Entity):
 
         self.create_catalogue("default")
 
-        repos=self.get_global_config_value('repository', self.get_app().get_user_path('Pictures'))
+        repos = self.get_global_config_value('repository', self.get_app().get_user_path('Pictures'))
         self.add_repository("default", repos)
         self.updatedb()
 

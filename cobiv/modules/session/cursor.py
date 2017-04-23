@@ -1,6 +1,6 @@
 from kivy.app import App
 from kivy.event import EventDispatcher
-from kivy.properties import StringProperty, ObjectProperty, NumericProperty
+from kivy.properties import StringProperty, NumericProperty
 
 
 class CursorInterface(EventDispatcher):
@@ -35,10 +35,13 @@ class CursorInterface(EventDispatcher):
     def get_tags(self):
         return []
 
-    def mark(self):
+    def mark(self,value):
         pass
 
     def get_mark(self):
+        return False
+
+    def get_all_marked(self):
         return False
 
     def remove(self):
@@ -126,12 +129,15 @@ class Cursor(EventDispatcher):
     def get_tags(self):
         return self.implementation.get_tags()
 
-    def mark(self):
-        self.implementation.mark()
+    def mark(self,value=None):
+        self.implementation.mark(value)
         self.get_app().root.execute_cmd("refresh-marked")
 
     def get_mark(self):
         return self.implementation.get_mark()
+
+    def get_all_marked(self):
+        return self.implementation.get_all_marked()
 
     def remove(self):
         return self.implementation.remove()

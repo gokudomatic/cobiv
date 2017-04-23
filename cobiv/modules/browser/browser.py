@@ -79,8 +79,7 @@ class Browser(View, FloatLayout):
         self.set_action("previous", self.tg_select_previous)
         self.set_action("up", self.tg_select_up)
         self.set_action("mark", self.mark_current)
-        self.set_action("mark-all", self.mark_all)
-        self.set_action("mark-invert", self.mark_invert)
+        self.set_action("refresh-marked", self.refresh_mark)
 
     def get_name(self=None):
         return "browser"
@@ -198,6 +197,8 @@ class Browser(View, FloatLayout):
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
         if queue_len > 0:
+            marked_list=self.page_cursor.get_all_marked()
+
             for i in range(min((queue_len, self.grid.cols))):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
                 thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
@@ -208,6 +209,9 @@ class Browser(View, FloatLayout):
                 if file_id == self.cursor.file_id:
                     self.selected_image = item
                     item.set_selected(True)
+
+                if file_id in marked_list:
+                    item.set_marked(True)
 
                 if self.append_queue:
                     self.grid.add_widget(item)
@@ -298,15 +302,6 @@ class Browser(View, FloatLayout):
                 if m[0]==item.file_id:
                     item.position=m[1]
                     break
-
-    def mark_current(self, value=None):
-        self.cursor.mark(value)
-
-    def mark_all(self, value=None):
-        self.get_app().root.execute_cmd("mark-all", value)
-
-    def mark_invert(self):
-        self.get_app().root.execute_cmd("invert-mark")
 
     def load_more(self, direction=True, factor=1, recenter=False):
         if len(self.grid.children) == 0:
@@ -423,3 +418,14 @@ class Browser(View, FloatLayout):
     def _scroll_to_current(self):
         if self.selected_image is not None:
             self.ids.scroll_view.scroll_to(self.selected_image)
+
+    ##############################################################
+
+    def mark_current(self, value=None):
+        if self.selected_image is not None:
+            self.cursor.mark(value)
+
+    def refresh_mark(self):
+        mapping = self.cursor.get_all_marked()
+        for item in self.grid.children:
+            item.set_marked(item.file_id in mapping)
