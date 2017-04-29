@@ -74,13 +74,13 @@ class SqliteCursor(CursorInterface):
                                (self.set_head_key, idx)).fetchone()
         return row
 
-    def get_next_ids(self, amount):
+    def get_next_ids(self, amount, self_included=False):
         if self.pos is None:
             return []
 
         rows = self.con.execute(
             'select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position>? and c.position<=? order by position',
-            (self.set_head_key, self.pos, self.pos + amount)).fetchall()
+            (self.set_head_key, self.pos - (1 if self_included else 0), self.pos + amount)).fetchall()
         return rows
 
     def get_previous_ids(self, amount):

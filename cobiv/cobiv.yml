@@ -6,6 +6,8 @@ browser:
   - {binding: down, key: '274'}
   - {binding: next, key: '275'}
   - {binding: previous, key: '276'}
+  - {binding: first, key: '103'}
+  - {binding: last, key: '103', modifiers: 1}
   - {binding: mark, key: '32'}
   - {binding: switch-view viewer, key: '13'}
   - {binding: mark-all, key: '97'}
@@ -22,7 +24,7 @@ viewer:
   - {binding: next, key: '275'}
   - {binding: previous, key: '276'}
   - {binding: first, key: '103'}
-  - {binding: last, key: '103', modifiers: '1'}
+  - {binding: last, key: '103', modifiers: 1}
   - {binding: scroll-up, key: '105'}
   - {binding: scroll-down, key: '107'}
   - {binding: scroll-left, key: '106'}

@@ -80,6 +80,9 @@ class Browser(View, FloatLayout):
         self.set_action("up", self.tg_select_up)
         self.set_action("mark", self.mark_current)
         self.set_action("refresh-marked", self.refresh_mark)
+        self.set_action("first", self.select_first)
+        self.set_action("last", self.select_last)
+        self.set_action("g", self.select_custom)
 
     def get_name(self=None):
         return "browser"
@@ -91,6 +94,8 @@ class Browser(View, FloatLayout):
                 {'key': '274', 'binding': 'down'},
                 {'key': '275', 'binding': 'next'},
                 {'key': '276', 'binding': 'previous'},
+                {'key': '103', 'binding': 'first'},
+                {'key': '103', 'binding': 'last', 'modifiers': '1'},
                 {'key': '32', 'binding': 'mark'},
                 {'key': '13', 'binding': 'switch-view viewer'},
                 {'key': '97', 'binding': 'mark-all'},
@@ -159,37 +164,41 @@ class Browser(View, FloatLayout):
         self.start_progress("Loading thumbs...")
         self.pending_actions.append(self._load_set)
         self.pending_actions.append(self._load_process)
-        self.do_next_action()
+        self.do_next_action(immediat=True)
 
     def _load_set(self, dt):
         max_count = self.max_items()
         self.set_progress_max_count(max_count)
         self.reset_progress()
 
-        self.page_cursor = self.cursor.get_cursor_by_pos(max(0, self.cursor.pos - max_count / 2))
+        start_pos = max(0, self.cursor.pos - max_count / 2)
+        diff = start_pos % self.grid.cols
+        start_pos -= diff
+
+        self.page_cursor = self.cursor.get_cursor_by_pos(start_pos)
 
         c = self.cursor.get_cursor_by_pos(self.page_cursor.pos)
         self.append_queue = True
 
         count = 0
-        for i in range(max_count):
-            self.thumb_loader.append((c.file_id, c.filename))
 
-            thumb_filename = os.path.join(self.thumbs_path, str(c.file_id) + '.png')
+        list_ids = c.get_next_ids(self.max_items_cache * self.grid.cols, self_included=True)
 
-            self.image_queue.append((thumb_filename, c.file_id, c.pos, c.filename))
+        idx = 0
+        for id_file, position, filename in list_ids:
 
-            count += 1
-            if count >= max_count or not c.go_next():
-                break
+            if idx < max_count:
 
-        while count < self.max_items_cache * self.grid.cols:
-            if not c.go_next():
-                break
+                self.thumb_loader.append((id_file, filename))
 
-            self.thumb_loader.append((c.file_id, c.filename))
+                thumb_filename = os.path.join(self.thumbs_path, str(id_file) + '.png')
 
-            count += 1
+                self.image_queue.append((thumb_filename, id_file, position, filename))
+
+            else:
+                self.thumb_loader.append((id_file, filename))
+
+            idx += 1
 
         self.reset_progress()
         self.do_next_action()
@@ -197,7 +206,7 @@ class Browser(View, FloatLayout):
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
         if queue_len > 0:
-            marked_list=self.page_cursor.get_all_marked()
+            marked_list = self.page_cursor.get_all_marked()
 
             for i in range(min((queue_len, self.grid.cols))):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
@@ -250,6 +259,19 @@ class Browser(View, FloatLayout):
             if not self.select_row(-1):
                 self.cursor.go_first()
 
+    def select_first(self):
+        if self.cursor.filename is not None:
+            self.cursor.go_first()
+
+    def select_last(self):
+        if self.cursor.filename is not None:
+            self.cursor.go_last()
+
+    def select_custom(self,position=None):
+        if self.cursor.filename is not None and position is not None:
+            self.cursor.go(position)
+
+
     def select_row(self, diff):
         pos = self.cursor.pos - self.page_cursor.pos
 
@@ -281,26 +303,32 @@ class Browser(View, FloatLayout):
                 self.selected_image = item
                 self.ids.scroll_view.scroll_to(item)
             else:
-                if self.cursor.pos > self.grid.children[0].position:
-                    self.cursor.go(self.grid.children[0].position)
-                else:
-                    self.cursor.go(self.page_cursor.pos)
+                self.load_set()
 
-    def on_image_touch_up(self, img,idx):
+                self.pending_actions.append(self._pass)
+                self.pending_actions.append(self._scroll_on_widget)
+
+
+                # if self.cursor.pos > self.grid.children[0].position:
+                #     self.cursor.go(self.grid.children[0].position)
+                # else:
+                #     self.cursor.go(self.page_cursor.pos)
+
+    def on_image_touch_up(self, img, idx):
         # select item
-        c=self.cursor.get_cursor_by_pos(img.position)
+        c = self.cursor.get_cursor_by_pos(img.position)
         if idx is not None:
-            c.move_to(idx+self.page_cursor.pos)
+            c.move_to(idx + self.page_cursor.pos)
             self.refresh_positions()
         self.cursor.go(c.pos)
 
     def refresh_positions(self):
-        list_id=[item.file_id for item in self.grid.children]
-        mapping=self.cursor.get_position_mapping(list_id)
+        list_id = [item.file_id for item in self.grid.children]
+        mapping = self.cursor.get_position_mapping(list_id)
         for item in self.grid.children:
             for m in mapping:
-                if m[0]==item.file_id:
-                    item.position=m[1]
+                if m[0] == item.file_id:
+                    item.position = m[1]
                     break
 
     def load_more(self, direction=True, factor=1, recenter=False):
@@ -346,13 +374,13 @@ class Browser(View, FloatLayout):
         else:
             self.stop_progress()
 
-    def do_next_action(self, immediat=False):
+    def do_next_action(self, immediat=False, timeout=0):
         if len(self.pending_actions) > 0:
             action = self.pending_actions.popleft()
             if immediat:
                 action(0)
             else:
-                Clock.schedule_once(action)
+                Clock.schedule_once(action, timeout)
 
     def _remove_firsts(self, dt):
         child_count = len(self.grid.children)
@@ -405,8 +433,10 @@ class Browser(View, FloatLayout):
             widget = self.grid.children[-1]
             self.page_cursor.go(widget.position)
 
-
         self.do_next_action()
+
+    def _pass(self, dt):
+        self.do_next_action(timeout=0.3)
 
     def _scroll_on_widget(self, dt):
         if self.widget_to_scroll is None:

@@ -84,11 +84,13 @@ class MainContainer(FloatLayout):
         elif not self.cmd_visible:
             if keycode[0] == 46L and modcode == 1:
                 self._toggle_cmd(":")
+            elif keycode[0] == 304:
+                pass
             elif keycode[0] == 267:
                 self._set_cmd_visible(True, "/")
             elif cmd_hotkeys.has_key(keycode[0]) and not self.is_enter_command:
                 if keycode[0] == 13L:
-                    print "enter pressed"
+                    print("enter pressed")
                 view_name = self.get_view_name()
                 command = get_hotkey_command(keycode[0], modcode, view_name)
                 if command:
@@ -98,7 +100,8 @@ class MainContainer(FloatLayout):
                     if command:
                         self.execute_cmd(command)
             else:
-                print "code : " + str(keycode) + " " + str(modifiers)
+                if keycode[0] != 13L:
+                    print("code : " + str(keycode) + " " + str(modifiers))
                 pass
 
             self.is_enter_command = False
