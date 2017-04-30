@@ -3,6 +3,7 @@ from collections import deque
 
 import time
 from kivy.app import App
+from kivy.core.text import Label
 from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.lang import Builder
 from kivy.uix.floatlayout import FloatLayout
@@ -18,6 +19,8 @@ import os
 
 Builder.load_file('modules/browser/browser.kv')
 
+class EOLItem(Label):
+    pass
 
 class VerticalLoadEffect(DampedScrollEffect):
     def __init__(self, **kwargs):
@@ -95,7 +98,7 @@ class Browser(View, FloatLayout):
                 {'key': '275', 'binding': 'next'},
                 {'key': '276', 'binding': 'previous'},
                 {'key': '103', 'binding': 'first'},
-                {'key': '103', 'binding': 'last', 'modifiers': '1'},
+                {'key': '103', 'binding': 'last', 'modifiers': 1},
                 {'key': '32', 'binding': 'mark'},
                 {'key': '13', 'binding': 'switch-view viewer'},
                 {'key': '97', 'binding': 'mark-all'},
@@ -103,8 +106,11 @@ class Browser(View, FloatLayout):
             ],
             'cache': {
                 'thumbnails': {
-                    'size': '500'
+                    'size': 500
                 }
+            },
+            'grid': {
+                'icon_size': 120
             }
         }
         return config
@@ -112,6 +118,8 @@ class Browser(View, FloatLayout):
     def ready(self):
         Component.ready(self)
         self.thumbs_path = self.get_global_config_value('thumbnails.path')
+
+        self.cell_size= self.get_config_value('grid.icon_size',120)
 
         self.session = self.get_app().lookup("session", "Entity")
         self.cursor = self.session.cursor

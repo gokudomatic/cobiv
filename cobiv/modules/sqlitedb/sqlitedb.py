@@ -16,6 +16,7 @@ import sqlite3
 
 from cobiv.modules.imageset.ImageSet import create_thumbnail_data
 from cobiv.modules.session.cursor import Cursor, CursorInterface
+import time
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
@@ -41,7 +42,7 @@ class SqliteCursor(CursorInterface):
         else:
             self.pos = row['position']
             self.set_head_key = row['set_head_key']
-            row1 = self.con.execute('select name from file where rowid=?', (row['file_key'],)).fetchone()
+            row1 = self.con.execute('select name from file where id=?', (row['file_key'],)).fetchone()
             self.filename = row1['name'] if row is not None else None
             self.file_id = row['file_key']
 
@@ -79,7 +80,7 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position>? and c.position<=? order by position',
+            'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>? and c.position<=? order by position',
             (self.set_head_key, self.pos - (1 if self_included else 0), self.pos + amount)).fetchall()
         return rows
 
@@ -88,7 +89,7 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name from current_set c, file f where f.rowid=c.file_key and c.set_head_key=? and c.position<? and c.position>=? order by position desc',
+            'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position<? and c.position>=? order by position desc',
             (self.set_head_key, self.pos, self.pos - amount)).fetchall()
         return rows
 
@@ -214,6 +215,7 @@ class SqliteDb(Entity):
         set_action("updatedb", self.updatedb)
         set_action("mark-all", self.mark_all)
         set_action("mark-invert", self.invert_marked)
+        set_action("rnc", self.reenumerate_current_set_positions)
 
         self.session = self.get_app().lookup("session", "Entity")
 
@@ -231,11 +233,11 @@ class SqliteDb(Entity):
 
     def create_database(self):
         with self.conn:
-            self.conn.execute('create table catalog (name text)')
-            self.conn.execute('create table repository (catalog_key int, path text, recursive num)')
-            self.conn.execute('create table file (repo_key int, name text, filename text, path text, ext text)')
+            self.conn.execute('create table catalog (id INTEGER PRIMARY KEY, name text)')
+            self.conn.execute('create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
+            self.conn.execute('create table file (id INTEGER PRIMARY KEY, repo_key int, name text, filename text, path text, ext text)')
             self.conn.execute('create table tag (file_key int, kind text, value text)')
-            self.conn.execute('create table set_head ( name text, readonly num)')
+            self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
             self.conn.execute('create table thumbs (file_key int primary key, data blob)')
 
@@ -273,7 +275,7 @@ class SqliteDb(Entity):
 
     def _threaded_updatedb(self):
         self.start_progress("Initializing update...")
-        c = self.conn.execute('select rowid, path, recursive from repository')
+        c = self.conn.execute('select id, path, recursive from repository')
         differences = []
         thread_max_files = 0
 
@@ -296,7 +298,7 @@ class SqliteDb(Entity):
                 if self.cancel_operation:
                     break
 
-            self.regenerate_set('*', "select rowid from file", caption="Creating default set...")
+            self.regenerate_set('*', "select id from file", caption="Creating default set...")
 
         self.stop_progress()
 
@@ -337,7 +339,7 @@ class SqliteDb(Entity):
             self.tick_progress()
             tags_to_add = []
             for f in to_add:
-                id = c.execute('select rowid from file where repo_key=? and name=? limit 1', (repo_id, f)).fetchone()[0]
+                id = c.execute('select id from file where repo_key=? and name=? limit 1', (repo_id, f)).fetchone()[0]
                 lines = self.read_tags(id, f)
                 if len(lines) > 0:
                     tags_to_add.extend(lines)
@@ -371,12 +373,12 @@ class SqliteDb(Entity):
                     'create temporary table current_set as select * from set_detail where 1=2')
                 head_key = 0
             else:
-                row = c.execute('select rowid from set_head where name=?', (set_name,)).fetchone()
+                row = c.execute('select id from set_head where name=?', (set_name,)).fetchone()
                 if row is not None:
                     head_key = row[0]
                     c.execute('delete from set_detail where set_head_key=?', (head_key,))
                 else:
-                    c.execute('insert into set_head values (?,?)', (set_name, '0'))
+                    c.execute('insert into set_head (name, readonly) values (?,?)', (set_name, '0'))
                     head_key = c.lastrowid
 
             resultset = c.execute(query).fetchall()
@@ -385,7 +387,7 @@ class SqliteDb(Entity):
             lines = []
             thread_count = 0
             for row in resultset:
-                lines.append((head_key, thread_count, row['rowid']))
+                lines.append((head_key, thread_count, row['id']))
                 self.tick_progress()
                 thread_count += 1
 
@@ -398,7 +400,7 @@ class SqliteDb(Entity):
         with self.conn:
             self.conn.execute('drop table if exists current_set') \
                 .execute(
-                'create temporary table current_set as select d.* from set_detail d,set_head h where d.set_head_key=h.rowid and h.name=? order by d.position',
+                'create temporary table current_set as select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? order by d.position',
                 set_name)
 
     def search_tag(self, *args):
@@ -414,7 +416,7 @@ class SqliteDb(Entity):
                 else:
                     to_include.append(arg)
 
-            query = 'select f.rowid,f.name from file f ,tag t where t.file_key=f.rowid '
+            query = 'select f.id,f.name from file f ,tag t where t.file_key=f.id '
             if len(to_include) > 0:
                 query += 'and t.value in ("' + '", "'.join(to_include) + '") '
             if len(to_exclude) > 0:
@@ -493,6 +495,35 @@ class SqliteDb(Entity):
                 'path': self.get_app().get_user_path('cobiv.db')
             }
         }
+
+    def reenumerate_current_set_positions(self):
+        with self.conn:
+            self.conn.execute('create temporary table renum as select rowid fkey from current_set where position>=0 order by position')
+            self.conn.execute('create unique index renum_idx on renum(fkey)') # improve performance
+            self.conn.execute('update current_set set position=(select r.rowid-1 from renum r where r.fkey=current_set.rowid) where exists (select * from renum where renum.fkey=current_set.rowid)')
+            self.conn.execute('drop table renum')
+
+    def cut_marked(self):
+        with self.conn:
+            self.conn.execute('create temporary table renum_clip as select c.rowid fkey from current_set c, marked m where c.file_key=m.file_key order by c.position')
+            self.conn.execute('create unique index renum_clip_idx on renum_clip(fkey)') # improve performance
+            self.conn.execute('update current_set set position=(select -1*r.rowid from renum_clip r where r.fkey=current_set.rowid) where exists (select * from renum_clip where renum_clip.fkey=current_set.rowid)')
+            self.conn.execute('drop table renum_clip')
+        self.reenumerate_current_set_positions()
+
+    def past_marked(self,new_pos):
+        if new_pos is None:
+            return
+
+        with self.conn:
+            # get clipboard size
+            size=self.conn.execute('select count(*) from current_set where position<0').fetchone()[0]
+            if size==0:
+                return
+            # make the place
+            self.conn.execute('update current_set set position=position+' + str(size) + ' where position>=?',(new_pos,))
+            # update the negative positions
+            self.conn.execute('update current_set set position=-1*position+'+str(new_pos-1)+' where position<0')
 
 
 Factory.register('Cursor', module=SqliteCursor)

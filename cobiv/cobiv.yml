@@ -12,6 +12,8 @@ browser:
   - {binding: switch-view viewer, key: '13'}
   - {binding: mark-all, key: '97'}
   - {binding: mark-invert, key: '105'}
+  grid:
+    icon_size: 120
 main:
   hotkeys:
   - {binding: q, key: '113'}
