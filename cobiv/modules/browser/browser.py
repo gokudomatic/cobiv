@@ -3,24 +3,40 @@ from collections import deque
 
 import time
 from kivy.app import App
-from kivy.core.text import Label
 from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.lang import Builder
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.browser.item import Item
 from cobiv.modules.browser.thumbloader import ThumbLoader
 from cobiv.modules.component import Component
 from cobiv.modules.view import View
-from kivy.properties import ObjectProperty, NumericProperty
+from kivy.properties import ObjectProperty, NumericProperty, BooleanProperty
 from kivy.clock import Clock
 import os
 
 Builder.load_file('modules/browser/browser.kv')
 
+
 class EOLItem(Label):
-    pass
+    cell_size = NumericProperty(None)
+    selected = BooleanProperty(None)
+
+    file_id = None
+    position = None
+
+    def __init__(self, **kwargs):
+        super(EOLItem, self).__init__(**kwargs)
+
+    def set_selected(self,value):
+        self.selected=value
+
+    def is_selected(self):
+        return self.selected
+
 
 class VerticalLoadEffect(DampedScrollEffect):
     def __init__(self, **kwargs):
@@ -51,6 +67,7 @@ class ThumbScrollView(ScrollView):
 class Browser(View, FloatLayout):
     cursor = None
     page_cursor = None
+    eol_cursor = None
     selected_image = None
     grid = ObjectProperty(None)
 
@@ -75,6 +92,7 @@ class Browser(View, FloatLayout):
         self.tg_select_previous = Clock.create_trigger(self.select_previous, 0.1)
         self.tg_select_up = Clock.create_trigger(self.select_up, 0.1)
         self.tg_select_down = Clock.create_trigger(self.select_down, 0.1)
+        self.tg_load_set = Clock.create_trigger(self.trigger_load_set, 0.1)
 
         self.set_action("load-set", self.load_set)
         self.set_action("next", self.tg_select_next)
@@ -119,7 +137,7 @@ class Browser(View, FloatLayout):
         Component.ready(self)
         self.thumbs_path = self.get_global_config_value('thumbnails.path')
 
-        self.cell_size= self.get_config_value('grid.icon_size',120)
+        self.cell_size = self.get_config_value('grid.icon_size', 120)
 
         self.session = self.get_app().lookup("session", "Entity")
         self.cursor = self.session.cursor
@@ -160,19 +178,23 @@ class Browser(View, FloatLayout):
         return self.grid.cols * self.max_rows
 
     #########################################################
-    # lazy loading
-    #########################################################
 
     def load_set(self):
+        self.tg_load_set()
+
+    def trigger_load_set(self, dt):
         self.grid.clear_widgets()
 
-        if self.cursor.file_id is None:
-            return
-
-        self.start_progress("Loading thumbs...")
-        self.pending_actions.append(self._load_set)
-        self.pending_actions.append(self._load_process)
-        self.do_next_action(immediat=True)
+        if self.cursor.file_id is not None:
+            self.start_progress("Loading thumbs...")
+            self.pending_actions.append(self._load_set)
+            self.pending_actions.append(self._load_process)
+            self.do_next_action(immediat=True)
+        else:
+            e = EOLItem(cell_size=self.cell_size)
+            self.grid.add_widget(e)
+            e.selected = True
+            self.cursor.go_eol()
 
     def _load_set(self, dt):
         max_count = self.max_items()
@@ -187,8 +209,6 @@ class Browser(View, FloatLayout):
 
         c = self.cursor.get_cursor_by_pos(self.page_cursor.pos)
         self.append_queue = True
-
-        count = 0
 
         list_ids = c.get_next_ids(self.max_items_cache * self.grid.cols, self_included=True)
 
@@ -208,8 +228,14 @@ class Browser(View, FloatLayout):
 
             idx += 1
 
-        self.reset_progress()
-        self.do_next_action()
+        if len(list_ids) < max_count:
+            self.image_queue.append((None, None, "eol", None))
+        if idx > 0:
+
+            self.reset_progress()
+            self.do_next_action()
+        else:
+            pass
 
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
@@ -218,24 +244,29 @@ class Browser(View, FloatLayout):
 
             for i in range(min((queue_len, self.grid.cols))):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
-                thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
 
-                item = Item(thumb=thumb, container=self,
-                            cell_size=self.cell_size, file_id=file_id, position=pos, duration=0)
-
-                if file_id == self.cursor.file_id:
-                    self.selected_image = item
-                    item.set_selected(True)
-
-                if file_id in marked_list:
-                    item.set_marked(True)
-
-                if self.append_queue:
-                    self.grid.add_widget(item)
+                if pos == "eol":
+                    e = EOLItem(cell_size=self.cell_size)
+                    self.grid.add_widget(e)
                 else:
-                    self.grid.add_widget(item, len(self.grid.children))
+                    thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
 
-                self.tick_progress()
+                    item = Item(thumb=thumb, container=self,
+                                cell_size=self.cell_size, file_id=file_id, position=pos, duration=0)
+
+                    if file_id == self.cursor.file_id:
+                        self.selected_image = item
+                        item.set_selected(True)
+
+                    if file_id in marked_list:
+                        item.set_marked(True)
+
+                    if self.append_queue:
+                        self.grid.add_widget(item)
+                    else:
+                        self.grid.add_widget(item, len(self.grid.children))
+
+                    self.tick_progress()
 
             if len(self.image_queue) > 0:
                 Clock.schedule_once(self._load_process, 0)
@@ -247,12 +278,16 @@ class Browser(View, FloatLayout):
 
     def select_next(self, dt):
         if self.cursor.filename is not None:
-            self.cursor.go_next()
-            if self.grid.children[0].position - self.grid.cols < self.cursor.pos:
-                self.load_more()
+            if self.cursor.go_next():
+                last_child=self.grid.children[0]
+                if not isinstance(last_child,EOLItem):
+                    if last_child.position - self.grid.cols < self.cursor.pos:
+                        self.load_more()
+            else:
+                self.select_EOL()
 
     def select_previous(self, dt):
-        if self.cursor.filename is not None:
+        if self.cursor.filename is not None or self.cursor.is_eol():
             self.cursor.go_previous()
             if self.grid.children[-1].position + self.grid.cols > self.cursor.pos:
                 self.load_more(direction=False)
@@ -260,25 +295,25 @@ class Browser(View, FloatLayout):
     def select_down(self, dt):
         if self.cursor.filename is not None:
             if not self.select_row(1):
-                self.cursor.go_last()
+                # self.cursor.go_last()
+                self.select_EOL()
 
     def select_up(self, dt):
-        if self.cursor.filename is not None:
+        if self.cursor.filename is not None or self.cursor.is_eol():
             if not self.select_row(-1):
                 self.cursor.go_first()
 
     def select_first(self):
-        if self.cursor.filename is not None:
+        if self.cursor.filename is not None or self.cursor.is_eol():
             self.cursor.go_first()
 
     def select_last(self):
         if self.cursor.filename is not None:
             self.cursor.go_last()
 
-    def select_custom(self,position=None):
-        if self.cursor.filename is not None and position is not None:
+    def select_custom(self, position=None):
+        if (self.cursor.filename is not None or self.cursor.is_eol) and position is not None:
             self.cursor.go(position)
-
 
     def select_row(self, diff):
         pos = self.cursor.pos - self.page_cursor.pos
@@ -296,31 +331,32 @@ class Browser(View, FloatLayout):
 
         return self.cursor.go(self.page_cursor.pos + new_pos)
 
+    def select_EOL(self):
+        pass
+
+
     def on_id_change(self, instance, value):
-        if self.cursor.filename is None or self.cursor.filename == '' or value is None or len(self.grid.children) == 0:
-            if self.selected_image is not None:
-                self.selected_image.img.selected = False
+        if self.selected_image is not None:
+            self.selected_image.set_selected(False)
+
+        if self.cursor.is_eol():
+            last_item=self.grid.children[0]
+            if isinstance(last_item,EOLItem):
+                last_item.set_selected(True)
+                self.selected_image = last_item
+        elif self.cursor.filename is None or self.cursor.filename == '' or value is None or len(self.grid.children) == 0:
             self.selected_image = None
         else:
             thumbs = [image for image in self.grid.children if image.file_id == value]
             if len(thumbs) > 0:
-                if self.selected_image is not None:
-                    self.selected_image.set_selected(False)
                 item = thumbs[0]
                 item.set_selected(True)
                 self.selected_image = item
                 self.ids.scroll_view.scroll_to(item)
             else:
                 self.load_set()
-
                 self.pending_actions.append(self._pass)
                 self.pending_actions.append(self._scroll_on_widget)
-
-
-                # if self.cursor.pos > self.grid.children[0].position:
-                #     self.cursor.go(self.grid.children[0].position)
-                # else:
-                #     self.cursor.go(self.page_cursor.pos)
 
     def on_image_touch_up(self, img, idx):
         # select item
@@ -345,29 +381,34 @@ class Browser(View, FloatLayout):
             return
 
         if direction:
-            last_pos = self.grid.children[0].position
+            last_child = self.grid.children[0]
+            if isinstance(last_child, EOLItem):
+                last_pos = None
+            else:
+                last_pos = last_child.position
         else:
             last_pos = self.grid.children[-1].position
-        c = self.cursor.get_cursor_by_pos(last_pos)
-
-        to_load = self.grid.cols * factor + max(0, self.max_items() - len(self.grid.children))
 
         self.image_queue.clear()
         self.append_queue = direction
+        if last_pos is not None:
+            c = self.cursor.get_cursor_by_pos(last_pos)
 
-        if direction:
-            list_id = c.get_next_ids(self.max_items_cache * self.grid.cols)
-        else:
-            list_id = c.get_previous_ids(to_load)
+            to_load = self.grid.cols * factor + max(0, self.max_items() - len(self.grid.children))
 
-        idx = 0
-        for id_file, position, filename in list_id:
-            if idx < to_load:
-                thumb_filename = os.path.join(self.thumbs_path, str(id_file) + '.png')
-                self.image_queue.append((thumb_filename, id_file, position, filename))
+            if direction:
+                list_id = c.get_next_ids(self.max_items_cache * self.grid.cols)
             else:
-                self.thumb_loader.append((id_file, filename))
-            idx += 1
+                list_id = c.get_previous_ids(to_load)
+
+            idx = 0
+            for id_file, position, filename in list_id:
+                if idx < to_load:
+                    thumb_filename = os.path.join(self.thumbs_path, str(id_file) + '.png')
+                    self.image_queue.append((thumb_filename, id_file, position, filename))
+                else:
+                    self.thumb_loader.append((id_file, filename))
+                idx += 1
 
         if len(self.image_queue) > 0:
             self.pending_actions.append(self._load_process)

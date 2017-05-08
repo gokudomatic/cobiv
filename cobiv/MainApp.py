@@ -1,6 +1,8 @@
 import os
 import kivy
 import yaml
+
+from cobiv.modules.browser.browser import Browser
 from cobiv.modules.entity import Entity
 from cobiv.modules.hud import Hud
 from cobiv.modules.view import View

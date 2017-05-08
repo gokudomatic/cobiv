@@ -3,18 +3,21 @@
 
 
 <EOLItem>:
-    text: EOL
+    text: 'EOL'
     color: 0,0,1,1
     size_hint: None, None
     size: root.cell_size, root.cell_size
     canvas.before:
         Color:
             rgba: 0,0,1,1
-        RoundedRectangle:
-            pos: self.pos
-            size: self.size
-            radius: [10, 10, 10, 10]
-
+        Line:
+            width: 2
+            rounded_rectangle: self.x+10,self.y+10,self.width-20,self.height-20,10
+        Color:
+            rgba: 1,0,0,1 if self.selected else 0
+        Line:
+            width: 2
+            rectangle: self.x+2,self.y+2,self.width-4,self.height-4
 
 <Browser>:
     page_rows: self.height/self.cell_size

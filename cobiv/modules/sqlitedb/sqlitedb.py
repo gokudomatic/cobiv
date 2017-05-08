@@ -27,7 +27,7 @@ class SqliteCursor(CursorInterface):
     con = None
     current_set = True
 
-    def __init__(self, row, backend=None, current=True):
+    def __init__(self, row=None, backend=None, current=True):
         self.con = backend
         self.current_set = current
         self.init_row(row)
@@ -46,6 +46,15 @@ class SqliteCursor(CursorInterface):
             self.filename = row1['name'] if row is not None else None
             self.file_id = row['file_key']
 
+    def clone(self):
+        new_cursor=SqliteCursor(backend=self.con,current=self.current_set)
+        new_cursor.pos=self.pos
+        new_cursor.set_head_key=self.set_head_key
+        new_cursor.filename=self.filename
+        new_cursor.file_id=self.file_id
+        return new_cursor
+
+
     def go_next(self):
         return self.go(self.pos + 1)
 
@@ -60,13 +69,13 @@ class SqliteCursor(CursorInterface):
 
     def go_last(self):
         if self.pos is None:
-            return
+            return None
         last_pos_row = self.con.execute('select max(position) from current_set where set_head_key=?',
                                         (self.set_head_key,)).fetchone()
         if last_pos_row is not None:
             return self.go(last_pos_row[0])
         else:
-            return False
+            return None
 
     def get(self, idx):
         if self.pos is None:
@@ -95,12 +104,12 @@ class SqliteCursor(CursorInterface):
 
     def go(self, idx):
         if self.pos is None:
-            return
+            return None
         row = self.con.execute('select rowid,* from current_set where set_head_key=? and position=?',
                                (self.set_head_key, idx)).fetchone()
         if row is not None:
             self.init_row(row)
-        return row is not None
+        return self if row is not None else None
 
     def mark(self, value):
         if self.pos is None:

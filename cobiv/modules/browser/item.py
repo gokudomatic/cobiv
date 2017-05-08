@@ -23,6 +23,7 @@ Builder.load_string('''
         Color:
             rgba: 1,0,0,1 if root.selected else 0
         Line:
+            width: 2
             rectangle: self.pos[0]+2,self.pos[1]+2,self.size[0]-4,self.size[1]-4
     Label:
         text:root.caption
@@ -124,6 +125,9 @@ class Item(Magnet):
 
     def set_selected(self, value):
         self.thumb.selected = value
+
+    def is_selected(self):
+        return self.thumb.selected if self.thumb is not None else False
 
     def set_marked(self,value):
         if value is None:
