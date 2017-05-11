@@ -192,7 +192,7 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select file_key,position from current_set where set_head_key=? and position in (%s)' % ','.join(
+            'select file_key,position from current_set where set_head_key=? and file_key in (%s)' % ','.join(
                 '?' * len(file_id_list)),
             (self.set_head_key,) + tuple(file_id_list)).fetchall()
 

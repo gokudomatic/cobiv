@@ -1,12 +1,11 @@
 import math
 
-from kivy.atlas import CoreImage
 from kivy.lang import Builder
 from kivy.properties import ObjectProperty, Clock, NumericProperty, StringProperty, BooleanProperty
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.image import AsyncImage
 
 from cobiv.libs.magnet import Magnet
+from cobiv.modules.browser.eolitem import EOLItem
 
 Builder.load_string('''
 <Thumb>:
@@ -98,7 +97,7 @@ class Item(Magnet):
             cnt_max = len(grid_layout.children)
             x = math.floor(touch.pos[0] / self.cell_size)
             y = math.floor((grid_layout.height + self.cell_size - touch.pos[1]) / self.cell_size)
-            idx = min(grid_layout.cols * y + x, cnt_max)
+            idx = min(grid_layout.cols * max(0,y-1) + x, cnt_max)
 
             i = int(cnt_max - idx)
 
@@ -107,7 +106,12 @@ class Item(Magnet):
             if i > 0:
                 grid_layout.add_widget(self, i)
             else:
-                grid_layout.add_widget(self)
+                last_child=grid_layout.children[0]
+                if isinstance(last_child, EOLItem):
+                    grid_layout.add_widget(self,1)
+                    self.temp_idx = cnt_max-1
+                else:
+                    grid_layout.add_widget(self)
 
         return super(Item, self).on_touch_move(touch, *args)
 

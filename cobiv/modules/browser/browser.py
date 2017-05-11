@@ -10,6 +10,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 
+from cobiv.modules.browser.eolitem import EOLItem
 from cobiv.modules.browser.item import Item
 from cobiv.modules.browser.thumbloader import ThumbLoader
 from cobiv.modules.component import Component
@@ -19,23 +20,6 @@ from kivy.clock import Clock
 import os
 
 Builder.load_file('modules/browser/browser.kv')
-
-
-class EOLItem(Label):
-    cell_size = NumericProperty(None)
-    selected = BooleanProperty(None)
-
-    file_id = None
-    position = None
-
-    def __init__(self, **kwargs):
-        super(EOLItem, self).__init__(**kwargs)
-
-    def set_selected(self,value):
-        self.selected=value
-
-    def is_selected(self):
-        return self.selected
 
 
 class VerticalLoadEffect(DampedScrollEffect):
@@ -191,7 +175,7 @@ class Browser(View, FloatLayout):
             self.pending_actions.append(self._load_process)
             self.do_next_action(immediat=True)
         else:
-            e = EOLItem(cell_size=self.cell_size)
+            e = EOLItem(cell_size=self.cell_size,container=self)
             self.grid.add_widget(e)
             e.selected = True
             self.cursor.go_eol()
@@ -246,7 +230,7 @@ class Browser(View, FloatLayout):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
 
                 if pos == "eol":
-                    e = EOLItem(cell_size=self.cell_size)
+                    e = EOLItem(cell_size=self.cell_size,container=self)
                     self.grid.add_widget(e)
                 else:
                     thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
@@ -332,7 +316,7 @@ class Browser(View, FloatLayout):
         return self.cursor.go(self.page_cursor.pos + new_pos)
 
     def select_EOL(self):
-        pass
+        self.cursor.go_eol()
 
 
     def on_id_change(self, instance, value):
@@ -396,8 +380,10 @@ class Browser(View, FloatLayout):
 
             to_load = self.grid.cols * factor + max(0, self.max_items() - len(self.grid.children))
 
+            do_add_eol=False
             if direction:
                 list_id = c.get_next_ids(self.max_items_cache * self.grid.cols)
+                do_add_eol=len(list_id)<to_load
             else:
                 list_id = c.get_previous_ids(to_load)
 
@@ -409,6 +395,9 @@ class Browser(View, FloatLayout):
                 else:
                     self.thumb_loader.append((id_file, filename))
                 idx += 1
+
+            if do_add_eol:
+                self.image_queue.append((None, None, "eol", None))
 
         if len(self.image_queue) > 0:
             self.pending_actions.append(self._load_process)
@@ -433,7 +422,7 @@ class Browser(View, FloatLayout):
 
     def _remove_firsts(self, dt):
         child_count = len(self.grid.children)
-        to_remove = child_count - self.max_items()
+        to_remove = int(child_count - self.max_items())
         if to_remove > 0:
             for i in range(to_remove):
                 widget = self.grid.children[-1]
@@ -447,7 +436,7 @@ class Browser(View, FloatLayout):
         self.do_next_action()
 
     def _remove_lasts(self, dt):
-        to_remove = len(self.grid.children) - self.max_items()
+        to_remove = int(len(self.grid.children) - self.max_items())
         if to_remove > 0:
             for i in range(to_remove):
                 widget = self.grid.children[0]
