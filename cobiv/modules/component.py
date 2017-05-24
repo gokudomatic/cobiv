@@ -88,3 +88,6 @@ class Component():
 
     def notify(self, message, is_error=False):
         self.get_app().root.notify(message, is_error=is_error)
+
+    def execute_cmd(self,cmd, force_default=False):
+        self.get_app().root.execute_cmd(cmd,force_default=force_default)

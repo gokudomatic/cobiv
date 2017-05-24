@@ -1,13 +1,10 @@
-import threading
 from collections import deque
 
-import time
+import datetime
 from kivy.app import App
 from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.browser.eolitem import EOLItem
@@ -36,7 +33,7 @@ class VerticalLoadEffect(DampedScrollEffect):
             self.trigger_load_next()
 
     def load_prev(self, dt):
-        App.get_running_app().root.get_view().load_more(factor=3, direction=False)
+        App.get_running_app().root.get_view().load_more(factor=3, direction_next=False)
 
     def load_next(self, dt):
         App.get_running_app().root.get_view().load_more(factor=3)
@@ -88,6 +85,8 @@ class Browser(View, FloatLayout):
         self.set_action("first", self.select_first)
         self.set_action("last", self.select_last)
         self.set_action("g", self.select_custom)
+        self.set_action("cut-marked", self.cut_marked)
+        self.set_action("paste-marked", self.paste_marked)
 
     def get_name(self=None):
         return "browser"
@@ -104,7 +103,9 @@ class Browser(View, FloatLayout):
                 {'key': '32', 'binding': 'mark'},
                 {'key': '13', 'binding': 'switch-view viewer'},
                 {'key': '97', 'binding': 'mark-all'},
-                {'key': '105', 'binding': 'mark-invert'}
+                {'key': '105', 'binding': 'mark-invert'},
+                {'key': '120', 'binding': 'cut-marked'},
+                {'key': '112', 'binding': 'paste-marked'}
             ],
             'cache': {
                 'thumbnails': {
@@ -175,10 +176,11 @@ class Browser(View, FloatLayout):
             self.pending_actions.append(self._load_process)
             self.do_next_action(immediat=True)
         else:
-            e = EOLItem(cell_size=self.cell_size,container=self)
+            e = EOLItem(cell_size=self.cell_size, container=self)
             self.grid.add_widget(e)
             e.selected = True
             self.cursor.go_eol()
+            self.page_cursor = self.cursor.clone()
 
     def _load_set(self, dt):
         max_count = self.max_items()
@@ -226,13 +228,14 @@ class Browser(View, FloatLayout):
         if queue_len > 0:
             marked_list = self.page_cursor.get_all_marked()
 
-            for i in range(min((queue_len, self.grid.cols))):
+            for i in range(queue_len):
                 thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
 
                 if pos == "eol":
-                    e = EOLItem(cell_size=self.cell_size,container=self)
+                    e = EOLItem(cell_size=self.cell_size, container=self)
                     self.grid.add_widget(e)
                 else:
+
                     thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
 
                     item = Item(thumb=thumb, container=self,
@@ -263,8 +266,8 @@ class Browser(View, FloatLayout):
     def select_next(self, dt):
         if self.cursor.filename is not None:
             if self.cursor.go_next():
-                last_child=self.grid.children[0]
-                if not isinstance(last_child,EOLItem):
+                last_child = self.grid.children[0]
+                if not isinstance(last_child, EOLItem):
                     if last_child.position - self.grid.cols < self.cursor.pos:
                         self.load_more()
             else:
@@ -273,8 +276,9 @@ class Browser(View, FloatLayout):
     def select_previous(self, dt):
         if self.cursor.filename is not None or self.cursor.is_eol():
             self.cursor.go_previous()
-            if self.grid.children[-1].position + self.grid.cols > self.cursor.pos:
-                self.load_more(direction=False)
+            if not isinstance(self.grid.children[-1], EOLItem):
+                if self.grid.children[-1].position + self.grid.cols > self.cursor.pos:
+                    self.load_more(direction_next=False)
 
     def select_down(self, dt):
         if self.cursor.filename is not None:
@@ -283,23 +287,30 @@ class Browser(View, FloatLayout):
                 self.select_EOL()
 
     def select_up(self, dt):
+
         if self.cursor.filename is not None or self.cursor.is_eol():
             if not self.select_row(-1):
                 self.cursor.go_first()
 
     def select_first(self):
         if self.cursor.filename is not None or self.cursor.is_eol():
+            self.thumb_loader.clear_cache()
             self.cursor.go_first()
 
     def select_last(self):
         if self.cursor.filename is not None:
+            self.thumb_loader.clear_cache()
             self.cursor.go_last()
 
     def select_custom(self, position=None):
         if (self.cursor.filename is not None or self.cursor.is_eol) and position is not None:
+            self.thumb_loader.clear_cache()
             self.cursor.go(position)
 
     def select_row(self, diff):
+        if self.page_cursor.is_eol():
+            return
+
         pos = self.cursor.pos - self.page_cursor.pos
 
         nb_cols = self.grid.cols
@@ -311,24 +322,24 @@ class Browser(View, FloatLayout):
         if new_pos >= len(self.grid.children) - nb_cols:
             self.load_more()
         elif new_pos <= nb_cols:
-            self.load_more(direction=False)
+            self.load_more(direction_next=False)
 
         return self.cursor.go(self.page_cursor.pos + new_pos)
 
     def select_EOL(self):
         self.cursor.go_eol()
 
-
     def on_id_change(self, instance, value):
         if self.selected_image is not None:
             self.selected_image.set_selected(False)
 
         if self.cursor.is_eol():
-            last_item=self.grid.children[0]
-            if isinstance(last_item,EOLItem):
+            last_item = self.grid.children[0]
+            if isinstance(last_item, EOLItem):
                 last_item.set_selected(True)
                 self.selected_image = last_item
-        elif self.cursor.filename is None or self.cursor.filename == '' or value is None or len(self.grid.children) == 0:
+        elif self.cursor.filename is None or self.cursor.filename == '' or value is None or len(
+                self.grid.children) == 0:
             self.selected_image = None
         else:
             thumbs = [image for image in self.grid.children if image.file_id == value]
@@ -359,12 +370,16 @@ class Browser(View, FloatLayout):
                     item.position = m[1]
                     break
 
-    def load_more(self, direction=True, factor=1, recenter=False):
+    def load_more(self, direction_next=True, factor=1, recenter=False):
         if len(self.grid.children) == 0:
             self.do_next_action()
             return
 
-        if direction:
+        if not direction_next and self.page_cursor.pos == 0:
+            self.do_next_action()
+            return
+
+        if direction_next:
             last_child = self.grid.children[0]
             if isinstance(last_child, EOLItem):
                 last_pos = None
@@ -374,18 +389,19 @@ class Browser(View, FloatLayout):
             last_pos = self.grid.children[-1].position
 
         self.image_queue.clear()
-        self.append_queue = direction
+        self.append_queue = direction_next
         if last_pos is not None:
             c = self.cursor.get_cursor_by_pos(last_pos)
 
             to_load = self.grid.cols * factor + max(0, self.max_items() - len(self.grid.children))
+            to_cache = self.max_items_cache * self.grid.cols
 
-            do_add_eol=False
-            if direction:
-                list_id = c.get_next_ids(self.max_items_cache * self.grid.cols)
-                do_add_eol=len(list_id)<to_load
+            do_add_eol = False
+            if direction_next:
+                list_id = c.get_next_ids(to_cache)
+                do_add_eol = len(list_id) < to_load
             else:
-                list_id = c.get_previous_ids(to_load)
+                list_id = c.get_previous_ids(to_cache)
 
             idx = 0
             for id_file, position, filename in list_id:
@@ -404,7 +420,7 @@ class Browser(View, FloatLayout):
             if recenter:
                 self.pending_actions.append(self._remove_recenter)
             else:
-                if direction:
+                if direction_next:
                     self.pending_actions.append(self._remove_firsts)
                 else:
                     self.pending_actions.append(self._remove_lasts)
@@ -497,3 +513,73 @@ class Browser(View, FloatLayout):
         mapping = self.cursor.get_all_marked()
         for item in self.grid.children:
             item.set_marked(item.file_id in mapping)
+
+    def cut_marked(self):
+        if self.cursor.get_marked_count() == 0:
+            return
+
+        children = dict()
+        for c in self.grid.children:
+            children[c.file_id] = c
+
+        self.execute_cmd("cut-marked", force_default=True)
+        sql_size = len(self.cursor)
+        if sql_size == 0:
+            self.load_set()
+        else:
+
+            if isinstance(self.grid.children[0],EOLItem):
+                item_before_eol=self.grid.children[1]
+            else:
+                item_before_eol=None
+
+            mapping = self.cursor.get_position_mapping(children.keys())
+            page_cursor_pos = None
+            cursor_pos = None
+            for file_id, position in mapping:
+                if file_id == self.cursor.file_id:
+                    cursor_pos = position
+                elif file_id == self.page_cursor.file_id:
+                    page_cursor_pos = position
+
+                child = children[file_id]
+                if position < 0:
+                    self.grid.remove_widget(child)
+                else:
+                    child.position = position
+            if len(self.grid.children) == 0:
+                self.cursor.go(min(sql_size, self.cursor.pos))
+                self.load_set()
+            else:
+                if page_cursor_pos < 0:
+                    self.page_cursor.go(self.grid.children[-1])
+                if cursor_pos < 0:
+                    self.cursor.go(page_cursor_pos)
+
+                if item_before_eol is not None and not item_before_eol in self.grid.children:
+                    #last item disappeared. link with eol must be updated
+                    self.cursor.update_eol_implementation()
+
+                # recenter
+                self.pending_actions.append(self._remove_recenter)
+                self.do_next_action()
+
+    def paste_marked(self):
+        if self.cursor.is_eol():
+            pos_to_send = "eol"
+        elif self.cursor.filename is not None:
+            pos_to_send = self.cursor.pos
+        else:
+            return
+
+        self.execute_cmd("past-marked " + str(pos_to_send), force_default=True)
+
+        if len(self.cursor) == 0:
+            return
+
+        if len(self.grid.children) == 0:
+            self.load_set()
+            return
+
+        self.pending_actions.append(self._remove_recenter)
+        self.do_next_action()

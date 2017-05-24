@@ -12,6 +12,8 @@ browser:
   - {binding: switch-view viewer, key: '13'}
   - {binding: mark-all, key: '97'}
   - {binding: mark-invert, key: '105'}
+  - {binding: cut-marked, key: '120'}
+  - {binding: paste-marked, key: '112'}
   grid:
     icon_size: 120
 main:

@@ -51,24 +51,18 @@ class ThumbLoader():
                         create_thumbnail_data(filename, self.cell_size, thumb_filename)
                         time.sleep(0.5)
 
-                    # if Cache.get('browser_items', file_id) is None:
-                    #     Clock.schedule_once(partial(self._create_item, file_id, thumb_filename,filename), 0.1)
-                    #     time.sleep(0.1)
                 except IndexError:
                     time.sleep(0.5)
 
         except KeyboardInterrupt:
             pass
 
-    # def _create_item(self, file_id, filename, original_filename, *largs):
-    #     name = self.get_filename_caption(original_filename)
-    #     item = AsyncImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
-    #     thumb = Thumb(image=item, cell_size=self.cell_size, caption=name, selected=False)
-    #     Cache.append('browser_items', file_id, thumb)
-
     def append(self, *items):
         for item in items:
             self.to_cache.append(item)
+
+    def clear_cache(self):
+        self.to_cache.clear()
 
     def get_filename_caption(self, filename):
         name = os.path.basename(filename)
@@ -76,19 +70,13 @@ class ThumbLoader():
             name = name[:5] + "..." + name[-7:]
         return name
 
-    def get_image(self, file_id, filename, caption, force_refresh=False):
-        thumb = None
-        # thumb = Cache.get('browser_items', file_id)
-        if thumb is None or force_refresh:
-            name = self.get_filename_caption(caption)
-            img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
-            # img = AsyncImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
-            thumb = Thumb(image=img, cell_size=self.cell_size, caption=name, selected=False)
-            # Cache.append('browser_items', file_id, thumb)
+    def get_image(self, file_id, filename, image_full_path, force_refresh=False):
+        if not os.path.exists(filename):
+            self.append((file_id,image_full_path))
+        name = self.get_filename_caption(image_full_path)
+        img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
+        thumb = Thumb(image=img, cell_size=self.cell_size, caption=name, selected=False)
         return thumb
-
-    # def invalidate_image(self, file_id):
-    #     Cache.remove('browser_items', file_id)
 
     def get_config_value(self, key, default=None):
         return App.get_running_app().get_config_value(key, default=default)

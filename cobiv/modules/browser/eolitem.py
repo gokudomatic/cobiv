@@ -43,3 +43,6 @@ class EOLItem(Label):
         if self.collide_point(*touch.pos):
             self.container.select_EOL()
             return True
+
+    def set_marked(self,value):
+        pass

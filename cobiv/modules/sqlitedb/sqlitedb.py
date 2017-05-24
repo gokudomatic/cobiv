@@ -89,7 +89,7 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>? and c.position<=? order by position',
+            'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position>? and c.position<=? order by position',
             (self.set_head_key, self.pos - (1 if self_included else 0), self.pos + amount)).fetchall()
         return rows
 
@@ -98,14 +98,14 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position<? and c.position>=? order by position desc',
+            'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position<? and c.position>=? order by position desc',
             (self.set_head_key, self.pos, self.pos - amount)).fetchall()
         return rows
 
     def go(self, idx):
         if self.pos is None:
             return None
-        row = self.con.execute('select rowid,* from current_set where set_head_key=? and position=?',
+        row = self.con.execute('select rowid,* from current_set where set_head_key=? and position>=0 and position=?',
                                (self.set_head_key, idx)).fetchone()
         if row is not None:
             self.init_row(row)
@@ -128,10 +128,13 @@ class SqliteCursor(CursorInterface):
     def get_all_marked(self):
         return [r[0] for r in self.con.execute('select file_key from marked', ).fetchall()]
 
+    def get_marked_count(self):
+        return self.con.execute('select count(*) from marked', ).fetchone()[0]
+
     def __len__(self):
         if self.pos is None:
             return
-        row = self.con.execute('select count(*) from current_set where set_head_key=?',
+        row = self.con.execute('select count(*) from current_set where set_head_key=? and position>=0',
                                (self.set_head_key,)).fetchone()
 
         return 0 if row is None else row[0]
@@ -225,6 +228,8 @@ class SqliteDb(Entity):
         set_action("mark-all", self.mark_all)
         set_action("mark-invert", self.invert_marked)
         set_action("rnc", self.reenumerate_current_set_positions)
+        set_action("cut-marked", self.cut_marked)
+        set_action("paste-marked", self.paste_marked)
 
         self.session = self.get_app().lookup("session", "Entity")
 
@@ -436,7 +441,7 @@ class SqliteDb(Entity):
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
         self.session.cursor.set_implementation(None if row is None else SqliteCursor(row, self.conn))
 
-        self.get_app().root.execute_cmd("load-set")
+        self.execute_cmd("load-set")
 
     def add_tag(self, *args):
         if len(args) == 0:
@@ -479,24 +484,24 @@ class SqliteDb(Entity):
             if value is None:
                 value = self.conn.execute(
                     'select count(*) from current_set c left join marked m on m.file_key=c.file_key' +
-                    ' where m.file_key is null').fetchone()[0] > 0
+                    ' where m.file_key is null and c.position>=0').fetchone()[0] > 0
             else:
                 value = value != "False" or value != "0"
 
             self.conn.execute('delete from marked')
             if value:
-                self.conn.execute('insert into marked (file_key) select file_key from current_set')
-        self.get_app().root.execute_cmd("refresh-marked")
+                self.conn.execute('insert into marked (file_key) select file_key from current_set where position>=0')
+        self.execute_cmd("refresh-marked")
 
     def invert_marked(self):
         with self.conn:
             self.conn.execute(
                 'create temporary table marked1 as select cs.file_key from current_set cs left join marked m on m.file_key=cs.file_key' +
-                ' where m.file_key is null')
+                ' where m.file_key is null and cs.position>=0')
             self.conn.execute('delete from marked')
             self.conn.execute('insert into marked select file_key from marked1')
             self.conn.execute('drop table marked1')
-            self.get_app().root.execute_cmd("refresh-marked")
+            self.execute_cmd("refresh-marked")
 
     def build_yaml_config(self, config):
         config[self.get_name()] = {
@@ -514,13 +519,13 @@ class SqliteDb(Entity):
 
     def cut_marked(self):
         with self.conn:
-            self.conn.execute('create temporary table renum_clip as select c.rowid fkey from current_set c, marked m where c.file_key=m.file_key order by c.position')
+            self.conn.execute('create temporary table renum_clip as select c.rowid fkey from current_set c, marked m where c.file_key=m.file_key and c.position>=0 order by c.position')
             self.conn.execute('create unique index renum_clip_idx on renum_clip(fkey)') # improve performance
             self.conn.execute('update current_set set position=(select -1*r.rowid from renum_clip r where r.fkey=current_set.rowid) where exists (select * from renum_clip where renum_clip.fkey=current_set.rowid)')
             self.conn.execute('drop table renum_clip')
         self.reenumerate_current_set_positions()
 
-    def past_marked(self,new_pos):
+    def paste_marked(self,new_pos):
         if new_pos is None:
             return
 
@@ -529,10 +534,14 @@ class SqliteDb(Entity):
             size=self.conn.execute('select count(*) from current_set where position<0').fetchone()[0]
             if size==0:
                 return
-            # make the place
-            self.conn.execute('update current_set set position=position+' + str(size) + ' where position>=?',(new_pos,))
-            # update the negative positions
-            self.conn.execute('update current_set set position=-1*position+'+str(new_pos-1)+' where position<0')
+
+            if new_pos=="eol":
+                pass
+            else:
+                # make the place
+                self.conn.execute('update current_set set position=position+' + str(size) + ' where position>=?',(new_pos,))
+                # update the negative positions
+                self.conn.execute('update current_set set position=-1*position+'+str(new_pos-1)+' where position<0')
 
 
 Factory.register('Cursor', module=SqliteCursor)

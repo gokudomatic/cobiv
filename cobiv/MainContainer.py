@@ -150,14 +150,14 @@ class MainContainer(FloatLayout):
         if text[0] == ":":
             self.execute_cmd(text[1:])
 
-    def execute_cmd(self, command):
+    def execute_cmd(self, command, force_default=False):
         line = shlex.split(command)
         action = line[0]
         args = line[1:]
         if cmd_actions.has_key(action):
             list_func = cmd_actions[action]
             profile_name = "default"
-            if list_func.has_key(self.get_view_name()):
+            if not force_default and list_func.has_key(self.get_view_name()):
                 profile_name = self.get_view_name()
             if list_func.has_key(profile_name):
                 func = list_func[profile_name]
