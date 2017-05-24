@@ -59,9 +59,6 @@ class CursorInterface(EventDispatcher):
     def get_cursor_by_pos(self, pos):
         return None
 
-    def get_thumbnail(self):
-        return None
-
     def move_to(self, idx):
         return None
 
@@ -198,7 +195,7 @@ class Cursor(EventDispatcher):
         return App.get_running_app()
 
     def set_implementation(self, instance):
-        if instance == self.implementation:
+        if instance == self.implementation or instance is None and isinstance(self.implementation,EOLCursor):
             return
 
         if not isinstance(instance, CursorInterface) and instance is not None:
@@ -330,9 +327,6 @@ class Cursor(EventDispatcher):
         c = self.clone()
         c.go(pos)
         return c
-
-    def get_thumbnail(self):
-        return self.implementation.get_thumbnail()
 
     def move_to(self, idx):
         if idx < 0:

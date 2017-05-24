@@ -528,7 +528,7 @@ class CursorTest(unittest.TestCase):
 
         c.mark_all(True)
         c.cut_marked()
-        # c.cut_marked()
+        c.cut_marked()
         self.assertTrue(c.is_eol())
         self.assertEqual(0,c.pos)
         self.assertIsNone(c.file_id)
@@ -538,6 +538,50 @@ class CursorTest(unittest.TestCase):
         self.assertEqual(1000, len(c))
         self.assertEqual(0, c.pos)
         self.assertEqual(0, c.file_id)
+
+        app.stop()
+
+
+    def _test_advanced_mark(self, app, *args):
+
+        def test_eol(c):
+            self.assertTrue(c.is_eol())
+            self.assertEqual(0, c.pos)
+            self.assertIsNone(c.file_id)
+            self.assertEqual(0, len(c))
+
+
+        c = Cursor()
+        c.set_implementation(MockCursor())
+        c.go(500)
+        c.mark_all()
+        c.cut_marked()
+        test_eol(c)
+        c.go_previous()
+        test_eol(c)
+        c.go_next()
+        test_eol(c)
+        c.go_first()
+        test_eol(c)
+        c.go_last()
+        test_eol(c)
+        c.go_eol()
+        test_eol(c)
+        c.go(200)
+        test_eol(c)
+        c.go_previous()
+        test_eol(c)
+        c.go_next()
+        test_eol(c)
+
+        c.paste_marked()
+        self.assertFalse(c.is_eol())
+        self.assertEqual(1000, len(c))
+        self.assertEqual(0, c.pos)
+        self.assertEqual(0, c.file_id)
+        c.go_next()
+        self.assertEqual(1, c.pos)
+        self.assertEqual(1, c.file_id)
 
         app.stop()
 
@@ -587,8 +631,11 @@ class CursorTest(unittest.TestCase):
     def test_move_items(self):
         self.call_test(self._test_move_items)
 
-    def test_0a_mark(self):
+    def test_mark(self):
         self.call_test(self._test_mark)
+
+    def test_advanced_mark(self):
+        self.call_test(self._test_advanced_mark)
 
     def test_clone(self):
         self.call_test(self._test_clone)

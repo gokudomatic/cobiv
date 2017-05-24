@@ -14,9 +14,7 @@ from cobiv.modules.entity import Entity
 import threading
 import sqlite3
 
-from cobiv.modules.imageset.ImageSet import create_thumbnail_data
-from cobiv.modules.session.cursor import Cursor, CursorInterface
-import time
+from cobiv.modules.session.cursor import CursorInterface
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
@@ -166,12 +164,6 @@ class SqliteCursor(CursorInterface):
     def get_thumbnail_filename(self, file_id):
         return os.path.join(self.thumbs_path, str(file_id) + '.png')
 
-    def get_thumbnail(self):
-        filename = self.get_thumbnail_filename(self.file_id)
-        if not os.path.exists(filename):
-            create_thumbnail_data(self.filename, 120, filename)
-        return filename
-
     def move_to(self, pos):
         if pos == self.pos:
             return
@@ -205,6 +197,19 @@ class SqliteCursor(CursorInterface):
 class SqliteDb(Entity):
     cancel_operation = False
     session = None
+
+    def init_test_db(self):
+        self.conn=sqlite3.connect(':memory:',check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
+        self.conn.execute('PRAGMA temp_store = MEMORY')
+        self.conn.execute('PRAGMA locking_mode = EXCLUSIVE')
+        self.create_database()
+        with self.conn:
+            self.conn.execute('create temporary table marked (file_key int)')
+            self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
+
+    def close_db(self):
+        self.conn.close()
 
     def ready(self):
         if not os.path.exists(self.get_app().get_user_path('thumbnails')):
