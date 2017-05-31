@@ -4,9 +4,9 @@ from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 
 
 class CursorInterface(EventDispatcher):
-    filename = StringProperty(None)
-    pos = NumericProperty(None)
-    file_id = NumericProperty(None)
+    filename = StringProperty(None,allownone=True)
+    pos = NumericProperty(None, allownone=True)
+    file_id = NumericProperty(None,allownone=True)
 
     def clone(self):
         return None
@@ -68,7 +68,7 @@ class CursorInterface(EventDispatcher):
     def cut_marked(self):
         pass
 
-    def paste_marked(self, new_pos, append=False):
+    def paste_marked(self, new_pos=None, append=False):
         pass
 
     def mark_all(self, value=None):
@@ -76,6 +76,16 @@ class CursorInterface(EventDispatcher):
 
     def invert_marked(self):
         pass
+
+    def add_tag(self, *args):
+        pass
+
+    def remove_tag(self, *args):
+        pass
+
+    def get_tags(self):
+        return []
+
 
 class EOLCursor(CursorInterface):
     last_cursor = ObjectProperty(None)
@@ -148,7 +158,7 @@ class EOLCursor(CursorInterface):
 
     def paste_marked(self, new_pos=None, append=False):
         if self.last_cursor is not None:
-            self.last_cursor.paste_marked(new_pos,append=True)
+            self.last_cursor.paste_marked(new_pos, append=True)
 
     def cut_marked(self):
         if self.last_cursor is not None:
@@ -164,11 +174,12 @@ class EOLCursor(CursorInterface):
 
     def update_pos(self):
         if self.last_cursor is not None:
-            last=self.last_cursor.go_last()
+            last = self.last_cursor.go_last()
             if last is None:
-                self.pos=0
+                self.pos = 0
             else:
-                self.pos=last.pos+1
+                self.pos = last.pos + 1
+
 
 class Cursor(EventDispatcher):
     filename = StringProperty(None, allownone=True)
@@ -195,7 +206,7 @@ class Cursor(EventDispatcher):
         return App.get_running_app()
 
     def set_implementation(self, instance):
-        if instance == self.implementation or instance is None and isinstance(self.implementation,EOLCursor):
+        if instance == self.implementation or instance is None and isinstance(self.implementation, EOLCursor):
             return
 
         if not isinstance(instance, CursorInterface) and instance is not None:
@@ -293,10 +304,10 @@ class Cursor(EventDispatcher):
             c = self.implementation.go(idx)
             if c is None and not self.is_eol() and idx < 0:
                 c = self.implementation.go_first()
-            elif c is None and self.is_eol() and idx>self.pos:
+            elif c is None and self.is_eol() and idx > self.pos:
                 return True
             elif c is None and self.is_eol():
-                self.implementation.pos=0
+                self.implementation.pos = 0
                 return True
             self._set_new_impl(c)
             return True
@@ -360,18 +371,17 @@ class Cursor(EventDispatcher):
 
     def cut_marked(self):
         if self.implementation is not None:
-            if self.implementation.get_marked_count()>0:
+            if self.implementation.get_marked_count() > 0:
                 self.implementation.cut_marked()
-                self.go(self.pos,force=True)
+                self.go(self.pos, force=True)
                 if self.is_eol():
                     self.implementation.update_pos()
-                    # self.pos=
                 self.mark_all(False)
 
     def paste_marked(self, new_pos=None):
         if self.implementation is not None:
             self.implementation.paste_marked(new_pos)
-            self.go(self.pos,force=True)
+            self.go(self.pos, force=True)
 
     def mark_all(self, value=None):
         if self.implementation is not None:
@@ -380,3 +390,15 @@ class Cursor(EventDispatcher):
     def invert_marked(self):
         if self.implementation is not None:
             self.implementation.invert_marked()
+
+    def add_tag(self, *args):
+        if self.implementation is not None:
+            self.implementation.add_tag(args)
+
+    def remove_tag(self, *args):
+        if self.implementation is not None:
+            self.implementation.remove_tag(args)
+
+    def get_tags(self):
+        if self.implementation is not None:
+            return self.implementation.get_tags()

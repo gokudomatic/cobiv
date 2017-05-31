@@ -17,6 +17,7 @@ class TestApp(App):
     def build(self):
         return TestMainWidget()
 
+
 class MockData():
     items = None
     marked = None
@@ -25,7 +26,7 @@ class MockData():
 
     def __init__(self):
         self.items = range(1000)
-        self.marked=set()
+        self.marked = set()
         self.tags = {}
         self.clipboard = []
 
@@ -37,7 +38,7 @@ class MockCursor(CursorInterface):
         self.pos = 0
         self.file_id = 0
         self.filename = "f0"
-        self.data=MockData()
+        self.data = MockData()
 
     def get_mark(self):
         return self.file_id in self.data.marked
@@ -46,7 +47,10 @@ class MockCursor(CursorInterface):
         return self.data.items[self.pos:self.pos - amount:-1]
 
     def get_tags(self):
-        return self.data.tags[self.pos]
+        try:
+            return list(self.data.tags[self.pos])
+        except KeyError:
+            return []
 
     def get_all_marked(self):
         return self.data.marked
@@ -159,6 +163,18 @@ class MockCursor(CursorInterface):
     def invert_marked(self):
         new_set = set(self.data.items) - self.data.marked
         self.data.marked = new_set
+
+    def add_tag(self, *args):
+        if not self.data.tags.has_key(self.pos):
+            self.data.tags[self.pos] = set()
+        for tag in args[0]:
+            self.data.tags[self.pos].add(tag)
+
+    def remove_tag(self, *args):
+        if not self.data.tags.has_key(self.pos):
+            self.data.tags[self.pos] = set()
+        for tag in args[0]:
+            self.data.tags[self.pos].remove(tag)
 
 
 class CursorTest(unittest.TestCase):
@@ -460,10 +476,10 @@ class CursorTest(unittest.TestCase):
         self.assertEqual(11, c.file_id)
 
         # reset cursor
-        c=Cursor()
+        c = Cursor()
         c.set_implementation(MockCursor())
 
-        #test special cases like first and last
+        # test special cases like first and last
         c.go_first()
         c.mark()
         c.cut_marked()
@@ -497,42 +513,42 @@ class CursorTest(unittest.TestCase):
         self.assertFalse(c.is_eol())
 
         # reset cursor
-        c=Cursor()
+        c = Cursor()
         c.set_implementation(MockCursor())
 
         # test cut all
         c.mark_all()
         c.cut_marked()
         self.assertTrue(c.is_eol())
-        self.assertEqual(0,c.pos)
+        self.assertEqual(0, c.pos)
         self.assertIsNone(c.file_id)
-        self.assertEqual(0,len(c))
+        self.assertEqual(0, len(c))
         c.paste_marked()
         self.assertFalse(c.is_eol())
         self.assertEqual(1000, len(c))
-        self.assertEqual(0,c.pos)
-        self.assertEqual(0,c.file_id)
+        self.assertEqual(0, c.pos)
+        self.assertEqual(0, c.file_id)
         c.go_next()
-        self.assertEqual(1,c.pos)
-        self.assertEqual(1,c.file_id)
+        self.assertEqual(1, c.pos)
+        self.assertEqual(1, c.file_id)
         c.go_previous()
         c.go_previous()
-        self.assertEqual(0,c.pos)
-        self.assertEqual(0,c.file_id)
+        self.assertEqual(0, c.pos)
+        self.assertEqual(0, c.file_id)
         c.go_last()
-        self.assertEqual(999,c.pos)
-        self.assertEqual(999,c.file_id)
+        self.assertEqual(999, c.pos)
+        self.assertEqual(999, c.file_id)
         c.go_next()
         self.assertTrue(c.is_eol())
-        self.assertEqual(1000,c.pos)
+        self.assertEqual(1000, c.pos)
 
         c.mark_all(True)
         c.cut_marked()
         c.cut_marked()
         self.assertTrue(c.is_eol())
-        self.assertEqual(0,c.pos)
+        self.assertEqual(0, c.pos)
         self.assertIsNone(c.file_id)
-        self.assertEqual(0,len(c))
+        self.assertEqual(0, len(c))
         c.paste_marked()
         self.assertFalse(c.is_eol())
         self.assertEqual(1000, len(c))
@@ -541,7 +557,6 @@ class CursorTest(unittest.TestCase):
 
         app.stop()
 
-
     def _test_advanced_mark(self, app, *args):
 
         def test_eol(c):
@@ -549,7 +564,6 @@ class CursorTest(unittest.TestCase):
             self.assertEqual(0, c.pos)
             self.assertIsNone(c.file_id)
             self.assertEqual(0, len(c))
-
 
         c = Cursor()
         c.set_implementation(MockCursor())
@@ -596,9 +610,9 @@ class CursorTest(unittest.TestCase):
         self.assertEqual(c1.eol_implementation, c.eol_implementation)
         self.assertEqual(c1.file_id, c.file_id)
         self.assertEqual(c1.filename, c.filename)
-        self.assertEqual(c1.get_marked_count(),1)
+        self.assertEqual(c1.get_marked_count(), 1)
         c.mark_all(False)
-        self.assertEqual(c1.get_marked_count(),c.get_marked_count())
+        self.assertEqual(c1.get_marked_count(), c.get_marked_count())
 
         c.go_eol()
         c1 = c.clone()
@@ -610,6 +624,50 @@ class CursorTest(unittest.TestCase):
         c1.go_previous()
         self.assertEqual(999, c1.pos)
         self.assertEqual(999, c1.file_id)
+
+        app.stop()
+
+    def _test_position_mapping(self, app, *args):
+
+        def get_map(id_list):
+            return [(r[0], r[1]) for r in c.get_position_mapping(id_list)]
+
+        c = Cursor()
+        c.set_implementation(MockCursor())
+
+        self.assertItemsEqual([(1, 1), (3, 3), (5, 5)], get_map([1, 3, 5]))
+
+        app.stop()
+
+    def _test_tags(self, app, *args):
+
+        c = Cursor()
+        c.set_implementation(MockCursor())
+
+        c.add_tag("one")
+        self.assertItemsEqual(c.get_tags(), ["one"])
+        c.add_tag("two")
+        self.assertItemsEqual(c.get_tags(), ["one", "two"])
+        c.remove_tag("one")
+        self.assertItemsEqual(c.get_tags(), ["two"])
+        c.add_tag("three")
+        self.assertItemsEqual(c.get_tags(), ["two", "three"])
+        c.remove_tag("three", "two")
+        self.assertItemsEqual(c.get_tags(), [])
+        c.add_tag("one", "two")
+        self.assertItemsEqual(c.get_tags(), ["one", "two"])
+
+        c = Cursor()
+        c.set_implementation(MockCursor())
+        c.go_last()
+        c.add_tag("a")
+        c.go_previous()
+        c.add_tag("1", "2")
+        c.go_first()
+        self.assertItemsEqual(c.get_tags(), [])
+        c.go_next()
+        c.go_last()
+        self.assertItemsEqual(c.get_tags(), ["a"])
 
         app.stop()
 
@@ -639,6 +697,12 @@ class CursorTest(unittest.TestCase):
 
     def test_clone(self):
         self.call_test(self._test_clone)
+
+    def test_position_mapping(self):
+        self.call_test(self._test_position_mapping)
+
+    def test_tags(self):
+        self.call_test(self._test_tags)
 
 
 if __name__ == "__main__":
