@@ -167,13 +167,13 @@ class MockCursor(CursorInterface):
     def add_tag(self, *args):
         if not self.data.tags.has_key(self.pos):
             self.data.tags[self.pos] = set()
-        for tag in args[0]:
+        for tag in args:
             self.data.tags[self.pos].add(tag)
 
     def remove_tag(self, *args):
         if not self.data.tags.has_key(self.pos):
             self.data.tags[self.pos] = set()
-        for tag in args[0]:
+        for tag in args:
             self.data.tags[self.pos].remove(tag)
 
 

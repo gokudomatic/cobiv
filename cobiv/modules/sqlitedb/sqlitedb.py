@@ -295,7 +295,7 @@ class SqliteDb(Entity):
         self.conn.row_factory = sqlite3.Row
         self.conn.execute('PRAGMA temp_store = MEMORY')
         self.conn.execute('PRAGMA locking_mode = EXCLUSIVE')
-        self.create_database()
+        self.create_database(sameThread=True)
         with self.conn:
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
@@ -342,7 +342,7 @@ class SqliteDb(Entity):
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
 
-    def create_database(self):
+    def create_database(self,sameThread=False):
         with self.conn:
             self.conn.execute('create table catalog (id INTEGER PRIMARY KEY, name text)')
             self.conn.execute(
@@ -364,7 +364,7 @@ class SqliteDb(Entity):
 
         repos = self.get_global_config_value('repository', self.get_app().get_user_path('Pictures'))
         self.add_repository("default", repos)
-        self.updatedb()
+        self.updatedb(sameThread=sameThread)
 
     def create_catalogue(self, name):
         try:
@@ -383,8 +383,11 @@ class SqliteDb(Entity):
         except sqlite3.IntegrityError:
             return False
 
-    def updatedb(self):
-        threading.Thread(target=self._threaded_updatedb).start()
+    def updatedb(self,sameThread=False):
+        if sameThread:
+            self._threaded_updatedb()
+        else:
+            threading.Thread(target=self._threaded_updatedb).start()
 
     def _threaded_updatedb(self):
         self.start_progress("Initializing update...")
@@ -531,9 +534,9 @@ class SqliteDb(Entity):
 
             query = 'select f.id,f.name from file f ,tag t where t.file_key=f.id '
             if len(to_include) > 0:
-                query += 'and t.value in ("' + '", "'.join(to_include) + '") '
+                query += 'and t.value in ("%s") ' % '", "'.join(to_include)
             if len(to_exclude) > 0:
-                query += 'and t.value not in ("' + '", "'.join(to_exclude) + '") '
+                query += 'and f.id not in (select t1.file_key from tag t1 where t1.value in ("%s")) ' % '", "'.join(to_exclude)
 
             self.regenerate_set(CURRENT_SET_NAME, query)
 
@@ -543,64 +546,26 @@ class SqliteDb(Entity):
         self.execute_cmd("load-set")
 
     def add_tag(self, *args):
-        if len(args) == 0:
-            return
-        filekey = self.session.cursor.file_id
-        if filekey is None:
-            return
-
-        with self.conn:
-            for tag in args:
-                c = self.conn.execute('select 1 from tag where value=? and file_key=? limit 1', (tag, filekey))
-                if c.fetchone() is None:
-                    c.execute('insert into tag values (?,?,?)', (self.session.cursor.file_id, 'tag', tag))
+        self.session.cursor.add_tag(args)
 
     def remove_tag(self, *args):
-        if len(args) == 0:
-            return
-        filekey = self.session.cursor.file_id
-        if filekey is None:
-            return
-
-        with self.conn:
-            self.conn.execute('delete from tag where file_key=? and value in (?)', (filekey,
-                                                                                    ', '.join(args)))
+        self.session.cursor.remove_tag(args)
 
     def list_tags(self):
-        filekey = self.session.cursor.file_id
-        if filekey is None:
-            return
-
-        c = self.conn.execute('select t.value from tag t where file_key=?', (filekey,))
-        text = '\n'.join([r['value'] for r in c.fetchall()])
+        tags = self.session.cursor.get_tags()
+        text = '\n'.join(tags)
         App.get_running_app().root.notify(text)
 
     def on_application_quit(self):
         self.cancel_operation = True
 
     def mark_all(self, value=None):
-        with self.conn:
-            if value is None:
-                value = self.conn.execute(
-                    'select count(*) from current_set c left join marked m on m.file_key=c.file_key' +
-                    ' where m.file_key is null and c.position>=0').fetchone()[0] > 0
-            else:
-                value = value != "False" or value != "0"
-
-            self.conn.execute('delete from marked')
-            if value:
-                self.conn.execute('insert into marked (file_key) select file_key from current_set where position>=0')
+        self.session.cursor.mark_all(value)
         self.execute_cmd("refresh-marked")
 
     def invert_marked(self):
-        with self.conn:
-            self.conn.execute(
-                'create temporary table marked1 as select cs.file_key from current_set cs left join marked m on m.file_key=cs.file_key' +
-                ' where m.file_key is null and cs.position>=0')
-            self.conn.execute('delete from marked')
-            self.conn.execute('insert into marked select file_key from marked1')
-            self.conn.execute('drop table marked1')
-            self.execute_cmd("refresh-marked")
+        self.session.cursor.invert_marked()
+        self.execute_cmd("refresh-marked")
 
     def build_yaml_config(self, config):
         config[self.get_name()] = {
@@ -610,43 +575,12 @@ class SqliteDb(Entity):
         }
 
     def reenumerate_current_set_positions(self):
-        with self.conn:
-            self.conn.execute(
-                'create temporary table renum as select rowid fkey from current_set where position>=0 order by position')
-            self.conn.execute('create unique index renum_idx on renum(fkey)')  # improve performance
-            self.conn.execute(
-                'update current_set set position=(select r.rowid-1 from renum r where r.fkey=current_set.rowid) where exists (select * from renum where renum.fkey=current_set.rowid)')
-            self.conn.execute('drop table renum')
+        self.session.cursor.reenumerate_current_set_positions()
 
     def cut_marked(self):
-        with self.conn:
-            self.conn.execute(
-                'create temporary table renum_clip as select c.rowid fkey from current_set c, marked m where c.file_key=m.file_key and c.position>=0 order by c.position')
-            self.conn.execute('create unique index renum_clip_idx on renum_clip(fkey)')  # improve performance
-            self.conn.execute(
-                'update current_set set position=(select -1*r.rowid from renum_clip r where r.fkey=current_set.rowid) where exists (select * from renum_clip where renum_clip.fkey=current_set.rowid)')
-            self.conn.execute('drop table renum_clip')
-        self.reenumerate_current_set_positions()
+        self.session.cursor.cut_marked()
 
     def paste_marked(self, new_pos):
-        if new_pos is None:
-            return
-
-        with self.conn:
-            # get clipboard size
-            size = self.conn.execute('select count(*) from current_set where position<0').fetchone()[0]
-            if size == 0:
-                return
-
-            if new_pos == "eol":
-                pass
-            else:
-                # make the place
-                self.conn.execute('update current_set set position=position+' + str(size) + ' where position>=?',
-                                  (new_pos,))
-                # update the negative positions
-                self.conn.execute(
-                    'update current_set set position=-1*position+' + str(new_pos - 1) + ' where position<0')
-
+        self.session.cursor.paste_marked()
 
 Factory.register('Cursor', module=SqliteCursor)

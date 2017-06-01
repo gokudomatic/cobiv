@@ -393,11 +393,11 @@ class Cursor(EventDispatcher):
 
     def add_tag(self, *args):
         if self.implementation is not None:
-            self.implementation.add_tag(args)
+            self.implementation.add_tag(*args)
 
     def remove_tag(self, *args):
         if self.implementation is not None:
-            self.implementation.remove_tag(args)
+            self.implementation.remove_tag(*args)
 
     def get_tags(self):
         if self.implementation is not None:

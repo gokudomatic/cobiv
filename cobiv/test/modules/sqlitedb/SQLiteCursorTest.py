@@ -5,7 +5,6 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
-from cobiv.modules.session.cursor import CursorInterface
 from cobiv.modules.sqlitedb.sqlitedb import SqliteCursor
 
 import sqlite3
@@ -32,8 +31,6 @@ class TestApp(App):
 
 
 class SQLiteCursorTest(unittest.TestCase):
-    db = None
-
     def setUp(self):
         self.conn = sqlite3.connect(':memory:', check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
@@ -526,10 +523,10 @@ class SQLiteCursorTest(unittest.TestCase):
         c = self.search()
         c.remove()
         c.go(c.pos)
-        self.assertEqual(2,c.file_id)
+        self.assertEqual(2, c.file_id)
         c.remove()
         c.go(c.pos)
-        self.assertEqual(3,c.file_id)
+        self.assertEqual(3, c.file_id)
 
         c.go(5)
         c.remove()
@@ -700,8 +697,8 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertEqual(0, c.get_marked_count())
         c.paste_marked(0)
         self.assertEqual(1, len(c))
-        self.assertEqual(0,c.pos)
-        self.assertEqual(1,c.file_id)
+        self.assertEqual(0, c.pos)
+        self.assertEqual(1, c.file_id)
 
         # test cut and past in the middle
         self.add_files(10)
@@ -716,21 +713,20 @@ class SQLiteCursorTest(unittest.TestCase):
         c.paste_marked(5)
         self.assertEqual(10, len(c))
         c.go(5)
-        self.assertEqual(5,c.pos)
-        self.assertEqual(2,c.file_id)
+        self.assertEqual(5, c.pos)
+        self.assertEqual(2, c.file_id)
         c.go_next()
-        self.assertEqual(6,c.pos)
-        self.assertEqual(9,c.file_id)
+        self.assertEqual(6, c.pos)
+        self.assertEqual(9, c.file_id)
         c.go_next()
-        self.assertEqual(7,c.pos)
-        self.assertEqual(7,c.file_id)
+        self.assertEqual(7, c.pos)
+        self.assertEqual(7, c.file_id)
         c.go_next()
-        self.assertEqual(8,c.pos)
-        self.assertEqual(8,c.file_id)
+        self.assertEqual(8, c.pos)
+        self.assertEqual(8, c.file_id)
         c.go_next()
-        self.assertEqual(9,c.pos)
-        self.assertEqual(10,c.file_id)
-
+        self.assertEqual(9, c.pos)
+        self.assertEqual(10, c.file_id)
 
         # test past empty
         self.add_files(10)
@@ -738,7 +734,7 @@ class SQLiteCursorTest(unittest.TestCase):
         c.paste_marked(3)
         self.assertEqual(10, len(c))
         c.go(3)
-        self.assertEqual(4,c.file_id)
+        self.assertEqual(4, c.file_id)
 
         # test past pos=none
         c.mark()
