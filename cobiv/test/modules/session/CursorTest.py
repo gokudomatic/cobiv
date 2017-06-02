@@ -258,6 +258,11 @@ class CursorTest(unittest.TestCase):
         self.assertEqual(500, c.pos)
         self.assertFalse(c.is_eol())
 
+        c.go(600)
+        self.assertEqual(600, c.pos)
+        self.assertFalse(c.is_eol())
+
+
         c.go(-5)
         self.assertEqual(0, c.pos)
         self.assertFalse(c.is_eol())
@@ -613,6 +618,9 @@ class CursorTest(unittest.TestCase):
         self.assertEqual(c1.get_marked_count(), 1)
         c.mark_all(False)
         self.assertEqual(c1.get_marked_count(), c.get_marked_count())
+
+        c1.go(200)
+        self.assertEqual(c1.pos, 200)
 
         c.go_eol()
         c1 = c.clone()

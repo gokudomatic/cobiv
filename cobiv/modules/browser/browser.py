@@ -319,9 +319,13 @@ class Browser(View, FloatLayout):
         colnr = pos % nb_cols
         new_pos = colnr + (linenr + diff) * nb_cols
 
+        print self.page_cursor.pos
+
         if new_pos >= len(self.grid.children) - nb_cols:
+            print "loading more next"
             self.load_more()
         elif new_pos <= nb_cols:
+            print "loading more previous"
             self.load_more(direction_next=False)
 
         return self.cursor.go(self.page_cursor.pos + new_pos)

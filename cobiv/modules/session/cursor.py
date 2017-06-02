@@ -196,6 +196,10 @@ class Cursor(EventDispatcher):
         new_cursor = Cursor()
         if self.implementation is not None:
             new_cursor.implementation = self.implementation.clone()
+            new_cursor.implementation.bind(filename=new_cursor.on_filename_change)
+            new_cursor.implementation.bind(file_id=new_cursor.on_file_id_change)
+            new_cursor.implementation.bind(pos=new_cursor.on_pos_change)
+
         new_cursor.pos = self.pos
         new_cursor.file_id = self.file_id
         new_cursor.filename = self.filename
