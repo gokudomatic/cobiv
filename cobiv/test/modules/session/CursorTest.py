@@ -679,6 +679,26 @@ class CursorTest(unittest.TestCase):
 
         app.stop()
 
+    def _test_advanced_clone(self, app, *args):
+        c = Cursor()
+        c.set_implementation(MockCursor())
+        c.go(990)
+        c.mark()
+        c.go_next()
+        c.cut_marked()
+
+        c.go_eol()
+        c.paste_marked(append=True,update_cursor=False)
+        c1 = c.clone()
+        c1.go(999)
+        self.assertFalse(c1.is_eol())
+        self.assertEqual(c1.pos,999)
+        self.assertEqual(c1.file_id,990)
+
+
+        app.stop()
+
+
     def call_test(self, func):
         a = TestApp()
         p = partial(func, a)
@@ -712,6 +732,8 @@ class CursorTest(unittest.TestCase):
     def test_tags(self):
         self.call_test(self._test_tags)
 
+    def test_advanced_clone(self):
+        self.call_test(self._test_advanced_clone)
 
 if __name__ == "__main__":
     unittest.main()

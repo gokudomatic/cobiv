@@ -108,8 +108,8 @@ class SqliteCursor(CursorInterface):
     def go(self, idx):
         if self.pos is None:
             return None
-        row = self.con.execute('select rowid,* from current_set where set_head_key=? and position>=0 and position=?',
-                               (self.set_head_key, idx)).fetchone()
+        row = self.con.execute('select rowid,* from current_set where position>=0 and position=?',
+                               (idx,)).fetchone()
         if row is not None:
             self.init_row(row)
         return self if row is not None else None
@@ -246,6 +246,7 @@ class SqliteCursor(CursorInterface):
 
     def cut_marked(self):
         with self.con:
+            self.con.execute('delete from current_set where position<0')
             self.con.execute(
                 'create temporary table renum_clip as select c.rowid fkey from current_set c, marked m where c.file_key=m.file_key and c.position>=0 order by c.position')
             self.con.execute('create unique index renum_clip_idx on renum_clip(fkey)')  # improve performance
@@ -284,6 +285,13 @@ class SqliteCursor(CursorInterface):
             # update the negative positions
             self.con.execute(
                 'update current_set set position=-1*position+' + str(new_pos - 1) + ' where position<0')
+
+    def get_clipboard_size(self):
+        if self.pos is None:
+            return 0
+        row = self.con.execute('select count(*) from current_set where position<0').fetchone()
+
+        return 0 if row is None else row[0]
 
 
 class SqliteDb(Entity):

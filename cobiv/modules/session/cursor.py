@@ -86,6 +86,9 @@ class CursorInterface(EventDispatcher):
     def get_tags(self):
         return []
 
+    def get_clipboard_size(self):
+        return 0
+
 
 class EOLCursor(CursorInterface):
     last_cursor = ObjectProperty(None)
@@ -179,6 +182,12 @@ class EOLCursor(CursorInterface):
                 self.pos = 0
             else:
                 self.pos = last.pos + 1
+
+    def get_clipboard_size(self):
+        if self.last_cursor is None:
+            return 0
+        else:
+            return self.last_cursor.get_clipboard_size()
 
 
 class Cursor(EventDispatcher):
@@ -382,10 +391,11 @@ class Cursor(EventDispatcher):
                     self.implementation.update_pos()
                 self.mark_all(False)
 
-    def paste_marked(self, new_pos=None):
+    def paste_marked(self, new_pos=None, append=False, update_cursor=True):
         if self.implementation is not None:
-            self.implementation.paste_marked(new_pos)
-            self.go(self.pos, force=True)
+            self.implementation.paste_marked(new_pos=new_pos,append=append)
+            if update_cursor:
+                self.go(self.pos, force=True)
 
     def mark_all(self, value=None):
         if self.implementation is not None:
@@ -406,3 +416,9 @@ class Cursor(EventDispatcher):
     def get_tags(self):
         if self.implementation is not None:
             return self.implementation.get_tags()
+
+    def get_clipboard_size(self):
+        if self.implementation is not None:
+            return self.implementation.get_clipboard_size()
+        else:
+            return 0

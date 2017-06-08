@@ -671,9 +671,11 @@ class SQLiteCursorTest(unittest.TestCase):
         c.go_first()
         c.cut_marked()
         self.assertEqual(8, len(c))
+        self.assertEqual(2,c.get_clipboard_size())
         c.mark()
         c.cut_marked()
         self.assertEqual(7, len(c))
+        self.assertEqual(1,c.get_clipboard_size())
 
         app.stop()
 

@@ -319,13 +319,9 @@ class Browser(View, FloatLayout):
         colnr = pos % nb_cols
         new_pos = colnr + (linenr + diff) * nb_cols
 
-        print self.page_cursor.pos
-
         if new_pos >= len(self.grid.children) - nb_cols:
-            print "loading more next"
             self.load_more()
         elif new_pos <= nb_cols:
-            print "loading more previous"
             self.load_more(direction_next=False)
 
         return self.cursor.go(self.page_cursor.pos + new_pos)
@@ -475,8 +471,8 @@ class Browser(View, FloatLayout):
         if total_to_remove > 0:
             current_local_pos = self.cursor.pos - self.page_cursor.pos
             # remove first items
-            to_delete_before = current_local_pos - self.max_items() / 2
-            to_delete_after = len(self.grid.children) - (current_local_pos + self.max_items() / 2)
+            to_delete_before = int(current_local_pos - self.max_items() / 2)
+            to_delete_after = int(len(self.grid.children) - (current_local_pos + self.max_items() / 2))
             if to_delete_after < 0:
                 # it means we're at the end of the list
                 to_delete_before += to_delete_after
@@ -506,6 +502,12 @@ class Browser(View, FloatLayout):
     def _scroll_to_current(self):
         if self.selected_image is not None:
             self.ids.scroll_view.scroll_to(self.selected_image)
+        self.do_next_action()
+
+    def _go_to_current_pos(self, dt):
+        if self.cursor.pos is not None:
+            self.cursor.go(idx=self.cursor.pos, force=True)
+        self.do_next_action()
 
     ##############################################################
 
@@ -522,11 +524,15 @@ class Browser(View, FloatLayout):
         if self.cursor.get_marked_count() == 0:
             return
 
+        cursor_is_eol=self.cursor.is_eol()
+
         children = dict()
         for c in self.grid.children:
             children[c.file_id] = c
 
-        self.execute_cmd("cut-marked", force_default=True)
+        self.cursor.cut_marked()
+
+        # self.execute_cmd("cut-marked", force_default=True)
         sql_size = len(self.cursor)
         if sql_size == 0:
             self.load_set()
@@ -556,27 +562,28 @@ class Browser(View, FloatLayout):
                 self.load_set()
             else:
                 if page_cursor_pos < 0:
-                    self.page_cursor.go(self.grid.children[-1])
-                if cursor_pos < 0:
+                    self.page_cursor.go(self.grid.children[-1].position)
+                if cursor_pos < 0 and not cursor_is_eol:
                     self.cursor.go(page_cursor_pos)
 
-                if item_before_eol is not None and not item_before_eol in self.grid.children:
+                if item_before_eol is not None:
                     #last item disappeared. link with eol must be updated
                     self.cursor.update_eol_implementation()
 
+
                 # recenter
-                self.pending_actions.append(self._remove_recenter)
+                self.load_more(factor=0,recenter=True)
                 self.do_next_action()
 
     def paste_marked(self):
-        if self.cursor.is_eol():
-            pos_to_send = "eol"
-        elif self.cursor.filename is not None:
-            pos_to_send = self.cursor.pos
-        else:
+        if self.cursor.pos is None:
             return
 
-        self.execute_cmd("past-marked " + str(pos_to_send), force_default=True)
+        clipboard_size=self.cursor.get_clipboard_size()
+        to_load=min(clipboard_size,self.max_items()-self.cursor.pos+self.page_cursor.pos)
+
+        pos_to_send = self.cursor.pos
+        self.cursor.paste_marked(pos_to_send,self.cursor.is_eol(),update_cursor=False)
 
         if len(self.cursor) == 0:
             return
@@ -585,5 +592,24 @@ class Browser(View, FloatLayout):
             self.load_set()
             return
 
-        self.pending_actions.append(self._remove_recenter)
+        c1=self.cursor.clone()
+        c1.go(pos_to_send,force=True)
+
+        next_ids=c1.get_next_ids(to_load,self_included=True)
+        pos_to_insert=len(self.grid.children)-self.cursor.pos+self.page_cursor.pos
+
+        for file_id,position,image_filename in next_ids:
+            thumb_filename = os.path.join(self.thumbs_path, str(file_id) + '.png')
+            thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
+
+            item = Item(thumb=thumb, container=self,
+                        cell_size=self.cell_size, file_id=file_id, position=position, duration=0)
+
+            self.grid.add_widget(item,pos_to_insert)
+
+        self.refresh_positions()
+
+        self.cursor.go(self.cursor.pos,force=True)
+        self._remove_recenter(0)
+        # self.pending_actions.append(self._remove_recenter)
         self.do_next_action()
