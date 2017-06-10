@@ -16,7 +16,8 @@ from kivy.properties import ObjectProperty, NumericProperty, BooleanProperty
 from kivy.clock import Clock
 import os
 
-Builder.load_file('modules/browser/browser.kv')
+
+Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'browser.kv')))
 
 
 class VerticalLoadEffect(DampedScrollEffect):
@@ -63,6 +64,7 @@ class Browser(View, FloatLayout):
     image_queue = deque()
     append_queue = True
     pending_actions = deque()
+    on_actions_end = None
     widget_to_scroll = None
     thumb_loader = None
 
@@ -130,12 +132,13 @@ class Browser(View, FloatLayout):
         self.thumb_loader = ThumbLoader()
         self.thumb_loader.container = self
 
-    def on_switch(self):
+    def on_switch(self,loader_thread=True):
         self.cursor.bind(file_id=self.on_id_change)
         self.load_set()
         if self.selected_image is not None:
             Clock.schedule_once(self.scroll_to_image)
-        self.thumb_loader.restart()
+        if loader_thread:
+            self.thumb_loader.restart()
 
         self.bind(max_rows=self.on_size_change, width=self.on_size_change)
 
@@ -168,6 +171,7 @@ class Browser(View, FloatLayout):
         self.tg_load_set()
 
     def trigger_load_set(self, dt):
+        print "load set"
         self.grid.clear_widgets()
 
         if self.cursor.file_id is not None:
@@ -283,11 +287,9 @@ class Browser(View, FloatLayout):
     def select_down(self, dt):
         if self.cursor.filename is not None:
             if not self.select_row(1):
-                # self.cursor.go_last()
                 self.select_EOL()
 
     def select_up(self, dt):
-
         if self.cursor.filename is not None or self.cursor.is_eol():
             if not self.select_row(-1):
                 self.cursor.go_first()
@@ -435,6 +437,9 @@ class Browser(View, FloatLayout):
                 action(0)
             else:
                 Clock.schedule_once(action, timeout)
+        elif self.on_actions_end is not None:
+            self.on_actions_end()
+
 
     def _remove_firsts(self, dt):
         child_count = len(self.grid.children)
@@ -518,7 +523,8 @@ class Browser(View, FloatLayout):
     def refresh_mark(self):
         mapping = self.cursor.get_all_marked()
         for item in self.grid.children:
-            item.set_marked(item.file_id in mapping)
+            if not isinstance(item,EOLItem):
+                item.set_marked(item.file_id in mapping)
 
     def cut_marked(self):
         if self.cursor.get_marked_count() == 0:
@@ -612,4 +618,4 @@ class Browser(View, FloatLayout):
         self.cursor.go(self.cursor.pos,force=True)
         self._remove_recenter(0)
         # self.pending_actions.append(self._remove_recenter)
-        self.do_next_action()
+        # self.do_next_action()

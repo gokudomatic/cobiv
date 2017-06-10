@@ -3,16 +3,50 @@ import threading
 
 import time
 from collections import deque
-from functools import partial
 
+import sys
 from kivy.app import App
 from kivy.cache import Cache
-from kivy.clock import Clock
-from kivy.uix.image import AsyncImage
 
 from cobiv.modules.browser.ThumbnailImage import ThumbnailImage
 from cobiv.modules.browser.item import Thumb
-from cobiv.modules.imageset.ImageSet import create_thumbnail_data
+
+import PIL
+from PIL import Image, ImageFile
+
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+
+def create_thumbnail_data(filename, size, destination):
+    # print "creating thumbnail for "+filename
+    img = Image.open(filename)
+    try:
+        img.load()
+    except SyntaxError as e:
+        path = os.path.dirname(sys.argv[0])
+        destination = 'C:/Users/edwin/Apps/python/workspace/cobiv/cobiv\\resources\\icons\\image_corrupt.png'
+        # destination=os.path.join(path,"resources","icons","image_corrupt.png")
+        print(destination)
+        return destination
+        print("error, not possible!")
+    except:
+        pass
+
+    if img.size[1] > img.size[0]:
+        baseheight = size
+        hpercent = (baseheight / float(img.size[1]))
+        wsize = int((float(img.size[0]) * float(hpercent)))
+        hsize = size
+    else:
+        basewidth = size
+        wpercent = (basewidth / float(img.size[0]))
+        hsize = int((float(img.size[1]) * float(wpercent)))
+        wsize = size
+    img = img.resize((wsize, hsize), PIL.Image.ANTIALIAS)
+
+    image_byte_array = BytesIO()
+    img.convert('RGB').save(destination, format='PNG', optimize=True)
+    return destination
 
 
 class ThumbLoader():
@@ -72,7 +106,7 @@ class ThumbLoader():
 
     def get_image(self, file_id, filename, image_full_path, force_refresh=False):
         if not os.path.exists(filename):
-            self.append((file_id,image_full_path))
+            self.append((file_id, image_full_path))
         name = self.get_filename_caption(image_full_path)
         img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
         thumb = Thumb(image=img, cell_size=self.cell_size, caption=name, selected=False)
