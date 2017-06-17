@@ -51,25 +51,27 @@ class Browser(View, FloatLayout):
     page_cursor = None
     eol_cursor = None
     selected_image = None
-    grid = ObjectProperty(None)
-
     cell_size = NumericProperty(120)
     page_rows = NumericProperty(None)
     max_rows = NumericProperty(None)
     max_scroll_ratio = NumericProperty(3)
     max_items_cache = NumericProperty(None)
+    grid = ObjectProperty(None)
 
     global_scroll_pos = NumericProperty(0)
     session = None
-    image_queue = deque()
+
     append_queue = True
-    pending_actions = deque()
+
     on_actions_end = None
     widget_to_scroll = None
     thumb_loader = None
 
     def __init__(self, **kwargs):
         super(Browser, self).__init__(**kwargs)
+
+        self.image_queue = deque()
+        self.pending_actions = deque()
 
         self.tg_select_next = Clock.create_trigger(self.select_next, 0.1)
         self.tg_select_previous = Clock.create_trigger(self.select_previous, 0.1)
@@ -171,11 +173,11 @@ class Browser(View, FloatLayout):
         self.tg_load_set()
 
     def trigger_load_set(self, dt):
-        print "load set"
         self.grid.clear_widgets()
 
         if self.cursor.file_id is not None:
             self.start_progress("Loading thumbs...")
+            self.pending_actions.clear()
             self.pending_actions.append(self._load_set)
             self.pending_actions.append(self._load_process)
             self.do_next_action(immediat=True)
@@ -202,6 +204,7 @@ class Browser(View, FloatLayout):
 
         list_ids = c.get_next_ids(self.max_items_cache * self.grid.cols, self_included=True)
 
+        self.image_queue.clear()
         idx = 0
         for id_file, position, filename in list_ids:
 

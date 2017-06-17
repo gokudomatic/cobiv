@@ -4,7 +4,7 @@ from cobiv.modules.session.cursor import Cursor
 
 class Session(Entity):
 
-    cursor = Cursor()
+    cursor = None
 
     def __init__(self):
-        pass
+        self.cursor = Cursor()
