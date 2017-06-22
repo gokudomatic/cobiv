@@ -46,3 +46,6 @@ class EOLItem(Label):
 
     def set_marked(self,value):
         pass
+
+    def is_marked(self):
+        return False

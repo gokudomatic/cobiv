@@ -1,6 +1,8 @@
 from collections import deque
 
 import datetime
+
+import math
 from kivy.app import App
 from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.lang import Builder
@@ -15,7 +17,6 @@ from cobiv.modules.view import View
 from kivy.properties import ObjectProperty, NumericProperty, BooleanProperty
 from kivy.clock import Clock
 import os
-
 
 Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'browser.kv')))
 
@@ -134,7 +135,7 @@ class Browser(View, FloatLayout):
         self.thumb_loader = ThumbLoader()
         self.thumb_loader.container = self
 
-    def on_switch(self,loader_thread=True):
+    def on_switch(self, loader_thread=True):
         self.cursor.bind(file_id=self.on_id_change)
         self.load_set()
         if self.selected_image is not None:
@@ -188,14 +189,23 @@ class Browser(View, FloatLayout):
             self.cursor.go_eol()
             self.page_cursor = self.cursor.clone()
 
+    def get_page_pos(self, cursor_pos, nb_cols, page_size, total_size):
+        if total_size - page_size / 2 < cursor_pos:
+            start_pos = total_size - page_size
+            start_pos += nb_cols - start_pos % nb_cols
+        else:
+            start_pos = cursor_pos - page_size / 2
+            start_pos -= start_pos % nb_cols
+
+        return max(0, start_pos)
+
     def _load_set(self, dt):
         max_count = self.max_items()
         self.set_progress_max_count(max_count)
         self.reset_progress()
 
-        start_pos = max(0, self.cursor.pos - max_count / 2)
-        diff = start_pos % self.grid.cols
-        start_pos -= diff
+        start_pos = self.get_page_pos(cursor_pos=self.cursor.pos, nb_cols=self.grid.cols, page_size=max_count,
+                                      total_size=len(self.cursor))
 
         self.page_cursor = self.cursor.get_cursor_by_pos(start_pos)
 
@@ -207,15 +217,10 @@ class Browser(View, FloatLayout):
         self.image_queue.clear()
         idx = 0
         for id_file, position, filename in list_ids:
-
             if idx < max_count:
-
                 self.thumb_loader.append((id_file, filename))
-
                 thumb_filename = os.path.join(self.thumbs_path, str(id_file) + '.png')
-
                 self.image_queue.append((thumb_filename, id_file, position, filename))
-
             else:
                 self.thumb_loader.append((id_file, filename))
 
@@ -224,11 +229,8 @@ class Browser(View, FloatLayout):
         if len(list_ids) < max_count:
             self.image_queue.append((None, None, "eol", None))
         if idx > 0:
-
             self.reset_progress()
             self.do_next_action()
-        else:
-            pass
 
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
@@ -303,7 +305,7 @@ class Browser(View, FloatLayout):
             self.cursor.go_first()
 
     def select_last(self):
-        if self.cursor.filename is not None:
+        if self.cursor.filename is not None or self.cursor.is_eol():
             self.thumb_loader.clear_cache()
             self.cursor.go_last()
 
@@ -353,6 +355,7 @@ class Browser(View, FloatLayout):
                 item.set_selected(True)
                 self.selected_image = item
                 self.ids.scroll_view.scroll_to(item)
+                self._recenter_auto_page()
             else:
                 self.load_set()
                 self.pending_actions.append(self._pass)
@@ -433,6 +436,14 @@ class Browser(View, FloatLayout):
         else:
             self.stop_progress()
 
+    def _recenter_auto_page(self):
+        pos = self.cursor.pos - self.page_cursor.pos
+        nb_cols = self.grid.cols
+        if pos >= len(self.grid.children) - nb_cols:
+            self.load_more()
+        elif pos <= nb_cols:
+            self.load_more(direction_next=False)
+
     def do_next_action(self, immediat=False, timeout=0):
         if len(self.pending_actions) > 0:
             action = self.pending_actions.popleft()
@@ -443,10 +454,9 @@ class Browser(View, FloatLayout):
         elif self.on_actions_end is not None:
             self.on_actions_end()
 
-
     def _remove_firsts(self, dt):
         child_count = len(self.grid.children)
-        to_remove = int(child_count - self.max_items())
+        to_remove = int(math.ceil((child_count - self.max_items()) / self.grid.cols) * self.grid.cols)
         if to_remove > 0:
             for i in range(to_remove):
                 widget = self.grid.children[-1]
@@ -526,14 +536,14 @@ class Browser(View, FloatLayout):
     def refresh_mark(self):
         mapping = self.cursor.get_all_marked()
         for item in self.grid.children:
-            if not isinstance(item,EOLItem):
+            if not isinstance(item, EOLItem):
                 item.set_marked(item.file_id in mapping)
 
     def cut_marked(self):
         if self.cursor.get_marked_count() == 0:
             return
 
-        cursor_is_eol=self.cursor.is_eol()
+        cursor_is_eol = self.cursor.is_eol()
 
         children = dict()
         for c in self.grid.children:
@@ -547,10 +557,10 @@ class Browser(View, FloatLayout):
             self.load_set()
         else:
 
-            if isinstance(self.grid.children[0],EOLItem):
-                item_before_eol=self.grid.children[1]
+            if isinstance(self.grid.children[0], EOLItem):
+                item_before_eol = self.grid.children[1]
             else:
-                item_before_eol=None
+                item_before_eol = None
 
             mapping = self.cursor.get_position_mapping(children.keys())
             page_cursor_pos = None
@@ -576,23 +586,22 @@ class Browser(View, FloatLayout):
                     self.cursor.go(page_cursor_pos)
 
                 if item_before_eol is not None:
-                    #last item disappeared. link with eol must be updated
+                    # last item disappeared. link with eol must be updated
                     self.cursor.update_eol_implementation()
 
-
                 # recenter
-                self.load_more(factor=0,recenter=True)
+                self.load_more(factor=0, recenter=True)
                 self.do_next_action()
 
     def paste_marked(self):
         if self.cursor.pos is None:
             return
 
-        clipboard_size=self.cursor.get_clipboard_size()
-        to_load=min(clipboard_size,self.max_items()-self.cursor.pos+self.page_cursor.pos)
+        clipboard_size = self.cursor.get_clipboard_size()
+        to_load = min(clipboard_size, self.max_items() - self.cursor.pos + self.page_cursor.pos)
 
         pos_to_send = self.cursor.pos
-        self.cursor.paste_marked(pos_to_send,self.cursor.is_eol(),update_cursor=False)
+        self.cursor.paste_marked(pos_to_send, self.cursor.is_eol(), update_cursor=False)
 
         if len(self.cursor) == 0:
             return
@@ -601,24 +610,24 @@ class Browser(View, FloatLayout):
             self.load_set()
             return
 
-        c1=self.cursor.clone()
-        c1.go(pos_to_send,force=True)
+        c1 = self.cursor.clone()
+        c1.go(pos_to_send, force=True)
 
-        next_ids=c1.get_next_ids(to_load,self_included=True)
-        pos_to_insert=len(self.grid.children)-self.cursor.pos+self.page_cursor.pos
+        next_ids = c1.get_next_ids(to_load, self_included=True)
+        pos_to_insert = len(self.grid.children) - self.cursor.pos + self.page_cursor.pos
 
-        for file_id,position,image_filename in next_ids:
+        for file_id, position, image_filename in next_ids:
             thumb_filename = os.path.join(self.thumbs_path, str(file_id) + '.png')
             thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
 
             item = Item(thumb=thumb, container=self,
                         cell_size=self.cell_size, file_id=file_id, position=position, duration=0)
 
-            self.grid.add_widget(item,pos_to_insert)
+            self.grid.add_widget(item, pos_to_insert)
 
         self.refresh_positions()
 
-        self.cursor.go(self.cursor.pos,force=True)
+        self.cursor.go(self.cursor.pos, force=True)
         self._remove_recenter(0)
         # self.pending_actions.append(self._remove_recenter)
         # self.do_next_action()

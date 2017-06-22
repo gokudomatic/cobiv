@@ -52,7 +52,6 @@ class Item(Magnet):
     position = NumericProperty(None)
     temp_idx = None
 
-
     def __init__(self, **kwargs):
         super(Item, self).__init__(**kwargs)
 
@@ -97,19 +96,19 @@ class Item(Magnet):
             cnt_max = len(grid_layout.children)
             x = math.floor(touch.pos[0] / self.cell_size)
             y = math.floor((grid_layout.height + self.cell_size - touch.pos[1]) / self.cell_size)
-            idx = min(grid_layout.cols * max(0,y-1) + x, cnt_max)
+            idx = min(grid_layout.cols * max(0, y - 1) + x, cnt_max)
 
             i = int(cnt_max - idx)
 
-            self.temp_idx=idx
+            self.temp_idx = idx
 
             if i > 0:
                 grid_layout.add_widget(self, i)
             else:
-                last_child=grid_layout.children[0]
+                last_child = grid_layout.children[0]
                 if isinstance(last_child, EOLItem):
-                    grid_layout.add_widget(self,1)
-                    self.temp_idx = cnt_max-1
+                    grid_layout.add_widget(self, 1)
+                    self.temp_idx = cnt_max - 1
                 else:
                     grid_layout.add_widget(self)
 
@@ -121,8 +120,8 @@ class Item(Magnet):
             self.container.remove_widget(self.thumb)
             self.add_widget(self.thumb)
             touch.ungrab(self)
-            self.container.on_image_touch_up(self,self.temp_idx)
-            self.temp_idx=None
+            self.container.on_image_touch_up(self, self.temp_idx)
+            self.temp_idx = None
             return True
 
         return super(Item, self).on_touch_up(touch, *args)
@@ -133,8 +132,11 @@ class Item(Magnet):
     def is_selected(self):
         return self.thumb.selected if self.thumb is not None else False
 
-    def set_marked(self,value):
+    def set_marked(self, value):
         if value is None:
             self.thumb.marked = not self.thumb.marked
         else:
             self.thumb.marked = value
+
+    def is_marked(self):
+        return self.thumb.marked
