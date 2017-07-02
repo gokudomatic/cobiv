@@ -402,6 +402,8 @@ class Browser(View, FloatLayout):
             c = self.cursor.get_cursor_by_pos(last_pos)
 
             to_load = self.grid.cols * factor + max(0, self.max_items() - len(self.grid.children))
+            if not direction_next:
+                to_load = self.grid.cols * int(to_load / self.grid.cols)
             to_cache = self.max_items_cache * self.grid.cols
 
             do_add_eol = False
@@ -504,6 +506,10 @@ class Browser(View, FloatLayout):
             self._remove_lasts(0)
             widget = self.grid.children[-1]
             self.page_cursor.go(widget.position)
+        else:
+            widget = self.grid.children[-1]
+            if self.page_cursor.file_id!=widget.position:
+                self.page_cursor.go(widget.position,force=True)
 
         self.do_next_action()
 
@@ -576,12 +582,13 @@ class Browser(View, FloatLayout):
                     self.grid.remove_widget(child)
                 else:
                     child.position = position
+
             if len(self.grid.children) == 0:
                 self.cursor.go(min(sql_size, self.cursor.pos))
                 self.load_set()
             else:
-                if page_cursor_pos < 0:
-                    self.page_cursor.go(self.grid.children[-1].position)
+                if page_cursor_pos < 0 or page_cursor_pos is None:
+                    self.page_cursor.go(self.grid.children[-1].position, force=True)
                 if cursor_pos < 0 and not cursor_is_eol:
                     self.cursor.go(page_cursor_pos)
 
@@ -591,6 +598,8 @@ class Browser(View, FloatLayout):
 
                 # recenter
                 self.load_more(factor=0, recenter=True)
+                if item_before_eol is not None:
+                    self.load_more(factor=0, recenter=True, direction_next=False)
                 self.do_next_action()
 
     def paste_marked(self):
