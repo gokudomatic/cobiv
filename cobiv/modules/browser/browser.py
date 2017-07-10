@@ -508,8 +508,8 @@ class Browser(View, FloatLayout):
             self.page_cursor.go(widget.position)
         else:
             widget = self.grid.children[-1]
-            if self.page_cursor.file_id!=widget.position:
-                self.page_cursor.go(widget.position,force=True)
+            if self.page_cursor.file_id != widget.file_id:
+                self.page_cursor.go(widget.position, force=True)
 
         self.do_next_action()
 
@@ -589,7 +589,20 @@ class Browser(View, FloatLayout):
             else:
                 if page_cursor_pos < 0 or page_cursor_pos is None:
                     self.page_cursor.go(self.grid.children[-1].position, force=True)
-                if cursor_pos < 0 and not cursor_is_eol:
+                elif page_cursor_pos != self.page_cursor.pos:
+                    # it moved upfront.
+
+                    # update page cursor and cursor
+                    self.page_cursor.go(self.page_cursor.pos, force=True)
+                    self.cursor.go(self.cursor.pos, force=True)
+                    cursor_pos = self.cursor.pos
+
+                    # remove all items before page cursor
+                    while (len(self.grid.children) > 0 and self.page_cursor.pos > self.grid.children[-1].position):
+                        self.grid.remove_widget(self.grid.children[-1])
+                if cursor_pos is None and not cursor_is_eol:
+                    self.cursor.go(self.cursor.pos)
+                elif cursor_pos < 0 and not cursor_is_eol:
                     self.cursor.go(page_cursor_pos)
 
                 if item_before_eol is not None:
@@ -633,6 +646,8 @@ class Browser(View, FloatLayout):
                         cell_size=self.cell_size, file_id=file_id, position=position, duration=0)
 
             self.grid.add_widget(item, pos_to_insert)
+            if position == self.page_cursor.pos and file_id != self.page_cursor.file_id:
+                self.page_cursor.go(position, force=True)
 
         self.refresh_positions()
 
