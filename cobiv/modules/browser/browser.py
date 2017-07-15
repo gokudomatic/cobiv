@@ -207,6 +207,9 @@ class Browser(View, FloatLayout):
         start_pos = self.get_page_pos(cursor_pos=self.cursor.pos, nb_cols=self.grid.cols, page_size=max_count,
                                       total_size=len(self.cursor))
 
+        if start_pos==self.cursor.pos:
+            self.cursor.go(start_pos,force=True)
+
         self.page_cursor = self.cursor.get_cursor_by_pos(start_pos)
 
         c = self.cursor.get_cursor_by_pos(self.page_cursor.pos)
@@ -486,24 +489,40 @@ class Browser(View, FloatLayout):
 
         self.do_next_action()
 
+    def _calculate_lines_to_remove(self, local_pos, page_size, actual_size):
+        half_page = float(page_size) / 2
+        to_delete_after = actual_size - int(local_pos + half_page)
+
+        if to_delete_after > 0:
+            to_delete_before = int(max(0,min(local_pos - half_page, actual_size - page_size - to_delete_after)))
+        else:
+            to_delete_before = actual_size - page_size
+
+        return int(self.grid.cols * math.ceil(float(to_delete_before) / self.grid.cols))
+
     def _remove_recenter(self, dt):
         total_to_remove = len(self.grid.children) - self.max_items()
         if total_to_remove > 0:
-            current_local_pos = self.cursor.pos - self.page_cursor.pos
-            # remove first items
-            to_delete_before = int(current_local_pos - self.max_items() / 2)
-            to_delete_after = int(len(self.grid.children) - (current_local_pos + self.max_items() / 2))
-            if to_delete_after < 0:
-                # it means we're at the end of the list
-                to_delete_before += to_delete_after
+
+            if isinstance(self.grid.children[0],EOLItem):
+                self.grid.remove_widget(self.grid.children[0])
+
+            to_delete_before = self._calculate_lines_to_remove(local_pos=self.cursor.pos - self.page_cursor.pos,
+                                                               page_size=self.max_items(),
+                                                               actual_size=len(self.grid.children))
+
             if to_delete_before > 0:
                 for i in range(to_delete_before):
                     widget = self.grid.children[-1]
                     self.grid.remove_widget(widget)
                     widget.clear_widgets()
 
-            # remove last items
-            self._remove_lasts(0)
+            if len(self.grid.children)>self.max_items():
+                # remove last items
+                self._remove_lasts(0)
+            elif len(self.grid.children)<self.max_items():
+                self.load_more(factor=0)
+
             widget = self.grid.children[-1]
             self.page_cursor.go(widget.position)
         else:
@@ -628,30 +647,34 @@ class Browser(View, FloatLayout):
         if len(self.cursor) == 0:
             return
 
-        if len(self.grid.children) == 0:
-            self.load_set()
-            return
 
-        c1 = self.cursor.clone()
-        c1.go(pos_to_send, force=True)
+        self.load_set()
+        self.cursor.go(self.cursor.pos,force=True)
+        return
 
-        next_ids = c1.get_next_ids(to_load, self_included=True)
-        pos_to_insert = len(self.grid.children) - self.cursor.pos + self.page_cursor.pos
 
-        for file_id, position, image_filename in next_ids:
-            thumb_filename = os.path.join(self.thumbs_path, str(file_id) + '.png')
-            thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
-
-            item = Item(thumb=thumb, container=self,
-                        cell_size=self.cell_size, file_id=file_id, position=position, duration=0)
-
-            self.grid.add_widget(item, pos_to_insert)
-            if position == self.page_cursor.pos and file_id != self.page_cursor.file_id:
-                self.page_cursor.go(position, force=True)
-
-        self.refresh_positions()
-
-        self.cursor.go(self.cursor.pos, force=True)
-        self._remove_recenter(0)
-        # self.pending_actions.append(self._remove_recenter)
-        # self.do_next_action()
+        # if len(self.grid.children) == 0:
+        #     self.load_set()
+        #     return
+        #
+        # c1 = self.cursor.clone()
+        # c1.go(pos_to_send, force=True)
+        #
+        # next_ids = c1.get_next_ids(to_load, self_included=True)
+        # pos_to_insert = len(self.grid.children) - self.cursor.pos + self.page_cursor.pos
+        #
+        # for file_id, position, image_filename in next_ids:
+        #     thumb_filename = os.path.join(self.thumbs_path, str(file_id) + '.png')
+        #     thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
+        #
+        #     item = Item(thumb=thumb, container=self,
+        #                 cell_size=self.cell_size, file_id=file_id, position=position, duration=0)
+        #
+        #     self.grid.add_widget(item, pos_to_insert)
+        #     if position == self.page_cursor.pos and file_id != self.page_cursor.file_id:
+        #         self.page_cursor.go(position, force=True)
+        #
+        # self.refresh_positions()
+        #
+        # self.cursor.go(self.cursor.pos, force=True)
+        # self._remove_recenter(0)
