@@ -979,10 +979,6 @@ class BrowserTest(unittest.TestCase):
             self.assertEqual(0, len(marked))
             filenames = get_filenames(b.page_cursor, len(expected))
 
-            if debug:
-                print expected
-                print filenames
-
             self.assertItemsEqual(expected, filenames)
 
         def mark_one(init=True):
@@ -1167,10 +1163,6 @@ class BrowserTest(unittest.TestCase):
             marked = [e.position for e in b.grid.children if e.is_marked()]
             self.assertEqual(0, len(marked))
             filenames = get_filenames(b.page_cursor, len(expected))
-
-            if debug:
-                print expected
-                print filenames
 
             self.assertItemsEqual(expected, filenames)
 
