@@ -176,7 +176,7 @@ class Browser(View, FloatLayout):
     def trigger_load_set(self, dt):
         self.grid.clear_widgets()
 
-        if self.cursor.file_id is not None:
+        if len(self.cursor)>0:
             self.start_progress("Loading thumbs...")
             self.pending_actions.clear()
             self.pending_actions.append(self._load_set)
@@ -189,13 +189,16 @@ class Browser(View, FloatLayout):
             self.cursor.go_eol()
             self.page_cursor = self.cursor.clone()
 
-    def get_page_pos(self, cursor_pos, nb_cols, page_size, total_size):
-        if total_size - page_size / 2 < cursor_pos:
-            start_pos = total_size - page_size
-            start_pos += nb_cols - start_pos % nb_cols
+    def get_page_pos(self, cursor_pos, nb_cols, page_size, total_size, is_eol=False):
+        if is_eol:
+            start_pos=total_size-page_size
         else:
-            start_pos = cursor_pos - page_size / 2
-            start_pos -= start_pos % nb_cols
+            if total_size - page_size / 2 < cursor_pos:
+                start_pos = total_size - page_size
+                start_pos += nb_cols - start_pos % nb_cols
+            else:
+                start_pos = cursor_pos - page_size / 2
+                start_pos -= start_pos % nb_cols
 
         return max(0, start_pos)
 
@@ -205,7 +208,7 @@ class Browser(View, FloatLayout):
         self.reset_progress()
 
         start_pos = self.get_page_pos(cursor_pos=self.cursor.pos, nb_cols=self.grid.cols, page_size=max_count,
-                                      total_size=len(self.cursor))
+                                      total_size=len(self.cursor),is_eol=self.cursor.is_eol())
 
         if start_pos==self.cursor.pos:
             self.cursor.go(start_pos,force=True)
@@ -613,16 +616,16 @@ class Browser(View, FloatLayout):
 
                     # update page cursor and cursor
                     self.page_cursor.go(self.page_cursor.pos, force=True)
-                    self.cursor.go(self.cursor.pos, force=True)
+                    self.cursor.reload()
                     cursor_pos = self.cursor.pos
 
                     # remove all items before page cursor
                     while (len(self.grid.children) > 0 and self.page_cursor.pos > self.grid.children[-1].position):
                         self.grid.remove_widget(self.grid.children[-1])
                 if cursor_pos is None and not cursor_is_eol:
-                    self.cursor.go(self.cursor.pos)
+                    self.cursor.reload()
                 elif cursor_pos < 0 and not cursor_is_eol:
-                    self.cursor.go(page_cursor_pos)
+                    self.cursor.reload()
 
                 if item_before_eol is not None:
                     # last item disappeared. link with eol must be updated
@@ -638,10 +641,15 @@ class Browser(View, FloatLayout):
         if self.cursor.pos is None:
             return
 
+        was_empty=len(self.cursor)==0
+
+        current_pos=self.cursor.pos
+
         clipboard_size = self.cursor.get_clipboard_size()
         to_load = min(clipboard_size, self.max_items() - self.cursor.pos + self.page_cursor.pos)
 
         pos_to_send = self.cursor.pos
+
         self.cursor.paste_marked(pos_to_send, self.cursor.is_eol(), update_cursor=False)
 
         if len(self.cursor) == 0:
@@ -649,7 +657,10 @@ class Browser(View, FloatLayout):
 
 
         self.load_set()
-        self.cursor.go(self.cursor.pos,force=True)
+        if was_empty:
+            self.cursor.go(0,force=True)
+        else:
+            self.cursor.go(current_pos,force=True)
         return
 
 

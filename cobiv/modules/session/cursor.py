@@ -183,6 +183,10 @@ class EOLCursor(CursorInterface):
             else:
                 self.pos = last.pos + 1
 
+    def update_last(self):
+        if self.last_cursor is not None:
+            self.last_cursor = self.last_cursor.go_last()
+
     def get_clipboard_size(self):
         if self.last_cursor is None:
             return 0
@@ -310,6 +314,12 @@ class Cursor(EventDispatcher):
     def get_previous_ids(self, amount):
         return self.implementation.get_previous_ids(amount)
 
+    def reload(self):
+        if self.is_eol():
+            self.implementation.update_last()
+        else:
+            self.go(self.pos,force=True)
+
     def go(self, idx, force=False):
         if not force and self.pos is not None and idx == self.pos:
             return True
@@ -345,7 +355,7 @@ class Cursor(EventDispatcher):
         return self.implementation.remove()
 
     def __len__(self):
-        return self.implementation.__len__()
+        return self.implementation.__len__() if self.implementation is not None else 0
 
     def get_cursor_by_pos(self, pos):
         c = self.clone()

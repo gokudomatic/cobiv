@@ -985,8 +985,9 @@ class BrowserTest(unittest.TestCase):
 
             self.assertItemsEqual(expected, filenames)
 
-        def mark_one():
-            self.proceed_search(db)
+        def mark_one(init=True):
+            if init:
+                self.proceed_search(db)
             b.select_custom(4)
             b.mark_current()
             Clock.tick()
@@ -1063,6 +1064,7 @@ class BrowserTest(unittest.TestCase):
         b.cut_marked()
         b.select_custom(2)
         b.paste_marked()
+        sleep(0.1)
         Clock.tick()
         Clock.tick()
 
@@ -1110,11 +1112,18 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual("images\\%04d.jpg" % (84 + 1,), b.page_cursor.filename)
         self.assertEqual("images\\%04d.jpg" % (0 + 1,), b.cursor.filename)
 
-        # test first paste
-
-        # test last paste
-
         # test multiple cut
+        mark_one()
+        b.cut_marked()
+        mark_one(init=False)
+        b.cut_marked()
+        b.paste_marked()
+        sleep(0.1)
+        Clock.tick()
+        Clock.tick()
+        self.assertEqual(4, cursor.pos)
+        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(4)+range(5,28)])
+        self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         # test cut and paste all
         self.proceed_search(db)
@@ -1141,11 +1150,85 @@ class BrowserTest(unittest.TestCase):
         self.proceed_search(db)
         cursor = b.cursor
 
-        self.assertTrue(False)
+        def get_filenames(c, qty):
+            pc = c.clone()
+            filenames = []
+            for i in range(qty):
+                filenames.append(pc.filename)
+                pc.go_next()
+            return filenames
+
+        def test_page(expected,debug=False):
+            self.assertEqual(b.grid.children[-1].position, b.page_cursor.pos)
+            self.assertEqual(b.grid.children[-1].file_id, b.page_cursor.file_id)
+
+            self.assertEqual(len(expected),
+                             len(b.grid.children) - (1 if isinstance(b.grid.children[0], EOLItem) else 0))
+            marked = [e.position for e in b.grid.children if e.is_marked()]
+            self.assertEqual(0, len(marked))
+            filenames = get_filenames(b.page_cursor, len(expected))
+
+            if debug:
+                print expected
+                print filenames
+
+            self.assertItemsEqual(expected, filenames)
+
+        def mark_one(init=True):
+            if init:
+                self.proceed_search(db)
+            b.select_custom(4)
+            b.mark_current()
+            Clock.tick()
+
+        def mark_row():
+            self.proceed_search(db)
+            for i in range(6, 9):
+                b.select_custom(i)
+                b.mark_current()
+            Clock.tick()
+
+        def mark_page():
+            self.proceed_search(db)
+            for i in range(27):
+                b.select_custom(i)
+                b.mark_current()
+            Clock.tick()
 
         # test cut
+        self.proceed_search(db)
+        for i in range(6, 9):
+            b.select_custom(i)
+            b.mark_current()
+        Clock.tick()
+        b.select_last()
+        sleep(0.1)
+        Clock.tick()
+        Clock.tick()
+        b.select_next(0)
+        self.assertTrue(cursor.is_eol())
+
+        b.cut_marked()
+        sleep(0.1)
+        Clock.tick()
+        Clock.tick()
+
+        self.assertTrue(cursor.is_eol())
+        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(75,100)])
+        self.assertEqual(26,len(b.grid.children))
+        self.assertItemsEqual(range(72,97),[c.position for c in b.grid.children if not isinstance(c,EOLItem)])
 
         # test paste
+        b.paste_marked()
+        sleep(0.1)
+        Clock.tick()
+        Clock.tick()
+
+        self.assertTrue(96,cursor.pos)
+        self.assertFalse(cursor.is_eol())
+        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(78,100)+range(6,9)])
+        self.assertEqual(26,len(b.grid.children))
+        self.assertItemsEqual(range(75,100),[c.position for c in b.grid.children if not isinstance(c,EOLItem)])
 
         app.stop()
 
