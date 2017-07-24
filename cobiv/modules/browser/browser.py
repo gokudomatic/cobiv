@@ -1,12 +1,13 @@
 from collections import deque
 
-import datetime
-
 import math
 from kivy.app import App
 from kivy.effects.dampedscroll import DampedScrollEffect
+from kivy.factory import Factory
 from kivy.lang import Builder
+from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.browser.eolitem import EOLItem
@@ -14,7 +15,7 @@ from cobiv.modules.browser.item import Item
 from cobiv.modules.browser.thumbloader import ThumbLoader
 from cobiv.modules.component import Component
 from cobiv.modules.view import View
-from kivy.properties import ObjectProperty, NumericProperty, BooleanProperty
+from kivy.properties import ObjectProperty, NumericProperty
 from kivy.clock import Clock
 import os
 
@@ -41,10 +42,25 @@ class VerticalLoadEffect(DampedScrollEffect):
         App.get_running_app().root.get_view().load_more(factor=3)
 
 
+class HorizontalSidebarEffect(DampedScrollEffect):
+    def __init__(self, **kwargs):
+        super(HorizontalSidebarEffect, self).__init__(**kwargs)
+        self.trigger_right_sidebar = Clock.create_trigger(self.show_right_sidebar, 0.5)
+
+    def on_overscroll(self, *args):
+        super(HorizontalSidebarEffect, self).on_overscroll(*args)
+        if self.overscroll < -50:
+            self.trigger_right_sidebar()
+
+    def show_right_sidebar(self, dt):
+        App.get_running_app().root.get_view().toggle_side_bar(value=True)
+
+
 class ThumbScrollView(ScrollView):
     def __init__(self, **kwargs):
         super(ThumbScrollView, self).__init__(**kwargs)
         self.effect_y = VerticalLoadEffect()
+        self.effect_x = HorizontalSidebarEffect()
 
 
 class Browser(View, FloatLayout):
@@ -58,6 +74,8 @@ class Browser(View, FloatLayout):
     max_scroll_ratio = NumericProperty(3)
     max_items_cache = NumericProperty(None)
     grid = ObjectProperty(None)
+    right_sidebar_size = NumericProperty(0)
+    right_sidebar = ObjectProperty(None)
 
     global_scroll_pos = NumericProperty(0)
     session = None
@@ -92,6 +110,7 @@ class Browser(View, FloatLayout):
         self.set_action("g", self.select_custom)
         self.set_action("cut-marked", self.cut_marked)
         self.set_action("paste-marked", self.paste_marked)
+        self.set_action("tg_sidebar", self.toggle_side_bar)
 
     def get_name(self=None):
         return "browser"
@@ -119,9 +138,30 @@ class Browser(View, FloatLayout):
             },
             'grid': {
                 'icon_size': 120
+            },
+            'sidebar': {
+                'right': {
+                    'size': 200,
+                    'class': 'SimpleSidebar'
+                }
             }
         }
         return config
+
+    def _init_sidebars(self):
+        self.right_sidebar_size = self.get_config_value('sidebar.right.width', 200)
+        right_sidebar_name = self.get_config_value('sidebar.right.class', 'SimpleSidebar')
+        self.right_sidebar.add_widget(Factory.get(right_sidebar_name)(session=self.session))
+
+        right_item_list = self.right_sidebar.children[0].item_list
+        right_item_list.add_widget(
+            Button(text='> > >', height=30, size_hint=(1, None), on_press=lambda a: self.toggle_side_bar()))
+
+        fi = Factory.get('FileInfo')(
+            text='Size: %file_size%\nCreated: %creation_date%\nModifier: %modified_date%\nFormat: %file_format%\nDimension: %image_size%')
+        right_item_list.add_widget(fi)
+
+        self.toggle_side_bar(False)
 
     def ready(self):
         Component.ready(self)
@@ -131,6 +171,8 @@ class Browser(View, FloatLayout):
 
         self.session = self.get_app().lookup("session", "Entity")
         self.cursor = self.session.cursor
+
+        self._init_sidebars()
 
         self.thumb_loader = ThumbLoader()
         self.thumb_loader.container = self
@@ -176,7 +218,7 @@ class Browser(View, FloatLayout):
     def trigger_load_set(self, dt):
         self.grid.clear_widgets()
 
-        if len(self.cursor)>0:
+        if len(self.cursor) > 0:
             self.start_progress("Loading thumbs...")
             self.pending_actions.clear()
             self.pending_actions.append(self._load_set)
@@ -191,7 +233,7 @@ class Browser(View, FloatLayout):
 
     def get_page_pos(self, cursor_pos, nb_cols, page_size, total_size, is_eol=False):
         if is_eol:
-            start_pos=total_size-page_size
+            start_pos = total_size - page_size
         else:
             if total_size - page_size / 2 < cursor_pos:
                 start_pos = total_size - page_size
@@ -208,10 +250,10 @@ class Browser(View, FloatLayout):
         self.reset_progress()
 
         start_pos = self.get_page_pos(cursor_pos=self.cursor.pos, nb_cols=self.grid.cols, page_size=max_count,
-                                      total_size=len(self.cursor),is_eol=self.cursor.is_eol())
+                                      total_size=len(self.cursor), is_eol=self.cursor.is_eol())
 
-        if start_pos==self.cursor.pos:
-            self.cursor.go(start_pos,force=True)
+        if start_pos == self.cursor.pos:
+            self.cursor.go(start_pos, force=True)
 
         self.page_cursor = self.cursor.get_cursor_by_pos(start_pos)
 
@@ -497,7 +539,7 @@ class Browser(View, FloatLayout):
         to_delete_after = actual_size - int(local_pos + half_page)
 
         if to_delete_after > 0:
-            to_delete_before = int(max(0,min(local_pos - half_page, actual_size - page_size - to_delete_after)))
+            to_delete_before = int(max(0, min(local_pos - half_page, actual_size - page_size - to_delete_after)))
         else:
             to_delete_before = actual_size - page_size
 
@@ -507,7 +549,7 @@ class Browser(View, FloatLayout):
         total_to_remove = len(self.grid.children) - self.max_items()
         if total_to_remove > 0:
 
-            if isinstance(self.grid.children[0],EOLItem):
+            if isinstance(self.grid.children[0], EOLItem):
                 self.grid.remove_widget(self.grid.children[0])
 
             to_delete_before = self._calculate_lines_to_remove(local_pos=self.cursor.pos - self.page_cursor.pos,
@@ -520,10 +562,10 @@ class Browser(View, FloatLayout):
                     self.grid.remove_widget(widget)
                     widget.clear_widgets()
 
-            if len(self.grid.children)>self.max_items():
+            if len(self.grid.children) > self.max_items():
                 # remove last items
                 self._remove_lasts(0)
-            elif len(self.grid.children)<self.max_items():
+            elif len(self.grid.children) < self.max_items():
                 self.load_more(factor=0)
 
             widget = self.grid.children[-1]
@@ -641,9 +683,9 @@ class Browser(View, FloatLayout):
         if self.cursor.pos is None:
             return
 
-        was_empty=len(self.cursor)==0
+        was_empty = len(self.cursor) == 0
 
-        current_pos=self.cursor.pos
+        current_pos = self.cursor.pos
 
         clipboard_size = self.cursor.get_clipboard_size()
         to_load = min(clipboard_size, self.max_items() - self.cursor.pos + self.page_cursor.pos)
@@ -655,12 +697,11 @@ class Browser(View, FloatLayout):
         if len(self.cursor) == 0:
             return
 
-
         self.load_set()
         if was_empty:
-            self.cursor.go(0,force=True)
+            self.cursor.go(0, force=True)
         else:
-            self.cursor.go(current_pos,force=True)
+            self.cursor.go(current_pos, force=True)
         return
 
 
@@ -689,3 +730,11 @@ class Browser(View, FloatLayout):
         #
         # self.cursor.go(self.cursor.pos, force=True)
         # self._remove_recenter(0)
+
+    def toggle_side_bar(self, value=None):
+        if value is None:
+            visibility = self.right_sidebar_size == 0
+        else:
+            visibility = value
+        self.right_sidebar_size = 200 if visibility else 0
+        self.on_size_change(None, 0)

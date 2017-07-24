@@ -4,7 +4,7 @@ from yapsy.IPlugin import IPlugin
 from cobiv.common import set_action, set_hotkey
 
 
-class Component():
+class Component(object):
     _progress_max_count = 100
     _progress_count = 0
 
@@ -40,17 +40,6 @@ class Component():
 
     def on_application_quit(self):
         pass
-
-    # def read_config(self):
-    #     config = self.get_app().config
-    #     if config.has_section(self.get_config_hotkeys_section()):
-    #
-    #         for binding, value in config.items(self.get_config_hotkeys_section()):
-    #             if "/" in value:
-    #                 b = value.split("/")
-    #                 set_hotkey(long(b[0]), binding, modifier=int(b[1]),profile=self.get_name())
-    #             else:
-    #                 set_hotkey(long(value), binding,profile=self.get_name())
 
     def build_yaml_config(self, config):
         return config

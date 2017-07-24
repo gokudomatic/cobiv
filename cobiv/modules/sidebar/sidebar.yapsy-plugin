@@ -1,0 +1,8 @@
+[Core]
+Name = sidebar
+Module = Sidebar
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Sidebar for HUD

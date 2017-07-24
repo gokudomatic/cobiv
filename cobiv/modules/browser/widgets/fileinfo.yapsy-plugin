@@ -1,0 +1,8 @@
+[Core]
+Name = fileinfo
+Module = FileInfo
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = File Info widget for sidebar
