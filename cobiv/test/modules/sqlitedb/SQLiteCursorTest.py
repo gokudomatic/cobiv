@@ -43,7 +43,7 @@ class SQLiteCursorTest(unittest.TestCase):
                 'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
             self.conn.execute(
                 'create table file (id INTEGER PRIMARY KEY, repo_key int, name text, filename text, path text, ext text)')
-            self.conn.execute('create table tag (file_key int, kind text, value text)')
+            self.conn.execute('create table tag (file_key int,category int, kind text, value text)')
             self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
             self.conn.execute('create table thumbs (file_key int primary key, data blob)')
@@ -844,17 +844,17 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertItemsEqual(c.get_tags(), [])
 
         c.add_tag("one")
-        self.assertItemsEqual(c.get_tags(), ["one"])
+        self.assertItemsEqual(c.get_tags(), [(1,'tag',"one")])
         c.add_tag("two")
-        self.assertItemsEqual(c.get_tags(), ["one", "two"])
+        self.assertItemsEqual(c.get_tags(), [(1,'tag',"one"), (1,'tag',"two")])
         c.remove_tag("one")
-        self.assertItemsEqual(c.get_tags(), ["two"])
+        self.assertItemsEqual(c.get_tags(), [(1,'tag',"two")])
         c.add_tag("three")
-        self.assertItemsEqual(c.get_tags(), ["two", "three"])
+        self.assertItemsEqual(c.get_tags(), [(1,'tag',"two"), (1,'tag',"three")])
         c.remove_tag("three", "two")
         self.assertItemsEqual(c.get_tags(), [])
         c.add_tag("one", "two")
-        self.assertItemsEqual(c.get_tags(), ["one", "two"])
+        self.assertItemsEqual(c.get_tags(), [(1,'tag',"one"), (1,'tag',"two")])
 
         self.add_files(3)
         c = self.search()
@@ -866,7 +866,7 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertItemsEqual(c.get_tags(), [])
         c.go_next()
         c.go_next()
-        self.assertItemsEqual(c.get_tags(), ["a"])
+        self.assertItemsEqual(c.get_tags(), [(1,'tag',"a")])
 
         app.stop()
 

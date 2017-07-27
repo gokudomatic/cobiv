@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 from cobiv.modules.entity import Entity
 from cobiv.modules.session.cursor import Cursor
@@ -9,15 +10,46 @@ class CoreVariables:
         self.session = session
 
         session.fields['file_size']=self.get_file_size
+        session.fields['image_size']=self.get_image_size
+        session.fields['file_format']=self.get_image_format
+        session.fields['modified_date']=self.get_modification_date
+
+    def get_simple_field(self,category,field_name,formatter=None):
+        if self.session.cursor.file_id is None:
+            return "N/A"
+        if not self.session.cursor.get_tags()[category].has_key(field_name):
+            return "N/A"
+
+        value=self.session.cursor.get_tags()[category][field_name]
+        if formatter is None:
+            return value
+        else:
+            return formatter(value)
 
     def get_file_size(self):
-        if self.session.cursor.filename is not None:
-            return CoreVariables.sizeof_fmt(os.path.getsize(self.session.cursor.filename))
-        else:
-            return "0 B"
+        return self.get_simple_field(0,'size',CoreVariables.sizeof_fmt)
+
+    def get_modification_date(self):
+        mod_date=self.get_simple_field(0,'modification_date')
+        if mod_date!="N/A":
+            mod_date=datetime.fromtimestamp(float(mod_date)).strftime('%Y-%m-%d %H:%M:%S')
+        return mod_date
+
+    def get_image_size(self):
+        if self.session.cursor.file_id is not None:
+            tags=self.session.cursor.get_tags()
+            width=tags[0]['width']
+            height=tags[0]['height']
+            if width is not None and height is not None:
+                return width+" x "+height
+        return "N/A"
+
+    def get_image_format(self):
+        return self.get_simple_field(0,'format')
 
     @staticmethod
     def sizeof_fmt(num, suffix='B'):
+        num=int(num)
         for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
             if abs(num) < 1024.0:
                 return "%3.1f %s%s" % (num, unit, suffix)

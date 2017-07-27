@@ -11,6 +11,8 @@ from cobiv.modules.browser.browser import Browser
 from cobiv.modules.browser.eolitem import EOLItem
 from cobiv.modules.session.Session import Session
 from cobiv.modules.sqlitedb.sqlitedb import SqliteDb
+from cobiv.modules.sidebar.sidebar import Sidebar
+from cobiv.modules.browser.widgets.fileinfo import FileInfo
 
 from kivy.core.window import Window
 
@@ -200,9 +202,10 @@ class BrowserTest(unittest.TestCase):
 
         b.select_down(0)
         Clock.tick()
+
         self.assertEqual(96, cursor.pos)
-        self.assertEqual(75, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 26)
+        self.assertEqual(75, b.page_cursor.pos)
 
         b.select_down(0)
         Clock.tick()
@@ -282,8 +285,8 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         self.assertEqual(70, cursor.pos)
         self.assertEqual("images\\0071.jpg", cursor.filename)
-        self.assertEqual(54, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
+        self.assertEqual(54, b.page_cursor.pos)
 
         b.select_custom(69)
         sleep(0.1)

@@ -4,9 +4,9 @@ from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 
 
 class CursorInterface(EventDispatcher):
-    filename = StringProperty(None,allownone=True)
+    filename = StringProperty(None, allownone=True)
     pos = NumericProperty(None, allownone=True)
-    file_id = NumericProperty(None,allownone=True)
+    file_id = NumericProperty(None, allownone=True)
 
     def clone(self):
         return None
@@ -200,6 +200,7 @@ class Cursor(EventDispatcher):
     pos = NumericProperty(None, allownone=True)
     file_id = NumericProperty(None, allownone=True)
     eol_implementation = None
+    tags = None
 
     def __init__(self, **kwargs):
         super(Cursor, self).__init__(**kwargs)
@@ -217,12 +218,14 @@ class Cursor(EventDispatcher):
         new_cursor.file_id = self.file_id
         new_cursor.filename = self.filename
         new_cursor.eol_implementation = self.eol_implementation
+        new_cursor.tags = self.tags
         return new_cursor
 
     def get_app(self):
         return App.get_running_app()
 
     def set_implementation(self, instance):
+        self.tags = None
         if instance == self.implementation or instance is None and isinstance(self.implementation, EOLCursor):
             return
 
@@ -274,6 +277,7 @@ class Cursor(EventDispatcher):
 
     def on_file_id_change(self, instance, value):
         self.file_id = value
+        self.tags = None
 
     def _set_new_impl(self, impl):
         if impl is None and not self.is_eol():
@@ -318,7 +322,7 @@ class Cursor(EventDispatcher):
         if self.is_eol():
             self.implementation.update_last()
         else:
-            self.go(self.pos,force=True)
+            self.go(self.pos, force=True)
 
     def go(self, idx, force=False):
         if not force and self.pos is not None and idx == self.pos:
@@ -336,7 +340,11 @@ class Cursor(EventDispatcher):
             return True
 
     def get_tags(self):
-        return self.implementation.get_tags()
+        if self.tags is None:
+            self.tags = {0: dict(), 1: dict()}
+            for cat, kind, value in self.implementation.get_tags():
+                self.tags[cat][kind] = value
+        return self.tags
 
     def mark(self, value=None):
         self.implementation.mark(value)
@@ -403,7 +411,7 @@ class Cursor(EventDispatcher):
 
     def paste_marked(self, new_pos=None, append=False, update_cursor=True):
         if self.implementation is not None:
-            self.implementation.paste_marked(new_pos=new_pos,append=append)
+            self.implementation.paste_marked(new_pos=new_pos, append=append)
             if update_cursor:
                 self.go(self.pos, force=True)
 
@@ -422,10 +430,6 @@ class Cursor(EventDispatcher):
     def remove_tag(self, *args):
         if self.implementation is not None:
             self.implementation.remove_tag(*args)
-
-    def get_tags(self):
-        if self.implementation is not None:
-            return self.implementation.get_tags()
 
     def get_clipboard_size(self):
         if self.implementation is not None:

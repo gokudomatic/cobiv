@@ -44,7 +44,7 @@ def create_thumbnail_data(filename, size, destination):
         wsize = size
     img = img.resize((wsize, hsize), PIL.Image.ANTIALIAS)
 
-    image_byte_array = BytesIO()
+    # image_byte_array = BytesIO()
     img.convert('RGB').save(destination, format='PNG', optimize=True)
     return destination
 

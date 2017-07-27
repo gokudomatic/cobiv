@@ -158,7 +158,7 @@ class Browser(View, FloatLayout):
             Button(text='> > >', height=30, size_hint=(1, None), on_press=lambda a: self.toggle_side_bar()))
 
         fi = Factory.get('FileInfo')(
-            text='Size: %file_size%\nCreated: %creation_date%\nModifier: %modified_date%\nFormat: %file_format%\nDimension: %image_size%')
+            text='Size: %file_size%\nModified: %modified_date%\nFormat: %file_format%\nDimension: %image_size%')
         right_item_list.add_widget(fi)
 
         self.toggle_side_bar(False)
@@ -235,11 +235,11 @@ class Browser(View, FloatLayout):
         if is_eol:
             start_pos = total_size - page_size
         else:
-            if total_size - page_size / 2 < cursor_pos:
+            if total_size - page_size / 2.0 < cursor_pos:
                 start_pos = total_size - page_size
                 start_pos += nb_cols - start_pos % nb_cols
             else:
-                start_pos = cursor_pos - page_size / 2
+                start_pos = cursor_pos - page_size / 2.0
                 start_pos -= start_pos % nb_cols
 
         return max(0, start_pos)
@@ -506,7 +506,7 @@ class Browser(View, FloatLayout):
 
     def _remove_firsts(self, dt):
         child_count = len(self.grid.children)
-        to_remove = int(math.ceil((child_count - self.max_items()) / self.grid.cols) * self.grid.cols)
+        to_remove = int(math.ceil(float(child_count - self.max_items()) / self.grid.cols) * self.grid.cols)
         if to_remove > 0:
             for i in range(to_remove):
                 widget = self.grid.children[-1]

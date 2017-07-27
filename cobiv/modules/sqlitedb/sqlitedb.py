@@ -62,9 +62,6 @@ class SqliteCursor(CursorInterface):
         else:
             return self.go(self.pos - 1)
 
-    def get_tags(self):
-        return []
-
     def go_first(self):
         return self.go(0)
 
@@ -89,7 +86,7 @@ class SqliteCursor(CursorInterface):
         if self.pos is None:
             return []
 
-        start_pos=self.pos - (1 if self_included else 0)
+        start_pos = self.pos - (1 if self_included else 0)
 
         rows = self.con.execute(
             'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position>? and c.position<=? order by position',
@@ -172,7 +169,7 @@ class SqliteCursor(CursorInterface):
         if pos == self.pos or self.file_id is None:
             return
 
-        pos=max(0,min(pos,len(self)-1))
+        pos = max(0, min(pos, len(self) - 1))
 
         if pos < self.pos:
             query = 'update current_set set position=position+1 where set_head_key=? and position<? and position>=?'
@@ -198,7 +195,6 @@ class SqliteCursor(CursorInterface):
             (self.set_head_key,) + tuple(file_id_list)).fetchall()
 
         return rows
-
 
     def mark_all(self, value=None):
         with self.con:
@@ -228,21 +224,22 @@ class SqliteCursor(CursorInterface):
             for tag in args:
                 c = self.con.execute('select 1 from tag where value=? and file_key=? limit 1', (tag, self.file_id))
                 if c.fetchone() is None:
-                    c.execute('insert into tag values (?,?,?)', (self.file_id, 'tag', tag))
+                    c.execute('insert into tag values (?,?,?,?)', (self.file_id, 1, 'tag', tag))
 
     def remove_tag(self, *args):
         if len(args) == 0 or self.file_id is None:
             return
 
         with self.con:
-            self.con.execute('delete from tag where file_key=? and value in (%s)' % ','.join( '?' * len(args)),
-                             (self.file_id,)+tuple(args))
+            self.con.execute('delete from tag where file_key=? and value in (%s)' % ','.join('?' * len(args)),
+                             (self.file_id,) + tuple(args))
+
     def get_tags(self):
         if self.file_id is None:
             return []
 
-        c = self.con.execute('select t.value from tag t where file_key=?', (self.file_id,))
-        return [r['value'] for r in c.fetchall()]
+        c = self.con.execute('select t.category,t.kind,t.value from tag t where file_key=?', (self.file_id,))
+        return [(r['category'], r['kind'], r['value']) for r in c.fetchall()]
 
     def cut_marked(self):
         with self.con:
@@ -267,7 +264,7 @@ class SqliteCursor(CursorInterface):
 
     def paste_marked(self, new_pos=None, append=False):
         if new_pos is None:
-            new_pos=self.pos
+            new_pos = self.pos
 
         with self.con:
             # get clipboard size
@@ -276,12 +273,12 @@ class SqliteCursor(CursorInterface):
                 return
 
             if append:
-                new_pos=len(self)
+                new_pos = len(self)
 
             else:
                 # make the place
                 self.con.execute('update current_set set position=position+' + str(size) + ' where position>=?',
-                                  (new_pos,))
+                                 (new_pos,))
             # update the negative positions
             self.con.execute(
                 'update current_set set position=-1*position+' + str(new_pos - 1) + ' where position<0')
@@ -329,6 +326,7 @@ class SqliteDb(Entity):
         set_action("add-tag", self.add_tag, "viewer")
         set_action("rm-tag", self.remove_tag, "viewer")
         set_action("ls-tag", self.list_tags, "viewer")
+        set_action("ls-tag", self.list_tags, "browser")
         set_action("updatedb", self.updatedb)
         set_action("mark-all", self.mark_all)
         set_action("mark-invert", self.invert_marked)
@@ -350,14 +348,14 @@ class SqliteDb(Entity):
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
 
-    def create_database(self,sameThread=False):
+    def create_database(self, sameThread=False):
         with self.conn:
             self.conn.execute('create table catalog (id INTEGER PRIMARY KEY, name text)')
             self.conn.execute(
                 'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
             self.conn.execute(
                 'create table file (id INTEGER PRIMARY KEY, repo_key int, name text, filename text, path text, ext text)')
-            self.conn.execute('create table tag (file_key int, kind text, value text)')
+            self.conn.execute('create table tag (file_key int, category int, kind text, value text)')
             self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
             self.conn.execute('create table thumbs (file_key int primary key, data blob)')
@@ -391,7 +389,7 @@ class SqliteDb(Entity):
         except sqlite3.IntegrityError:
             return False
 
-    def updatedb(self,sameThread=False):
+    def updatedb(self, sameThread=False):
         if sameThread:
             self._threaded_updatedb()
         else:
@@ -470,18 +468,25 @@ class SqliteDb(Entity):
                 self.tick_progress()
 
             if len(tags_to_add) > 0:
-                c.executemany('insert into tag values (?,?,?)', tags_to_add)
+                c.executemany('insert into tag values (?,?,?,?)', tags_to_add)
                 self.tick_progress()
 
     def read_tags(self, node_id, name):
         to_add = []
         img = Image.open(name)
+
+        to_add.append((node_id, 0, 'width', img.size[0]))
+        to_add.append((node_id, 0, 'height', img.size[1]))
+        to_add.append((node_id, 0, 'format', img.format))
+        to_add.append((node_id, 0, 'size', os.path.getsize(name)))
+        to_add.append((node_id, 0, 'modification_date', os.path.getmtime(name)))
+
         if img.info:
             for i, v in img.info.iteritems():
                 if i == "tags":
                     tag_list = v.split(",")
                     for tag in tag_list:
-                        to_add.append((node_id, 'tag', tag.strip()))
+                        to_add.append((node_id, 1, 'tag', tag.strip()))
         return to_add
 
     def regenerate_set(self, set_name, query, caption=None):
@@ -544,7 +549,8 @@ class SqliteDb(Entity):
             if len(to_include) > 0:
                 query += 'and t.value in ("%s") ' % '", "'.join(to_include)
             if len(to_exclude) > 0:
-                query += 'and f.id not in (select t1.file_key from tag t1 where t1.value in ("%s")) ' % '", "'.join(to_exclude)
+                query += 'and f.id not in (select t1.file_key from tag t1 where t1.value in ("%s")) ' % '", "'.join(
+                    to_exclude)
 
             self.regenerate_set(CURRENT_SET_NAME, query)
 
@@ -561,7 +567,7 @@ class SqliteDb(Entity):
 
     def list_tags(self):
         tags = self.session.cursor.get_tags()
-        text = '\n'.join(tags)
+        text = '\n'.join([value for kind, value in tags[1]])
         App.get_running_app().root.notify(text)
 
     def on_application_quit(self):
@@ -590,5 +596,6 @@ class SqliteDb(Entity):
 
     def paste_marked(self, new_pos):
         self.session.cursor.paste_marked()
+
 
 Factory.register('Cursor', module=SqliteCursor)
