@@ -12,7 +12,6 @@ from cobiv.modules.browser.eolitem import EOLItem
 from cobiv.modules.session.Session import Session
 from cobiv.modules.sqlitedb.sqlitedb import SqliteDb
 from cobiv.modules.sidebar.sidebar import Sidebar
-from cobiv.modules.browser.widgets.labelwidget import FileInfo
 
 from kivy.core.window import Window
 

@@ -14,22 +14,27 @@ class TagsWidget(LabelWidget, Component):
             self.limit = kwargs['limit']
 
     def refresh(self):
-        text = ""
         tags = self.session.cursor.get_tags()
-        if tags is not None and len(tags) > 0:
-            count = 0
-            for key in tags[1]:
-                if len(text) > 1:
-                    text += '\n'
 
-                count += 1
-                if count > self.limit > 0:
-                    text += '...'
-                    break
-                else:
-                    value = tags[1][key]
-                    text += (key + ":" + value) if key != "tag" else value
-        self.text = text
+        def build_text():
+            text = ""
+            if tags is not None and len(tags) > 0:
+                count = 0
+                for key in tags[1]:
+                    values = tags[1][key]
+                    for value in values:
+                        if len(text) > 1:
+                            text += '\n'
+
+                        count += 1
+                        if count > self.limit > 0:
+                            text += '...'
+                            return text
+                        else:
+                            text += (key + ":" + value) if key != "tag" else value
+            return text
+
+        self.text = build_text()
 
 
 Factory.register('TagsWidget', cls=TagsWidget)

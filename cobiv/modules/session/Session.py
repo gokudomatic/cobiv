@@ -22,7 +22,8 @@ class CoreVariables:
         if not self.session.cursor.get_tags()[category].has_key(field_name):
             return "N/A"
 
-        value=self.session.cursor.get_tags()[category][field_name]
+        values=self.session.cursor.get_tags()[category][field_name]
+        value=values[0] if len(values)>0 else None
         if formatter is None:
             return value
         else:
@@ -40,8 +41,8 @@ class CoreVariables:
     def get_image_size(self):
         if self.session.cursor.file_id is not None:
             tags=self.session.cursor.get_tags()
-            width=tags[0]['width']
-            height=tags[0]['height']
+            width=tags[0]['width'][0]
+            height=tags[0]['height'][0]
             if width is not None and height is not None:
                 return width+" x "+height
         return "N/A"
