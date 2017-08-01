@@ -47,10 +47,17 @@ class MockCursor(CursorInterface):
         return self.data.items[self.pos:self.pos - amount:-1]
 
     def get_tags(self):
+        values=[]
         try:
-            return list(self.data.tags[self.pos])
+            cat_i=0
+            for cat in self.data.tags[self.pos]:
+                for kind in cat:
+                    for value in cat[kind]:
+                        values.append((cat_i,kind,value))
+                cat_i+=1
         except KeyError:
-            return []
+            pass
+        return values
 
     def get_all_marked(self):
         return self.data.marked
@@ -164,17 +171,36 @@ class MockCursor(CursorInterface):
         new_set = set(self.data.items) - self.data.marked
         self.data.marked = new_set
 
+    def _get_tag_key_value(self, tag):
+        key = "tag"
+        value = tag
+        if ':' in tag:
+            values = tag.split(':')
+            key = values[0]
+            value = values[1]
+        return (key, value)
+
     def add_tag(self, *args):
-        if not self.data.tags.has_key(self.pos):
-            self.data.tags[self.pos] = set()
+
+        if self.pos not in self.data.tags:
+            self.data.tags[self.pos] = [{}, {}]
+        tags = self.data.tags[self.pos][1]
+
         for tag in args:
-            self.data.tags[self.pos].add(tag)
+            key, value = self._get_tag_key_value(tag)
+
+            if not tags.has_key(key):
+                tags[key] = set()
+            tags[key].add(value)
 
     def remove_tag(self, *args):
-        if not self.data.tags.has_key(self.pos):
-            self.data.tags[self.pos] = set()
-        for tag in args:
-            self.data.tags[self.pos].remove(tag)
+
+        if self.pos in self.data.tags:
+            for tag in args:
+                key, value = self._get_tag_key_value(tag)
+
+                if key in self.data.tags[self.pos][1]:
+                    self.data.tags[self.pos][1][key].remove(value)
 
 
 class CursorTest(unittest.TestCase):
@@ -261,7 +287,6 @@ class CursorTest(unittest.TestCase):
         c.go(600)
         self.assertEqual(600, c.pos)
         self.assertFalse(c.is_eol())
-
 
         c.go(-5)
         self.assertEqual(0, c.pos)
@@ -652,18 +677,21 @@ class CursorTest(unittest.TestCase):
         c = Cursor()
         c.set_implementation(MockCursor())
 
+        def test_tags(expected):
+            self.assertItemsEqual(c.get_tags(), [{}, expected])
+
         c.add_tag("one")
-        self.assertItemsEqual(c.get_tags(), ["one"])
+        test_tags({'tag': ["one"]})
         c.add_tag("two")
-        self.assertItemsEqual(c.get_tags(), ["one", "two"])
+        test_tags({'tag': ["two","one"]})
         c.remove_tag("one")
-        self.assertItemsEqual(c.get_tags(), ["two"])
+        test_tags({'tag': ["two"]})
         c.add_tag("three")
-        self.assertItemsEqual(c.get_tags(), ["two", "three"])
+        test_tags({'tag': ["two", "three"]})
         c.remove_tag("three", "two")
-        self.assertItemsEqual(c.get_tags(), [])
+        test_tags({})
         c.add_tag("one", "two")
-        self.assertItemsEqual(c.get_tags(), ["one", "two"])
+        test_tags({'tag': ["two","one"]})
 
         c = Cursor()
         c.set_implementation(MockCursor())
@@ -672,10 +700,10 @@ class CursorTest(unittest.TestCase):
         c.go_previous()
         c.add_tag("1", "2")
         c.go_first()
-        self.assertItemsEqual(c.get_tags(), [])
+        test_tags({})
         c.go_next()
         c.go_last()
-        self.assertItemsEqual(c.get_tags(), ["a"])
+        test_tags({'tag': ["a"]})
 
         app.stop()
 
@@ -688,16 +716,14 @@ class CursorTest(unittest.TestCase):
         c.cut_marked()
 
         c.go_eol()
-        c.paste_marked(append=True,update_cursor=False)
+        c.paste_marked(append=True, update_cursor=False)
         c1 = c.clone()
         c1.go(999)
         self.assertFalse(c1.is_eol())
-        self.assertEqual(c1.pos,999)
-        self.assertEqual(c1.file_id,990)
-
+        self.assertEqual(c1.pos, 999)
+        self.assertEqual(c1.file_id, 990)
 
         app.stop()
-
 
     def call_test(self, func):
         a = TestApp()
@@ -734,6 +760,7 @@ class CursorTest(unittest.TestCase):
 
     def test_advanced_clone(self):
         self.call_test(self._test_advanced_clone)
+
 
 if __name__ == "__main__":
     unittest.main()

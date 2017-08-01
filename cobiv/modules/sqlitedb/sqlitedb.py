@@ -216,23 +216,35 @@ class SqliteCursor(CursorInterface):
             self.con.execute('insert into marked select file_key from marked1')
             self.con.execute('drop table marked1')
 
+    def _get_tag_key_value(self,tag):
+        key = "tag"
+        value = tag
+        if ':' in tag:
+            values = tag.split(':')
+            key = values[0]
+            value = values[1]
+        return (key,value)
+
     def add_tag(self, *args):
         if len(args) == 0 or self.file_id is None:
             return
 
         with self.con:
             for tag in args:
-                c = self.con.execute('select 1 from tag where value=? and file_key=? limit 1', (tag, self.file_id))
+                key,value = self._get_tag_key_value(tag)
+                c = self.con.execute('select 1 from tag where category=1 and kind=? and value=? and file_key=? limit 1', (key,value, self.file_id))
                 if c.fetchone() is None:
-                    c.execute('insert into tag values (?,?,?,?)', (self.file_id, 1, 'tag', tag))
+                    c.execute('insert into tag values (?,?,?,?)', (self.file_id, 1, key, value))
 
     def remove_tag(self, *args):
         if len(args) == 0 or self.file_id is None:
             return
 
         with self.con:
-            self.con.execute('delete from tag where file_key=? and value in (%s)' % ','.join('?' * len(args)),
-                             (self.file_id,) + tuple(args))
+            for tag in args:
+                key,value = self._get_tag_key_value(tag)
+                self.con.execute('delete from tag where file_key=? and category=1 and kind=? and value=?',
+                             (self.file_id,key,value))
 
     def get_tags(self):
         if self.file_id is None:
@@ -324,7 +336,9 @@ class SqliteDb(Entity):
         set_action("search", self.search_tag, "viewer")
         set_action("search", self.search_tag, "browser")
         set_action("add-tag", self.add_tag, "viewer")
+        set_action("add-tag", self.add_tag, "browser")
         set_action("rm-tag", self.remove_tag, "viewer")
+        set_action("rm-tag", self.remove_tag, "browser")
         set_action("ls-tag", self.list_tags, "viewer")
         set_action("ls-tag", self.list_tags, "browser")
         set_action("updatedb", self.updatedb)
@@ -560,10 +574,12 @@ class SqliteDb(Entity):
         self.execute_cmd("load-set")
 
     def add_tag(self, *args):
-        self.session.cursor.add_tag(args)
+        self.session.cursor.add_tag(*args)
+        self.execute_cmd("refresh-info")
 
     def remove_tag(self, *args):
-        self.session.cursor.remove_tag(args)
+        self.session.cursor.remove_tag(*args)
+        self.execute_cmd("refresh-info")
 
     def list_tags(self):
         tags = self.session.cursor.get_tags()

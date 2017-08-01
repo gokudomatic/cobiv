@@ -1,0 +1,8 @@
+[Core]
+Name = labelwidget
+Module = LabelWidget
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Label widget for sidebar

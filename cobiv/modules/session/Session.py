@@ -1,6 +1,8 @@
 import os
 from datetime import datetime
 
+from templite import Templite
+
 from cobiv.modules.entity import Entity
 from cobiv.modules.session.cursor import Cursor
 
@@ -60,7 +62,7 @@ class CoreVariables:
 class Session(Entity):
     cursor = None
 
-    fields = dict()
+    fields = {}
 
     def __init__(self):
         self.cursor = Cursor()
@@ -75,10 +77,12 @@ class Session(Entity):
         pass
 
     def fill_text_fields(self, original_text):
-        text = original_text
-        for key in self.fields.keys():
-            key_string = "%" + key + "%"
-            if key_string in original_text:
-                text = text.replace(key_string, str(self.fields.get(key)()))
+        text = original_text.replace("%{","${write(").replace("}%",")}$")
+        # for key in self.fields.keys():
+        #     key_string = "%" + key + "%"
+        #     if key_string in original_text:
+        #         text = text.replace(key_string, str(self.fields.get(key)()))
+        template=Templite(text)
+        text=template.render(**self.fields)
 
         return text

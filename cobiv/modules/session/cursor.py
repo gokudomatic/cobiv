@@ -276,8 +276,8 @@ class Cursor(EventDispatcher):
         self.filename = value
 
     def on_file_id_change(self, instance, value):
-        self.file_id = value
         self.tags = None
+        self.file_id = value
 
     def _set_new_impl(self, impl):
         if impl is None and not self.is_eol():
@@ -340,10 +340,15 @@ class Cursor(EventDispatcher):
             return True
 
     def get_tags(self):
+        if self.implementation is None:
+            return []
+
         if self.tags is None:
-            self.tags = {0: dict(), 1: dict()}
+            self.tags = [{},{}]
             for cat, kind, value in self.implementation.get_tags():
-                self.tags[cat][kind] = value
+                if kind not in self.tags[int(cat)]:
+                    self.tags[int(cat)][kind]=[]
+                self.tags[int(cat)][kind].append(value)
         return self.tags
 
     def mark(self, value=None):
@@ -426,10 +431,12 @@ class Cursor(EventDispatcher):
     def add_tag(self, *args):
         if self.implementation is not None:
             self.implementation.add_tag(*args)
+            self.tags=None
 
     def remove_tag(self, *args):
         if self.implementation is not None:
             self.implementation.remove_tag(*args)
+            self.tags=None
 
     def get_clipboard_size(self):
         if self.implementation is not None:

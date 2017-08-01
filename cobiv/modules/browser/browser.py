@@ -74,6 +74,7 @@ class Browser(View, FloatLayout):
     max_scroll_ratio = NumericProperty(3)
     max_items_cache = NumericProperty(None)
     grid = ObjectProperty(None)
+    right_sidebar_full_size = NumericProperty(0)
     right_sidebar_size = NumericProperty(0)
     right_sidebar = ObjectProperty(None)
 
@@ -105,6 +106,7 @@ class Browser(View, FloatLayout):
         self.set_action("up", self.tg_select_up)
         self.set_action("mark", self.mark_current)
         self.set_action("refresh-marked", self.refresh_mark)
+        self.set_action("refresh-info", self.refresh_info)
         self.set_action("first", self.select_first)
         self.set_action("last", self.select_last)
         self.set_action("g", self.select_custom)
@@ -149,7 +151,7 @@ class Browser(View, FloatLayout):
         return config
 
     def _init_sidebars(self):
-        self.right_sidebar_size = self.get_config_value('sidebar.right.width', 200)
+        self.right_sidebar_full_size = self.get_config_value('sidebar.right.width', 200)
         right_sidebar_name = self.get_config_value('sidebar.right.class', 'SimpleSidebar')
         self.right_sidebar.add_widget(Factory.get(right_sidebar_name)(session=self.session))
 
@@ -157,9 +159,13 @@ class Browser(View, FloatLayout):
         right_item_list.add_widget(
             Button(text='> > >', height=30, size_hint=(1, None), on_press=lambda a: self.toggle_side_bar()))
 
-        fi = Factory.get('FileInfo')(
-            text='Size: %file_size%\nModified: %modified_date%\nFormat: %file_format%\nDimension: %image_size%')
-        right_item_list.add_widget(fi)
+        right_sidebar_cfg=self.get_config_value('sidebar.right.items')
+        if right_sidebar_cfg is not None:
+            for item in right_sidebar_cfg:
+                parameters=item.get('parameters')
+                parameters={} if parameters is None else parameters
+                instance= Factory.get(item.get('class'))(**parameters)
+                right_item_list.add_widget(instance)
 
         self.toggle_side_bar(False)
 
@@ -609,6 +615,9 @@ class Browser(View, FloatLayout):
             if not isinstance(item, EOLItem):
                 item.set_marked(item.file_id in mapping)
 
+    def refresh_info(self):
+        self.right_sidebar.children[0].refresh_widgets()
+
     def cut_marked(self):
         if self.cursor.get_marked_count() == 0:
             return
@@ -736,5 +745,5 @@ class Browser(View, FloatLayout):
             visibility = self.right_sidebar_size == 0
         else:
             visibility = value
-        self.right_sidebar_size = 200 if visibility else 0
+        self.right_sidebar_size = self.right_sidebar_full_size if visibility else 0
         self.on_size_change(None, 0)

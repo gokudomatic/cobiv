@@ -16,6 +16,20 @@ browser:
   - {binding: paste-marked, key: '112'}
   grid:
     icon_size: 120
+  sidebar:
+    right:
+      width: 150
+      items:
+      -
+        class: LabelWidget
+        parameters:
+          text: |
+                Size: %{file_size()}%
+                Modified: %{modified_date()}%
+                Format: %{file_format()}%
+                Dimension: %{image_size()}%
+      - {class: SeparatorWidget}
+      - {class: TagsWidget, parameters: {limit: 5} }
 main:
   hotkeys:
   - {binding: q, key: '113'}
