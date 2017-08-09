@@ -9,7 +9,6 @@ from kivy.core.window import Window
 from kivy.clock import Clock, mainthread
 
 from cobiv.common import *
-from cobiv.hud import HUD
 from os.path import expanduser
 
 this = sys.modules[__name__]
@@ -214,8 +213,5 @@ class MainContainer(FloatLayout):
                     {'key': '113', 'binding': 'q'},
                     {'key': '292', 'binding': 'fullscreen'}
                 ]
-            },
-            'thumbnails': {
-                'path': os.path.join(expanduser('~'), '.cobiv', 'thumbnails')
             }
         }

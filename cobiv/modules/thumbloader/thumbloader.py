@@ -1,34 +1,28 @@
 import os
 import threading
-
+import logging
 import time
 from collections import deque
-
 import sys
-from kivy.app import App
-from kivy.cache import Cache
-
-from cobiv.modules.browser.ThumbnailImage import ThumbnailImage
-from cobiv.modules.browser.item import Thumb
-
 import PIL
 from PIL import Image, ImageFile
-
+from os.path import expanduser
+from cobiv.modules.entity import Entity
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+
 def create_thumbnail_data(filename, size, destination):
-    # print "creating thumbnail for "+filename
+    logging.debug("creating thumbnail for " + filename)
     img = Image.open(filename)
     try:
         img.load()
     except SyntaxError as e:
         path = os.path.dirname(sys.argv[0])
-        destination = 'C:/Users/edwin/Apps/python/workspace/cobiv/cobiv\\resources\\icons\\image_corrupt.png'
-        # destination=os.path.join(path,"resources","icons","image_corrupt.png")
-        print(destination)
+        destination = os.path.join(path, "resources", "icons", "image_corrupt.png")
+        logging.error("Failed to read default thumbnail at : " + destination)
+        logging.error(e, exc_info=True)
         return destination
-        print("error, not possible!")
     except:
         pass
 
@@ -44,22 +38,36 @@ def create_thumbnail_data(filename, size, destination):
         wsize = size
     img = img.resize((wsize, hsize), PIL.Image.ANTIALIAS)
 
-    # image_byte_array = BytesIO()
     img.convert('RGB').save(destination, format='PNG', optimize=True)
     return destination
 
 
-class ThumbLoader():
+class ThumbLoader(Entity):
     container = None
 
     thread = None
     thread_alive = True
     cell_size = 120
-
-    to_cache = deque()
+    thumb_path = None
 
     def __init__(self):
-        Cache.register('browser_items', limit=self.get_config_value('browser.cache.thumbnails.size', 500))
+        super(ThumbLoader, self).__init__()
+        self.to_cache = deque()
+
+    def ready(self):
+        super(ThumbLoader, self).ready()
+        self.cell_size = int(self.get_config_value('image_size', 120))
+        self.thumb_path = self.get_config_value('path')
+
+    def build_yaml_config(self, config):
+        config[self.get_name()] = {
+            'image_size': 120,
+            'path': os.path.join(expanduser('~'), '.cobiv', 'thumbnails')
+        }
+        return config
+
+    def get_name(self=None):
+        return "thumbloader"
 
     def stop(self):
         self.thread_alive = False
@@ -71,16 +79,17 @@ class ThumbLoader():
         self.thread = threading.Thread(target=self.run)
         self.thread.start()
 
-    def run(self):
-        thumb_path = self.get_config_value('thumbnails.path')
-        self.thread_alive = True
+    def get_fullpath_from_file_id(self, file_id):
+        return os.path.join(self.thumb_path, str(file_id) + '.png')
 
+    def run(self):
+        self.thread_alive = True
         try:
             while self.thread_alive:
                 try:
                     file_id, filename = self.to_cache.popleft()
 
-                    thumb_filename = os.path.join(thumb_path, str(file_id) + '.png')
+                    thumb_filename = self.get_fullpath_from_file_id(file_id)
                     if not os.path.exists(thumb_filename):
                         create_thumbnail_data(filename, self.cell_size, thumb_filename)
                         time.sleep(0.5)
@@ -104,13 +113,6 @@ class ThumbLoader():
             name = name[:5] + "..." + name[-7:]
         return name
 
-    def get_image(self, file_id, filename, image_full_path, force_refresh=False):
-        if not os.path.exists(filename):
-            self.append((file_id, image_full_path))
-        name = self.get_filename_caption(image_full_path)
-        img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
-        thumb = Thumb(image=img, cell_size=self.cell_size, caption=name, selected=False)
-        return thumb
-
-    def get_config_value(self, key, default=None):
-        return App.get_running_app().get_config_value(key, default=default)
+    def delete_thumbnail(self, *items):
+        for file_id in items:
+            os.remove(self.get_fullpath_from_file_id(file_id))

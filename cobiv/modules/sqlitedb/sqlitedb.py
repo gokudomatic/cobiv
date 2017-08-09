@@ -1,3 +1,4 @@
+import hashlib
 import os
 from os import listdir
 from os.path import isfile, join
@@ -216,14 +217,15 @@ class SqliteCursor(CursorInterface):
             self.con.execute('insert into marked select file_key from marked1')
             self.con.execute('drop table marked1')
 
-    def _get_tag_key_value(self,tag):
+    @staticmethod
+    def _get_tag_key_value(self, tag):
         key = "tag"
         value = tag
         if ':' in tag:
             values = tag.split(':')
             key = values[0]
             value = values[1]
-        return (key,value)
+        return (key, value)
 
     def add_tag(self, *args):
         if len(args) == 0 or self.file_id is None:
@@ -231,8 +233,9 @@ class SqliteCursor(CursorInterface):
 
         with self.con:
             for tag in args:
-                key,value = self._get_tag_key_value(tag)
-                c = self.con.execute('select 1 from tag where category=1 and kind=? and value=? and file_key=? limit 1', (key,value, self.file_id))
+                key, value = self._get_tag_key_value(tag)
+                c = self.con.execute('select 1 from tag where category=1 and kind=? and value=? and file_key=? limit 1',
+                                     (key, value, self.file_id))
                 if c.fetchone() is None:
                     c.execute('insert into tag values (?,?,?,?)', (self.file_id, 1, key, value))
 
@@ -242,9 +245,9 @@ class SqliteCursor(CursorInterface):
 
         with self.con:
             for tag in args:
-                key,value = self._get_tag_key_value(tag)
+                key, value = self._get_tag_key_value(tag)
                 self.con.execute('delete from tag where file_key=? and category=1 and kind=? and value=?',
-                             (self.file_id,key,value))
+                                 (self.file_id, key, value))
 
     def get_tags(self):
         if self.file_id is None:
@@ -252,6 +255,24 @@ class SqliteCursor(CursorInterface):
 
         c = self.con.execute('select t.category,t.kind,t.value from tag t where file_key=?', (self.file_id,))
         return [(r['category'], r['kind'], r['value']) for r in c.fetchall()]
+
+    def is_changed(self):
+        if self.file_id is None:
+            return False
+
+        tags = self.get_tags()
+        for tag in tags:
+            if tag[0] != 0:
+                continue
+
+            if tag[1] == 'modification_date':
+                if tag[2] != os.path.getmtime(self.filename):
+                    return True
+            elif tag[1] == 'size':
+                if tag[2] != os.path.getsize(self.filename):
+                    return True
+
+        return False
 
     def cut_marked(self):
         with self.con:
@@ -376,7 +397,7 @@ class SqliteDb(Entity):
 
             # indexes
             self.conn.execute('create unique index file_idx on file(name)')
-            self.conn.execute('create unique index tag_idx on tag(file_key,kind,value)')
+            self.conn.execute('create unique index tag_idx on tag(file_key,category,kind,value)')
             self.conn.execute('create unique index set_detail_pos_idx on set_detail(set_head_key,position)')
             self.conn.execute('create unique index set_detail_file_idx on set_detail(set_head_key,file_key)')
 
@@ -485,6 +506,47 @@ class SqliteDb(Entity):
                 c.executemany('insert into tag values (?,?,?,?)', tags_to_add)
                 self.tick_progress()
 
+    def update_tags(self,repo_id):
+        with self.conn:
+            c = self.conn.cursor()
+
+            modified_file_ids=self._check_modified_files(repo_id)
+            for file_id,filename in modified_file_ids:
+                tags_to_add=self.read_tags(file_id,filename)
+
+                if len(tags_to_add) > 0:
+                    if tags_to_add[1]==0:
+                        c.executemany('update tag set value=? where file_key=? and category=0 and kind=?', (tags_to_add[3],tags_to_add[0],tags_to_add[2]))
+                    elif tags_to_add[1]==1:
+                        c.executemany('insert or ignore into tag values (?,?,?,?)', tags_to_add)
+
+                # delete thumbnail
+
+    def _check_modified_files(self, repo_id, to_ignore=[]):
+        result = []
+
+        with self.conn:
+            c = self.conn.execute(
+                'select f.id,f.name,t.kind,t.value from file f,tag t where repo_key=? and f.id=t.file_key and t.category=0 and t.kind in ("size","modification_date") order by f.id',
+                (repo_id,))
+            current_id = None
+            changed = None
+            for file_id, filename, kind, value in c.fetchall():
+                if file_id in to_ignore:
+                    continue
+
+                if file_id != current_id:
+                    if current_id is not None and changed:
+                        result.append((file_id,filename))
+                    current_id = file_id
+                    changed = False
+
+                if kind == 'size':
+                    changed = changed or value != os.path.getsize(filename)
+                elif kind == 'modification_date':
+                    changed = changed or value != os.path.getmtime(filename)
+        return result
+
     def read_tags(self, node_id, name):
         to_add = []
         img = Image.open(name)
@@ -501,6 +563,13 @@ class SqliteDb(Entity):
                     tag_list = v.split(",")
                     for tag in tag_list:
                         to_add.append((node_id, 1, 'tag', tag.strip()))
+
+        hasher = hashlib.md5()
+        with open(name, 'rb') as afile:
+            buf = afile.read()
+            hasher.update(buf)
+        to_add.append((node_id, 0, 'crc', hasher.hexdigest()))
+
         return to_add
 
     def regenerate_set(self, set_name, query, caption=None):

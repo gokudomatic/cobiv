@@ -34,7 +34,9 @@ main:
   hotkeys:
   - {binding: q, key: '113'}
   - {binding: fullscreen, key: '292'}
-thumbnails: {path: 'C:\Users\edwin\.cobiv\thumbnails'}
+thumbloader:
+  path: 'C:\Users\edwin\.cobiv\thumbnails'
+  image_size: 120
 viewer:
   hotkeys:
   - {binding: up 20, key: '273'}

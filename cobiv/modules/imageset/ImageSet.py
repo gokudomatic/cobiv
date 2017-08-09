@@ -1,13 +1,7 @@
 from __future__ import division
 
-import os
-from io import BytesIO
-
-import sys
-from kivy.core.window import Window
-from kivy.event import EventDispatcher
 from kivy.lang import Builder
-from kivy.properties import NumericProperty, ObjectProperty, ListProperty
+from kivy.properties import ObjectProperty
 from kivy.uix.image import AsyncImage
 from enum import Enum
 

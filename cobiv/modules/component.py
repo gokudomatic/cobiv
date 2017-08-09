@@ -8,9 +8,6 @@ class Component(object):
     _progress_max_count = 100
     _progress_count = 0
 
-    def build_config(config):
-        pass
-
     def set_action(self, name, fn):
         set_action(name, fn, self.get_name())
 

@@ -1,23 +1,22 @@
+import math
+import os
 from collections import deque
 
-import math
 from kivy.app import App
+from kivy.clock import Clock
 from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.factory import Factory
 from kivy.lang import Builder
+from kivy.properties import ObjectProperty, NumericProperty
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.label import Label
 from kivy.uix.scrollview import ScrollView
 
+from cobiv.modules.browser.ThumbnailImage import ThumbnailImage
 from cobiv.modules.browser.eolitem import EOLItem
-from cobiv.modules.browser.item import Item
-from cobiv.modules.browser.thumbloader import ThumbLoader
+from cobiv.modules.browser.item import Item, Thumb
 from cobiv.modules.component import Component
 from cobiv.modules.view import View
-from kivy.properties import ObjectProperty, NumericProperty
-from kivy.clock import Clock
-import os
 
 Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'browser.kv')))
 
@@ -180,7 +179,7 @@ class Browser(View, FloatLayout):
 
         self._init_sidebars()
 
-        self.thumb_loader = ThumbLoader()
+        self.thumb_loader = App.get_running_app().lookup('thumbloader', 'Entity')
         self.thumb_loader.container = self
 
     def on_switch(self, loader_thread=True):
@@ -273,7 +272,7 @@ class Browser(View, FloatLayout):
         for id_file, position, filename in list_ids:
             if idx < max_count:
                 self.thumb_loader.append((id_file, filename))
-                thumb_filename = os.path.join(self.thumbs_path, str(id_file) + '.png')
+                thumb_filename = os.path.join(self.thumb_loader.thumb_path, str(id_file) + '.png')
                 self.image_queue.append((thumb_filename, id_file, position, filename))
             else:
                 self.thumb_loader.append((id_file, filename))
@@ -285,6 +284,15 @@ class Browser(View, FloatLayout):
         if idx > 0:
             self.reset_progress()
             self.do_next_action()
+
+    def get_image(self, file_id, filename, image_full_path):
+        if not os.path.exists(filename):
+            self.thumb_loader.append((file_id, image_full_path))
+        name = self.thumb_loader.get_filename_caption(image_full_path)
+        img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
+        thumb = Thumb(image=img, cell_size=self.thumb_loader.cell_size, caption=name, selected=False)
+        return thumb
+
 
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
@@ -299,7 +307,7 @@ class Browser(View, FloatLayout):
                     self.grid.add_widget(e)
                 else:
 
-                    thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
+                    thumb = self.get_image(file_id, thumb_filename, image_filename)
 
                     item = Item(thumb=thumb, container=self,
                                 cell_size=self.cell_size, file_id=file_id, position=pos, duration=0)
@@ -470,7 +478,7 @@ class Browser(View, FloatLayout):
             idx = 0
             for id_file, position, filename in list_id:
                 if idx < to_load:
-                    thumb_filename = os.path.join(self.thumbs_path, str(id_file) + '.png')
+                    thumb_filename = os.path.join(self.thumb_loader.thumb_path, str(id_file) + '.png')
                     self.image_queue.append((thumb_filename, id_file, position, filename))
                 else:
                     self.thumb_loader.append((id_file, filename))
