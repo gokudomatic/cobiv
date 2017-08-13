@@ -43,16 +43,16 @@ def create_thumbnail_data(filename, size, destination):
 
 
 class ThumbLoader(Entity):
-    container = None
-
-    thread = None
-    thread_alive = True
-    cell_size = 120
-    thumb_path = None
 
     def __init__(self):
         super(ThumbLoader, self).__init__()
         self.to_cache = deque()
+        self.container = None
+        self.thread = None
+        self.thread_alive = True
+        self.cell_size = 120
+        self.thumb_path = None
+        self.queue_empty = True
 
     def ready(self):
         super(ThumbLoader, self).ready()
@@ -71,6 +71,7 @@ class ThumbLoader(Entity):
 
     def stop(self):
         self.thread_alive = False
+        self.thread.join()
 
     def restart(self):
         if self.thread is not None and self.thread.is_alive:
@@ -86,15 +87,15 @@ class ThumbLoader(Entity):
         self.thread_alive = True
         try:
             while self.thread_alive:
-                try:
-                    file_id, filename = self.to_cache.popleft()
+                if not self.queue_empty:
+                    try:
+                        file_id, filename = self.to_cache.popleft()
 
-                    thumb_filename = self.get_fullpath_from_file_id(file_id)
-                    if not os.path.exists(thumb_filename):
-                        create_thumbnail_data(filename, self.cell_size, thumb_filename)
-                        time.sleep(0.5)
-
-                except IndexError:
+                        thumb_filename = self.get_fullpath_from_file_id(file_id)
+                        if not os.path.exists(thumb_filename):
+                            create_thumbnail_data(filename, self.cell_size, thumb_filename)
+                    except IndexError:
+                        self.queue_empty=True
                     time.sleep(0.5)
 
         except KeyboardInterrupt:
@@ -103,6 +104,7 @@ class ThumbLoader(Entity):
     def append(self, *items):
         for item in items:
             self.to_cache.append(item)
+            self.queue_empty=False
 
     def clear_cache(self):
         self.to_cache.clear()
@@ -115,4 +117,7 @@ class ThumbLoader(Entity):
 
     def delete_thumbnail(self, *items):
         for file_id in items:
-            os.remove(self.get_fullpath_from_file_id(file_id))
+            try:
+                os.remove(self.get_fullpath_from_file_id(file_id))
+            except WindowsError:
+                pass
