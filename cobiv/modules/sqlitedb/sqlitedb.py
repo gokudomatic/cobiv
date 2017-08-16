@@ -18,8 +18,10 @@ from cobiv.modules.session.cursor import CursorInterface
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
 
+
 def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
-    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+    return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+
 
 class SqliteCursor(CursorInterface):
     set_head_key = None
@@ -453,6 +455,7 @@ class SqliteDb(Entity):
 
             for diff in differences:
                 self._update_dir(diff[0], diff[1], diff[2])
+                self.update_tags(diff[0], diff[1])
                 if self.cancel_operation:
                     break
 
@@ -507,23 +510,19 @@ class SqliteDb(Entity):
                 c.executemany('insert into tag values (?,?,?,?)', tags_to_add)
                 self.tick_progress()
 
-    def update_tags(self,repo_id):
+    def update_tags(self, repo_id, to_ignore=[]):
         with self.conn:
             c = self.conn.cursor()
 
-            modified_file_ids=self._check_modified_files(repo_id)
-            for file_id,filename in modified_file_ids:
-                tags_to_add=self.read_tags(file_id,filename)
+            modified_file_ids = self._check_modified_files(repo_id, to_ignore=to_ignore)
+            for file_id, filename in modified_file_ids:
+                tags_to_add = self.read_tags(file_id, filename)
 
-                for tag_to_add in tags_to_add:
-                    if len(tags_to_add) > 0:
-                        if tag_to_add[1]==0:
-                            c.execute('update tag set value=? where file_key=? and category=0 and kind=?', (tag_to_add[3],tag_to_add[0],tag_to_add[2]))
-                        elif tag_to_add[1]==1:
-                            c.execute('insert or ignore into tag values (?,?,?,?)', tag_to_add)
+                c.executemany('update tag set value=? where file_key=? and category=0 and kind=?',
+                          [(tag[3], tag[0], tag[2]) for tag in tags_to_add if tag[1] == 0])
+                c.executemany('insert or ignore into tag values (?,?,?,?)', [tag for tag in tags_to_add if tag[1] == 1])
 
-                self.get_app().fire_event('on_file_content_change',file_id)
-
+                self.get_app().fire_event('on_file_content_change', file_id)
 
     def _check_modified_files(self, repo_id, to_ignore=[]):
         result = []
@@ -540,17 +539,18 @@ class SqliteDb(Entity):
 
                 if file_id != current_id:
                     if current_id is not None and changed:
-                        result.append((file_id,filename))
+                        result.append((file_id, filename))
                     current_id = file_id
                     changed = False
 
                 if kind == 'size':
                     changed = changed or int(value) != os.path.getsize(filename)
                 elif kind == 'modification_date':
-                    changed = changed or not is_close(float(value),os.path.getmtime(filename),abs_tol=1e-05,rel_tol=0)
+                    changed = changed or not is_close(float(value), os.path.getmtime(filename), abs_tol=1e-05,
+                                                      rel_tol=0)
 
             if current_id is not None and changed:
-                result.append((file_id,filename))
+                result.append((file_id, filename))
 
         return result
 
