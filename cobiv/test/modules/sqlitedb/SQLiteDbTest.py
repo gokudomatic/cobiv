@@ -54,6 +54,9 @@ class TestApp(App):
     def fire_event(self,*args):
         pass
 
+    def lookups(self,category):
+        return []
+
 class SQLiteCursorTest(unittest.TestCase):
 
     def get_user_path(self, *args):

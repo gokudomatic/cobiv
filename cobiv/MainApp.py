@@ -5,6 +5,7 @@ import yaml
 from cobiv.modules.browser.browser import Browser
 from cobiv.modules.entity import Entity
 from cobiv.modules.hud import Hud
+from cobiv.modules.reader.tagreader import TagReader
 from cobiv.modules.view import View
 from kivy.app import App
 from MainContainer import MainContainer
@@ -27,7 +28,8 @@ class Cobiv(App):
         self.plugin_manager.setCategoriesFilter({
             "View": View,
             "Entity": Entity,
-            "Hud": Hud
+            "Hud": Hud,
+            "TagReader": TagReader
         })
 
         self.plugin_manager.locatePlugins()
@@ -77,6 +79,9 @@ class Cobiv(App):
 
     def lookup(self, name, category):
         return self.plugin_manager.getPluginByName(name, category=category).plugin_object
+
+    def lookups(self,category):
+        return [plugin.plugin_object for plugin in self.plugin_manager.getPluginsOfCategory(category)]
 
     def register_event_observer(self,evt_name,callback):
         if not self.observers.has_key(evt_name):

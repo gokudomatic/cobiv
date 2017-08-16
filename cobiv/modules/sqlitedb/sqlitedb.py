@@ -571,11 +571,9 @@ class SqliteDb(Entity):
                     for tag in tag_list:
                         to_add.append((node_id, 1, 'tag', tag.strip()))
 
-        hasher = hashlib.md5()
-        with open(name, 'rb') as afile:
-            buf = afile.read()
-            hasher.update(buf)
-        to_add.append((node_id, 0, 'crc', hasher.hexdigest()))
+
+        for reader in self.get_app().lookups("TagReader"):
+            reader.read_file_tags(node_id,name,to_add)
 
         return to_add
 
