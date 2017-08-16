@@ -46,6 +46,9 @@ class TestApp(App):
     def get_user_path(self, *args):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), *args)
 
+    def register_event_observer(self, name, fallback):
+        pass
+
 
 class ThumbloaderTest(unittest.TestCase):
     def get_user_path(self, *args):
@@ -56,8 +59,8 @@ class ThumbloaderTest(unittest.TestCase):
 
     def tearDown(self):
         super(ThumbloaderTest, self).tearDown()
-        path=self.get_user_path('thumbs')
-        [os.remove(os.path.join(path,f)) for f in os.listdir(path)]
+        path = self.get_user_path('thumbs')
+        [os.remove(os.path.join(path, f)) for f in os.listdir(path)]
 
     def call_test(self, func):
         a = TestApp()
@@ -72,69 +75,65 @@ class ThumbloaderTest(unittest.TestCase):
         return t
 
     def _test_initialization(self, app, *args):
-        t=self.get_thumbloader()
+        t = self.get_thumbloader()
 
         t.stop()
         app.stop()
 
-    def wait_for(self,t,size):
-        for i in range(5*size+1):
+    def wait_for(self, t, size):
+        for i in range(5 * size + 1):
             if t.queue_empty:
                 break
             sleep(0.2)
         self.assertTrue(t.queue_empty)
 
-
     def _test_enqueue_images(self, app, *args):
-        t=self.get_thumbloader()
+        t = self.get_thumbloader()
 
+        self.assertEqual(0, len(t.to_cache))
 
-        self.assertEqual(0,len(t.to_cache))
+        t.append((1, self.get_user_path('images', '0001.jpg')))
+        self.assertEqual(1, len(t.to_cache))
+        self.wait_for(t, 1)
+        self.assertEqual(0, len(t.to_cache))
+        self.assertEqual(1, len(os.listdir(self.get_user_path('thumbs'))))
 
-        t.append((1,self.get_user_path('images', '0001.jpg')))
-        self.assertEqual(1,len(t.to_cache))
-        self.wait_for(t,1)
-        self.assertEqual(0,len(t.to_cache))
-        self.assertEqual(1,len(os.listdir(self.get_user_path('thumbs'))))
+        t.append((1, self.get_user_path('images', '0001.jpg')), (2, self.get_user_path('images', '0002.jpg')),
+                 (3, self.get_user_path('images', '0003.jpg')))
+        self.assertEqual(3, len(t.to_cache))
+        self.wait_for(t, 3)
+        self.assertEqual(0, len(t.to_cache))
+        self.assertEqual(3, len(os.listdir(self.get_user_path('thumbs'))))
 
-        t.append((1,self.get_user_path('images', '0001.jpg')),(2,self.get_user_path('images', '0002.jpg')),(3,self.get_user_path('images', '0003.jpg')))
-        self.assertEqual(3,len(t.to_cache))
-        self.wait_for(t,3)
-        self.assertEqual(0,len(t.to_cache))
-        self.assertEqual(3,len(os.listdir(self.get_user_path('thumbs'))))
-
-        t.append((2,self.get_user_path('images', '0002.jpg')))
-        self.assertEqual(1,len(t.to_cache))
-        self.wait_for(t,1)
-        self.assertEqual(0,len(t.to_cache))
-        self.assertEqual(3,len(os.listdir(self.get_user_path('thumbs'))))
-
+        t.append((2, self.get_user_path('images', '0002.jpg')))
+        self.assertEqual(1, len(t.to_cache))
+        self.wait_for(t, 1)
+        self.assertEqual(0, len(t.to_cache))
+        self.assertEqual(3, len(os.listdir(self.get_user_path('thumbs'))))
 
         t.stop()
         app.stop()
-
 
     def _test_remove_images(self, app, *args):
-        t=self.get_thumbloader()
+        t = self.get_thumbloader()
 
-        t.append((1,self.get_user_path('images', '0001.jpg')))
-        self.wait_for(t,1)
-        self.assertEqual(1,len(os.listdir(self.get_user_path('thumbs'))))
+        t.append((1, self.get_user_path('images', '0001.jpg')))
+        self.wait_for(t, 1)
+        self.assertEqual(1, len(os.listdir(self.get_user_path('thumbs'))))
 
         t.delete_thumbnail(1)
-        self.assertEqual(0,len(os.listdir(self.get_user_path('thumbs'))))
+        self.assertEqual(0, len(os.listdir(self.get_user_path('thumbs'))))
 
-        t.append((1,self.get_user_path('images', '0001.jpg')),(2,self.get_user_path('images', '0002.jpg')),(3,self.get_user_path('images', '0003.jpg')))
-        self.wait_for(t,3)
+        t.append((1, self.get_user_path('images', '0001.jpg')), (2, self.get_user_path('images', '0002.jpg')),
+                 (3, self.get_user_path('images', '0003.jpg')))
+        self.wait_for(t, 3)
         t.delete_thumbnail(2)
-        self.assertEqual(2,len(os.listdir(self.get_user_path('thumbs'))))
-        t.delete_thumbnail(1,2)
-        self.assertEqual(1,len(os.listdir(self.get_user_path('thumbs'))))
-
+        self.assertEqual(2, len(os.listdir(self.get_user_path('thumbs'))))
+        t.delete_thumbnail(1, 2)
+        self.assertEqual(1, len(os.listdir(self.get_user_path('thumbs'))))
 
         t.stop()
         app.stop()
-
 
     def test_initialization(self):
         self.call_test(self._test_initialization)

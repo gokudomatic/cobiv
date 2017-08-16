@@ -58,6 +58,7 @@ class ThumbLoader(Entity):
         super(ThumbLoader, self).ready()
         self.cell_size = int(self.get_config_value('image_size', 120))
         self.thumb_path = self.get_config_value('path')
+        self.get_app().register_event_observer('on_file_content_change',self.delete_thumbnail)
 
     def build_yaml_config(self, config):
         config[self.get_name()] = {

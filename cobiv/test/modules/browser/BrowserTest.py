@@ -6,9 +6,11 @@ from time import sleep
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.gridlayout import GridLayout
+from os.path import expanduser
 
 from cobiv.modules.browser.browser import Browser
 from cobiv.modules.browser.eolitem import EOLItem
+from cobiv.modules.entity import Entity
 from cobiv.modules.session.Session import Session
 from cobiv.modules.sqlitedb.sqlitedb import SqliteDb
 from cobiv.modules.sidebar.sidebar import Sidebar
@@ -40,6 +42,40 @@ class TestMainWidget(GridLayout):
         self.browser = instance
         self.add_widget(instance)
 
+class MockThumbloader(Entity):
+
+
+
+    def __init__(self):
+        super(MockThumbloader, self).__init__()
+        self.thumb_path=os.path.join(expanduser('~'), '.cobiv', 'thumbnails')
+        self.cell_size = 120
+
+    def stop(self):
+        pass
+
+    def restart(self):
+        pass
+
+    def get_fullpath_from_file_id(self, file_id):
+        return None
+
+    def append(self, *items):
+        pass
+
+    def clear_cache(self):
+        pass
+
+    def get_filename_caption(self, filename):
+        name = os.path.basename(filename)
+        if len(name) > 12:
+            name = name[:5] + "..." + name[-7:]
+        return name
+
+    def delete_thumbnail(self, *items):
+        pass
+
+
 
 class TestApp(App):
     session = None
@@ -67,6 +103,8 @@ class TestApp(App):
     def lookup(self, object_name, category):
         if category == "Entity" and object_name == "session":
             return self.session
+        elif category == "Entity" and object_name == "thumbloader":
+            return MockThumbloader()
         else:
             return None
 

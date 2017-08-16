@@ -51,6 +51,8 @@ class TestApp(App):
     def get_user_path(self, *args):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), *args)
 
+    def fire_event(self,*args):
+        pass
 
 class SQLiteCursorTest(unittest.TestCase):
 
@@ -64,6 +66,12 @@ class SQLiteCursorTest(unittest.TestCase):
         f_path=self.get_user_path('images','test.jpg')
         if os.path.exists(f_path):
             os.remove(f_path)
+
+    def tearDown(self):
+        f_path=self.get_user_path('images','test.jpg')
+        if os.path.exists(f_path):
+            os.remove(f_path)
+        super(SQLiteCursorTest, self).tearDown()
 
     def init_db_with_tags(self):
         db = SqliteDb()
@@ -146,6 +154,37 @@ class SQLiteCursorTest(unittest.TestCase):
         db.close_db()
         app.stop()
 
+    def _test_update_tags(self, app, *args):
+
+        new_filename=self.get_user_path('images','test.jpg')
+        shutil.copy(self.get_user_path('images','0003.jpg'),new_filename)
+
+        db=self.init_db_with_tags()
+        c = self.session.cursor
+
+        # test when nothing changed
+        self.assertItemsEqual([],db._check_modified_files(repo_id=1))
+        db.update_tags(repo_id=1)
+
+        db.search_tag()
+        c.go_last()
+        c.get_tags()
+        self.assertEqual(str(os.path.getsize(new_filename)),c.get_tags()[0]['size'][0])
+        self.assertEqual(str(os.path.getsize(self.get_user_path('images','0003.jpg'))),c.get_tags()[0]['size'][0])
+
+        # test when file content changed
+        shutil.copy(self.get_user_path('images','0001.jpg'),new_filename)
+        self.assertItemsEqual([(4,'images\\test.jpg')],db._check_modified_files(repo_id=1))
+        db.update_tags(repo_id=1)
+        c.reload()
+        self.assertEqual(str(os.path.getsize(new_filename)),c.get_tags()[0]['size'][0])
+        self.assertEqual(str(os.path.getsize(self.get_user_path('images','0001.jpg'))),c.get_tags()[0]['size'][0])
+
+
+        db.close_db()
+        app.stop()
+
+
     def call_test(self, func):
         a = TestApp()
         p = partial(func, a)
@@ -163,6 +202,10 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def test_update_file(self):
         self.call_test(self._test_update_file)
+
+    def test_update_tags(self):
+        self.call_test(self._test_update_tags)
+
 
 if __name__ == "__main__":
     unittest.main()

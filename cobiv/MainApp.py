@@ -18,6 +18,7 @@ Builder.load_file('main.kv')
 
 class Cobiv(App):
     root = None
+    observers={}
 
     def __init__(self, **kwargs):
         super(Cobiv, self).__init__(**kwargs)
@@ -68,9 +69,6 @@ class Cobiv(App):
 
         self.root.ready()
 
-
-
-
         return self.root
 
     def on_stop(self):
@@ -79,6 +77,17 @@ class Cobiv(App):
 
     def lookup(self, name, category):
         return self.plugin_manager.getPluginByName(name, category=category).plugin_object
+
+    def register_event_observer(self,evt_name,callback):
+        if not self.observers.has_key(evt_name):
+            self.observers[evt_name]=[callback]
+        else:
+            self.observers[evt_name].append(callback)
+
+    def fire_event(self,evt_name,*args):
+        if self.observers.has_key(evt_name):
+            for callback in self.observers[evt_name]:
+                callback(*args)
 
     def get_user_path(self,*args):
         return os.path.join(os.path.expanduser('~'),'.cobiv',*args)

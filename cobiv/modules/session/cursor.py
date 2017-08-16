@@ -328,6 +328,7 @@ class Cursor(EventDispatcher):
         if not force and self.pos is not None and idx == self.pos:
             return True
         else:
+            self.tags=None
             c = self.implementation.go(idx)
             if c is None and not self.is_eol() and idx < 0:
                 c = self.implementation.go_first()

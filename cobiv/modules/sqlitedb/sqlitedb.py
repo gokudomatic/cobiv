@@ -18,6 +18,8 @@ from cobiv.modules.session.cursor import CursorInterface
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
 
+def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 class SqliteCursor(CursorInterface):
     set_head_key = None
@@ -208,16 +210,6 @@ class SqliteCursor(CursorInterface):
             if value:
                 self.con.execute('insert into marked (file_key) select file_key from current_set where position>=0')
 
-    def invert_marked(self):
-        with self.con:
-            self.con.execute(
-                'create temporary table marked1 as select cs.file_key from current_set cs left join marked m on m.file_key=cs.file_key' +
-                ' where m.file_key is null and cs.position>=0')
-            self.con.execute('delete from marked')
-            self.con.execute('insert into marked select file_key from marked1')
-            self.con.execute('drop table marked1')
-
-    @staticmethod
     def _get_tag_key_value(self, tag):
         key = "tag"
         value = tag
@@ -226,6 +218,15 @@ class SqliteCursor(CursorInterface):
             key = values[0]
             value = values[1]
         return (key, value)
+
+    def invert_marked(self):
+        with self.con:
+            self.con.execute(
+                'create temporary table marked1 as select cs.file_key from current_set cs left join marked m on m.file_key=cs.file_key' +
+                ' where m.file_key is null and cs.position>=0')
+            self.con.execute('delete from marked')
+            self.con.execute('insert into marked select file_key from marked1')
+            self.con.execute('drop table marked1')
 
     def add_tag(self, *args):
         if len(args) == 0 or self.file_id is None:
@@ -514,13 +515,15 @@ class SqliteDb(Entity):
             for file_id,filename in modified_file_ids:
                 tags_to_add=self.read_tags(file_id,filename)
 
-                if len(tags_to_add) > 0:
-                    if tags_to_add[1]==0:
-                        c.executemany('update tag set value=? where file_key=? and category=0 and kind=?', (tags_to_add[3],tags_to_add[0],tags_to_add[2]))
-                    elif tags_to_add[1]==1:
-                        c.executemany('insert or ignore into tag values (?,?,?,?)', tags_to_add)
+                for tag_to_add in tags_to_add:
+                    if len(tags_to_add) > 0:
+                        if tag_to_add[1]==0:
+                            c.execute('update tag set value=? where file_key=? and category=0 and kind=?', (tag_to_add[3],tag_to_add[0],tag_to_add[2]))
+                        elif tag_to_add[1]==1:
+                            c.execute('insert or ignore into tag values (?,?,?,?)', tag_to_add)
 
-                # delete thumbnail
+                self.get_app().fire_event('on_file_content_change',file_id)
+
 
     def _check_modified_files(self, repo_id, to_ignore=[]):
         result = []
@@ -542,9 +545,13 @@ class SqliteDb(Entity):
                     changed = False
 
                 if kind == 'size':
-                    changed = changed or value != os.path.getsize(filename)
+                    changed = changed or int(value) != os.path.getsize(filename)
                 elif kind == 'modification_date':
-                    changed = changed or value != os.path.getmtime(filename)
+                    changed = changed or not is_close(float(value),os.path.getmtime(filename),abs_tol=1e-05,rel_tol=0)
+
+            if current_id is not None and changed:
+                result.append((file_id,filename))
+
         return result
 
     def read_tags(self, node_id, name):
