@@ -42,28 +42,11 @@ class Viewer(View, ScrollView):
         self.set_action("mark", self.mark)
         self.set_action("is-marked", self.print_mark)
         self.set_action("refresh-marked", self.refresh_marked)
-        self.set_action("rm", self.remove_slide)
-
-    def build_config(self, config):
-        Component.build_config(self, config)
-        section = self.get_config_hotkeys_section()
-        config.add_section(section)
-        config.set(section, "up 20", "273")  # up arrow
-        config.set(section, "down 20", "274")  # down arrow
-        config.set(section, "next", "275")
-        config.set(section, "previous", "276")
-        config.set(section, "first", "103")
-        config.set(section, "last", "103/1")
-        config.set(section, "scroll-up", "105", )
-        config.set(section, "scroll-down", "107")
-        config.set(section, "scroll-left", "106")
-        config.set(section, "scroll-right", "108")
-        config.set(section, "zoom-in", "48")
-        config.set(section, "zoom-out", "57")
 
     def build_yaml_config(self, config):
         config[self.get_name()] = {
             'hotkeys': [
+                {'key': '13', 'binding': 'switch-view browser'},
                 {'key': '273', 'binding': 'up 20'},
                 {'key': '274', 'binding': 'down 20'},
                 {'key': '275', 'binding': 'next'},
@@ -128,7 +111,7 @@ class Viewer(View, ScrollView):
         return len(self.cursor)
 
     def jump_to_slide(self, value):
-        self.cursor = self.cursor.get_index(value)
+        self.cursor.go(value)
 
     def load_last(self):
         self.cursor.go_last()

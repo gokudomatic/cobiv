@@ -519,7 +519,7 @@ class SqliteDb(Entity):
                 tags_to_add = self.read_tags(file_id, filename)
 
                 c.executemany('update tag set value=? where file_key=? and category=0 and kind=?',
-                          [(tag[3], tag[0], tag[2]) for tag in tags_to_add if tag[1] == 0])
+                              [(tag[3], tag[0], tag[2]) for tag in tags_to_add if tag[1] == 0])
                 c.executemany('insert or ignore into tag values (?,?,?,?)', [tag for tag in tags_to_add if tag[1] == 1])
 
                 self.get_app().fire_event('on_file_content_change', file_id)
@@ -571,9 +571,8 @@ class SqliteDb(Entity):
                     for tag in tag_list:
                         to_add.append((node_id, 1, 'tag', tag.strip()))
 
-
         for reader in self.get_app().lookups("TagReader"):
-            reader.read_file_tags(node_id,name,to_add)
+            reader.read_file_tags(node_id, name, to_add)
 
         return to_add
 
