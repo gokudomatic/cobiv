@@ -1,4 +1,3 @@
-import os
 import shlex
 
 import sys
@@ -9,7 +8,6 @@ from kivy.core.window import Window
 from kivy.clock import Clock, mainthread
 
 from cobiv.common import *
-from os.path import expanduser
 
 this = sys.modules[__name__]
 

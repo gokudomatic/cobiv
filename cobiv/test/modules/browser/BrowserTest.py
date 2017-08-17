@@ -1,21 +1,19 @@
 import os
 import unittest
 from functools import partial
+from os.path import expanduser
 from time import sleep
 
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.uix.gridlayout import GridLayout
-from os.path import expanduser
-
-from cobiv.modules.browser.browser import Browser
-from cobiv.modules.browser.eolitem import EOLItem
-from cobiv.modules.entity import Entity
-from cobiv.modules.session.Session import Session
-from cobiv.modules.sqlitedb.sqlitedb import SqliteDb
-from cobiv.modules.sidebar.sidebar import Sidebar
-
 from kivy.core.window import Window
+from kivy.uix.gridlayout import GridLayout
+
+from cobiv.modules.core.entity import Entity
+from cobiv.modules.core.session import Session
+from cobiv.modules.database.sqlitedb import SqliteDb
+from cobiv.modules.views.browser import Browser
+from cobiv.modules.views.browser import EOLItem
 
 Window.size = (360, 360)
 

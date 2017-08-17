@@ -1,3 +1,4 @@
+import sqlite3
 import unittest
 from functools import partial
 
@@ -5,9 +6,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
-from cobiv.modules.sqlitedb.sqlitedb import SqliteCursor
-
-import sqlite3
+from cobiv.modules.database.sqlitedb import SqliteCursor
 
 
 class TestMainWidget(Widget):

@@ -5,7 +5,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
-from cobiv.modules.session.cursor import Cursor, EOLCursor, CursorInterface
+from cobiv.modules.core.session.cursor import Cursor, EOLCursor, CursorInterface
 
 
 class TestMainWidget(Widget):

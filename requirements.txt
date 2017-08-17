@@ -1,0 +1,14 @@
+functools32==3.2.3.post2
+Kivy==1.10.0
+Kivy-Garden==0.1.4
+kivy.deps.glew==0.1.9
+kivy.deps.gstreamer==0.1.12
+kivy.deps.sdl2==0.1.17
+pathlib2==2.2.1
+pickleshare==0.7.4
+Pillow==4.1.1
+prompt-toolkit==1.0.14
+psutil==5.2.2
+PyYAML==3.12
+templite==0.2.1
+Yapsy==1.11.223

@@ -1,17 +1,14 @@
 import os
+import shutil
 import unittest
 from functools import partial
-import shutil
 
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
-from cobiv.modules.session.Session import Session
-from cobiv.modules.session.cursor import CursorInterface
-from cobiv.modules.sqlitedb.sqlitedb import SqliteCursor, SqliteDb
-
-import sqlite3
+from cobiv.modules.core.session import Session
+from cobiv.modules.database.sqlitedb import SqliteDb
 
 
 class TestMainWidget(Widget):

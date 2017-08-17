@@ -1,16 +1,16 @@
 import os
+
 import kivy
 import yaml
-
-from cobiv.modules.browser.browser import Browser
-from cobiv.modules.entity import Entity
-from cobiv.modules.hud import Hud
-from cobiv.modules.reader.tagreader import TagReader
-from cobiv.modules.view import View
 from kivy.app import App
-from MainContainer import MainContainer
 from kivy.lang import Builder
 from yapsy.PluginManager import PluginManager
+
+from MainContainer import MainContainer
+from cobiv.modules.core.entity import Entity
+from cobiv.modules.core.hud import Hud
+from cobiv.modules.core.view import View
+from cobiv.modules.io.reader.tagreader import TagReader
 
 kivy.require('1.9.1')
 
