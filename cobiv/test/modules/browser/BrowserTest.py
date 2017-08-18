@@ -10,10 +10,11 @@ from kivy.core.window import Window
 from kivy.uix.gridlayout import GridLayout
 
 from cobiv.modules.core.entity import Entity
-from cobiv.modules.core.session import Session
-from cobiv.modules.database.sqlitedb import SqliteDb
-from cobiv.modules.views.browser import Browser
-from cobiv.modules.views.browser import EOLItem
+from cobiv.modules.core.session.Session import Session
+from cobiv.modules.database.sqlitedb.sqlitedb import SqliteDb
+from cobiv.modules.views.browser.browser import Browser
+from cobiv.modules.views.browser.eolitem import EOLItem
+from cobiv.modules.hud_components.sidebar.sidebar import Sidebar
 
 Window.size = (360, 360)
 
@@ -106,6 +107,8 @@ class TestApp(App):
         else:
             return None
 
+    def lookups(self,category):
+        return []
 
 class BrowserTest(unittest.TestCase):
     def setUp(self):

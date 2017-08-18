@@ -7,8 +7,8 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
-from cobiv.modules.core.session import Session
-from cobiv.modules.database.sqlitedb import SqliteDb
+from cobiv.modules.core.session.Session import Session
+from cobiv.modules.database.sqlitedb.sqlitedb import SqliteDb
 
 
 class TestMainWidget(Widget):
