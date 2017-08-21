@@ -1,12 +1,6 @@
 #:import win kivy.core.window
 #:import math math
 
-<TopBar@BoxLayout>:
-    orientation: 'horizontal'
-    size_hint: 1, None
-    height: 30
-
-
 <Browser>:
     page_rows: self.height/self.cell_size
     max_rows: int(self.height*self.max_scroll_ratio/self.cell_size)
@@ -15,18 +9,9 @@
     max_items_cache: self.max_rows * 3
     BoxLayout:
         orientation: 'vertical'
-        TopBar:
-            Label:
-                text: 'aaa'
-            Label:
-                text: 'bbb'
-            Label:
-                text: '3/999'
-                halign: 'right'
-                valign: 'middle'
-                text_size: self.size
-
+        id: main_layout_vertical
         BoxLayout:
+            id: main_layout_horizontal
             orientation: 'horizontal'
             ThumbScrollView:
                 id: scroll_view
@@ -41,6 +26,3 @@
                 id: right_sidebar_layout
                 size_hint: None, 1
                 width: root.right_sidebar_size
-        Label:
-            size_hint: 1, None
-            height: 30

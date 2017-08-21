@@ -86,8 +86,12 @@ class Browser(View, FloatLayout):
     widget_to_scroll = None
     thumb_loader = None
 
+    toolbars = None
+
     def __init__(self, **kwargs):
         super(Browser, self).__init__(**kwargs)
+
+        self.toolbars=[]
 
         self.image_queue = deque()
         self.pending_actions = deque()
@@ -152,21 +156,41 @@ class Browser(View, FloatLayout):
     def _init_sidebars(self):
         self.right_sidebar_full_size = self.get_config_value('sidebar.right.width', 200)
         right_sidebar_name = self.get_config_value('sidebar.right.class', 'SimpleSidebar')
-        self.right_sidebar.add_widget(Factory.get(right_sidebar_name)(session=self.session))
+        sidebar_instance=Factory.get(right_sidebar_name)(session=self.session)
+        self.toolbars.append(sidebar_instance)
+        self.right_sidebar.add_widget(sidebar_instance)
 
         right_item_list = self.right_sidebar.children[0].item_list
         right_item_list.add_widget(
             Button(text='> > >', height=30, size_hint=(1, None), on_press=lambda a: self.toggle_side_bar()))
 
-        right_sidebar_cfg=self.get_config_value('sidebar.right.items')
+        right_sidebar_cfg = self.get_config_value('sidebar.right.items')
         if right_sidebar_cfg is not None:
             for item in right_sidebar_cfg:
-                parameters=item.get('parameters')
-                parameters={} if parameters is None else parameters
-                instance= Factory.get(item.get('class'))(**parameters)
+                parameters = item.get('parameters')
+                parameters = {} if parameters is None else parameters
+                instance = Factory.get(item.get('class'))(**parameters)
                 right_item_list.add_widget(instance)
 
         self.toggle_side_bar(False)
+
+    def _init_statusbars(self):
+        statusbar_cfg = self.get_config_value('statusbar')
+        if statusbar_cfg is not None:
+            for barcfg in statusbar_cfg:
+                kwargs={}
+                if barcfg.has_key('height'):
+                    kwargs['height']=barcfg['height']
+                instance = Factory.get(barcfg.get('class'))(session=self.session,**kwargs)
+                self.toolbars.append(instance)
+                if barcfg.has_key('items'):
+                    for cfg_item in barcfg.get('items'):
+                        instance.add_label(**cfg_item)
+
+                if barcfg.get('position') == 'top':
+                    self.ids.main_layout_vertical.add_widget(instance, len(self.ids.main_layout_vertical.children))
+                elif barcfg.get('position') == 'bottom':
+                    self.ids.main_layout_vertical.add_widget(instance)
 
     def ready(self):
         Component.ready(self)
@@ -178,6 +202,7 @@ class Browser(View, FloatLayout):
         self.cursor = self.session.cursor
 
         self._init_sidebars()
+        self._init_statusbars()
 
         self.thumb_loader = App.get_running_app().lookup('thumbloader', 'Entity')
         self.thumb_loader.container = self
@@ -293,7 +318,6 @@ class Browser(View, FloatLayout):
         thumb = Thumb(image=img, cell_size=self.thumb_loader.cell_size, caption=name, selected=False)
         return thumb
 
-
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
         if queue_len > 0:
@@ -407,6 +431,7 @@ class Browser(View, FloatLayout):
             if isinstance(last_item, EOLItem):
                 last_item.set_selected(True)
                 self.selected_image = last_item
+                self.ids.scroll_view.scroll_to(last_item)
         elif self.cursor.filename is None or self.cursor.filename == '' or value is None or len(
                 self.grid.children) == 0:
             self.selected_image = None
@@ -624,7 +649,8 @@ class Browser(View, FloatLayout):
                 item.set_marked(item.file_id in mapping)
 
     def refresh_info(self):
-        self.right_sidebar.children[0].refresh_widgets()
+        for toolbar in self.toolbars:
+            toolbar.refresh_widgets()
 
     def cut_marked(self):
         if self.cursor.get_marked_count() == 0:

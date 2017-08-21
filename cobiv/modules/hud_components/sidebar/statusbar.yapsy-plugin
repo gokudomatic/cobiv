@@ -1,0 +1,8 @@
+[Core]
+Name = statusbar
+Module = StatusBar
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Statusbar for HUD

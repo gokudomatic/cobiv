@@ -30,6 +30,18 @@ browser:
                 Dimension: %{image_size()}%
       - {class: SeparatorWidget}
       - {class: TagsWidget, parameters: {limit: 5} }
+  statusbar:
+  -
+    class: SimpleStatusBar
+    position: top
+    items:
+    - {text: '%{filename()}%', align: left}
+    - {text: '%{currentset_position()}%/%{currentset_count()}%', align: right, size: 100}
+  -
+    class: SimpleStatusBar
+    position: bottom
+    height: 30
+
 main:
   hotkeys:
   - {binding: q, key: '113'}

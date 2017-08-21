@@ -1,14 +1,39 @@
 import os
 
+from kivy.app import App
+from kivy.effects.dampedscroll import DampedScrollEffect
+
 from cobiv.modules.core.component import Component
 from kivy.lang import Builder
-from kivy.properties import ObjectProperty
+from kivy.properties import ObjectProperty, Clock
 from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.core.imageset.ImageSet import SlideMode, Slide
 from cobiv.modules.core.view import View
 
-Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__),'viewer.kv')))
+Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'viewer.kv')))
+
+
+class HorizontalSidebarEffect(DampedScrollEffect):
+    overscroll_limit = 50
+
+    def __init__(self, **kwargs):
+        super(HorizontalSidebarEffect, self).__init__(**kwargs)
+        self.trigger_navigate_right = Clock.create_trigger(lambda dt: self.navigate(True), 0.5)
+        self.trigger_navigate_left = Clock.create_trigger(lambda dt: self.navigate(False), 0.5)
+
+    def on_overscroll(self, *args):
+        super(HorizontalSidebarEffect, self).on_overscroll(*args)
+        if self.overscroll < -self.overscroll_limit:
+            self.trigger_navigate_right()
+        elif self.overscroll > self.overscroll_limit:
+            self.trigger_navigate_left()
+
+    def navigate(self, go_right):
+        if go_right:
+            App.get_running_app().root.get_view().load_next()
+        else:
+            App.get_running_app().root.get_view().load_previous()
 
 
 class Viewer(View, ScrollView):
@@ -18,6 +43,8 @@ class Viewer(View, ScrollView):
 
     def __init__(self, **kwargs):
         super(Viewer, self).__init__(**kwargs)
+
+        self.effect_x = HorizontalSidebarEffect()
 
         self.set_action("scroll-up", self.scroll_up)
         self.set_action("scroll-down", self.scroll_down)

@@ -14,6 +14,9 @@ class CoreVariables:
         session.fields['image_size'] = self.get_image_size
         session.fields['file_format'] = self.get_image_format
         session.fields['modified_date'] = self.get_modification_date
+        session.fields['filename'] = lambda: self.session.cursor.filename
+        session.fields['currentset_position'] = lambda: (self.session.cursor.pos+1) if self.session.cursor.pos is not None else "0"
+        session.fields['currentset_count'] = lambda: len(self.session.cursor) if self.session.cursor.pos is not None else "0"
 
     def get_simple_field(self, category, field_name, formatter=None):
         if self.session.cursor.file_id is None:
@@ -29,7 +32,7 @@ class CoreVariables:
             return formatter(value)
 
     def get_file_size(self):
-        return self.get_simple_field(0, 'size', CoreVariables.sizeof_fmt)
+        return self.get_simple_field(0, 'size')
 
     def get_modification_date(self):
         mod_date = self.get_simple_field(0, 'modification_date')
