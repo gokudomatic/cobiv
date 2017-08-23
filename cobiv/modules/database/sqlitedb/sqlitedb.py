@@ -3,6 +3,7 @@ import sqlite3
 import threading
 from os import listdir
 from os.path import isfile, join
+from future.utils import viewitems
 
 from PIL import Image
 from kivy.app import App
@@ -622,20 +623,60 @@ class SqliteDb(Entity):
         else:
             to_include = []
             to_exclude = []
+            to_include_cat = {}
+            to_exclude_cat = {}
+
+            def add_criteria(criteria, global_list, category_list, exclude_mode=False):
+                if ':' in criteria:
+                    key, value = criteria.split(':', 1)
+                    if not category_list.has_key(key):
+                        category_list[key] = []
+                    if (value == '' or value == '*'):
+                        if exclude_mode:
+                            category_list[key] = ['*']
+                            return
+                        else:
+                            value='*'
+
+                    elif exclude_mode and len(category_list[key]) ==  1 and category_list[key][0] == '*':
+                        return
+                    category_list[key].append(value)
+                else:
+                    global_list.append(criteria)
 
             for arg in args:
                 if arg[0] == "-":
-                    to_exclude.append(arg[1:])
+                    add_criteria(arg[1:], to_exclude, to_exclude_cat)
                 else:
-                    to_include.append(arg)
+                    add_criteria(arg, to_include, to_include_cat)
 
             query = 'select f.id,f.name from file f ,tag t where t.file_key=f.id '
             if len(to_include) > 0:
                 query += 'and t.value in ("%s") ' % '", "'.join(to_include)
-            if len(to_exclude) > 0:
-                query += 'and f.id not in (select t1.file_key from tag t1 where t1.value in ("%s")) ' % '", "'.join(
-                    to_exclude)
+            if len(to_include_cat) > 0:
+                for (key, values) in viewitems(to_include_cat):
+                    if len(values) == 1 and values[0] == '*':
+                        query += ' and t.kind="%s" ' % key
+                    else:
+                        query += ' and t.kind="%s" and t.value in ("%s") ' % (key, '", "'.join(values))
 
+            if len(to_exclude)+len(to_exclude_cat) > 0:
+                subquery='select distinct file_key from tag where 1=0 '
+
+                if len(to_exclude) > 0:
+                    subquery += ' or value in ("%s") ' % '", "'.join(
+                        to_exclude)
+
+                if len(to_exclude_cat) > 0:
+                    for (key, values) in viewitems(to_exclude_cat):
+                        if len(values) == 1 and values[0] == '*':
+                            subquery += ' or kind="%s" ' % key
+                        else:
+                            subquery += ' or (kind="%s" and value in ("%s")) ' % (key, '", "'.join(values))
+
+                query += ' and f.id not in ( '+subquery+') '
+
+            query += ' group by f.id'
             self.regenerate_set(CURRENT_SET_NAME, query)
 
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()

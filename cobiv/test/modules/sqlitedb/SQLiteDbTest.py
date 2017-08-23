@@ -26,8 +26,6 @@ class TestMainWidget(Widget):
 
 
 class TestApp(App):
-
-
     def __init__(self, **kwargs):
         super(TestApp, self).__init__(**kwargs)
         self.configuration = {
@@ -48,27 +46,26 @@ class TestApp(App):
     def get_user_path(self, *args):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), *args)
 
-    def fire_event(self,*args):
+    def fire_event(self, *args):
         pass
 
-    def lookups(self,category):
+    def lookups(self, category):
         return []
 
-class SQLiteCursorTest(unittest.TestCase):
 
+class SQLiteCursorTest(unittest.TestCase):
     def get_user_path(self, *args):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), *args)
 
-
     def setUp(self):
-        self.session=Session()
+        self.session = Session()
 
-        f_path=self.get_user_path('images','test.jpg')
+        f_path = self.get_user_path('images', 'test.jpg')
         if os.path.exists(f_path):
             os.remove(f_path)
 
     def tearDown(self):
-        f_path=self.get_user_path('images','test.jpg')
+        f_path = self.get_user_path('images', 'test.jpg')
         if os.path.exists(f_path):
             os.remove(f_path)
         super(SQLiteCursorTest, self).tearDown()
@@ -81,13 +78,33 @@ class SQLiteCursorTest(unittest.TestCase):
         db.search_tag()
         c = self.session.cursor
 
-        c.add_tag("one","o","e")
+        c.add_tag("one", "o", "e")
         c.go_next()
-        c.add_tag("two","o","t")
+        c.add_tag("two", "o", "t")
         c.go_next()
-        c.add_tag("three","t","r","e","3")
+        c.add_tag("three", "t", "r", "e", "3")
 
         return db
+
+    def init_db_with_categorized_tags(self):
+        db = SqliteDb()
+        db.init_test_db()
+        db.session = self.session
+
+        db.search_tag()
+        c = self.session.cursor
+
+        self.assertEqual("images\\0001.jpg", c.filename)
+        c.add_tag("cat1:one", "o", "e")
+        c.go_next()
+        self.assertEqual("images\\0002.jpg", c.filename)
+        c.add_tag("cat2:two", "o", "t")
+        c.go_next()
+        self.assertEqual("images\\0003.jpg", c.filename)
+        c.add_tag("cat1:three", "letter:t", "r", "e", "3")
+
+        return db
+
 
     def _test_initialization(self, app, *args):
         db = SqliteDb()
@@ -100,23 +117,23 @@ class SQLiteCursorTest(unittest.TestCase):
     def _test_search_all(self, app, *args):
         db = SqliteDb()
         db.init_test_db()
-        db.session=self.session
+        db.session = self.session
 
         db.search_tag()
         c = self.session.cursor
 
-        self.assertEqual(3,len(c))
-        self.assertEqual("images\\0001.jpg",c.filename)
+        self.assertEqual(3, len(c))
+        self.assertEqual("images\\0001.jpg", c.filename)
         c.go_next()
-        self.assertEqual("images\\0002.jpg",c.filename)
+        self.assertEqual("images\\0002.jpg", c.filename)
         c.go_next()
-        self.assertEqual("images\\0003.jpg",c.filename)
+        self.assertEqual("images\\0003.jpg", c.filename)
 
         db.close_db()
         app.stop()
 
     def _test_search_tag(self, app, *args):
-        db=self.init_db_with_tags()
+        db = self.init_db_with_tags()
         c = self.session.cursor
 
         db.search_tag("one")
@@ -125,64 +142,91 @@ class SQLiteCursorTest(unittest.TestCase):
         db.search_tag("o")
         self.assertEqual(2, len(c))
 
-        db.search_tag("o","-one")
+        db.search_tag("o", "-one")
         self.assertEqual(1, len(c))
-        self.assertEqual("images\\0002.jpg",c.filename)
-
+        self.assertEqual("images\\0002.jpg", c.filename)
 
         db.close_db()
         app.stop()
 
     def _test_update_file(self, app, *args):
-        db=self.init_db_with_tags()
+        db = self.init_db_with_tags()
         c = self.session.cursor
 
-        new_filename=self.get_user_path('images','test.jpg')
+        new_filename = self.get_user_path('images', 'test.jpg')
 
-        shutil.copy(self.get_user_path('images','0003.jpg'),new_filename)
+        shutil.copy(self.get_user_path('images', '0003.jpg'), new_filename)
         self.assertTrue(os.path.exists(new_filename))
         db.updatedb(sameThread=True)
         db.search_tag()
-        self.assertEqual(4,len(c))
+        self.assertEqual(4, len(c))
 
         os.remove(new_filename)
         db.updatedb(sameThread=True)
         db.search_tag()
-        self.assertEqual(3,len(c))
-
+        self.assertEqual(3, len(c))
 
         db.close_db()
         app.stop()
 
     def _test_update_tags(self, app, *args):
 
-        new_filename=self.get_user_path('images','test.jpg')
-        shutil.copy(self.get_user_path('images','0003.jpg'),new_filename)
+        new_filename = self.get_user_path('images', 'test.jpg')
+        shutil.copy(self.get_user_path('images', '0003.jpg'), new_filename)
 
-        db=self.init_db_with_tags()
+        db = self.init_db_with_tags()
         c = self.session.cursor
 
         # test when nothing changed
-        self.assertItemsEqual([],db._check_modified_files(repo_id=1))
+        self.assertItemsEqual([], db._check_modified_files(repo_id=1))
         db.update_tags(repo_id=1)
 
         db.search_tag()
         c.go_last()
         c.get_tags()
-        self.assertEqual(str(os.path.getsize(new_filename)),c.get_tags()[0]['size'][0])
-        self.assertEqual(str(os.path.getsize(self.get_user_path('images','0003.jpg'))),c.get_tags()[0]['size'][0])
+        self.assertEqual(str(os.path.getsize(new_filename)), c.get_tags()[0]['size'][0])
+        self.assertEqual(str(os.path.getsize(self.get_user_path('images', '0003.jpg'))), c.get_tags()[0]['size'][0])
 
         # test when file content changed
-        shutil.copy(self.get_user_path('images','0001.jpg'),new_filename)
-        self.assertItemsEqual([(4,'images\\test.jpg')],db._check_modified_files(repo_id=1))
+        shutil.copy(self.get_user_path('images', '0001.jpg'), new_filename)
+        self.assertItemsEqual([(4, 'images\\test.jpg')], db._check_modified_files(repo_id=1))
         db.update_tags(repo_id=1)
         c.reload()
-        self.assertEqual(str(os.path.getsize(new_filename)),c.get_tags()[0]['size'][0])
-        self.assertEqual(str(os.path.getsize(self.get_user_path('images','0001.jpg'))),c.get_tags()[0]['size'][0])
+        self.assertEqual(str(os.path.getsize(new_filename)), c.get_tags()[0]['size'][0])
+        self.assertEqual(str(os.path.getsize(self.get_user_path('images', '0001.jpg'))), c.get_tags()[0]['size'][0])
+
+        db.close_db()
+        app.stop()
+
+    def _test_search_tag_category(self, app, *args):
+        db = self.init_db_with_categorized_tags()
+        c = self.session.cursor
+
+        db.search_tag("cat1:one")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("cat1:")
+        self.assertEqual(2, len(c))
+
+        db.search_tag("two")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("cat1:*", "-one")
+        self.assertEqual(1, len(c))
+        self.assertEqual("images\\0003.jpg", c.filename)
+
+        db.search_tag("t", "-letter:")
+        self.assertEqual(1, len(c))
+        self.assertEqual("images\\0002.jpg", c.filename)
+
+        db.search_tag("-cat2:","-cat1:three")
+        self.assertEqual(1, len(c))
+        self.assertEqual("images\\0001.jpg", c.filename)
 
 
         db.close_db()
         app.stop()
+
 
 
     def call_test(self, func):
@@ -206,6 +250,8 @@ class SQLiteCursorTest(unittest.TestCase):
     def test_update_tags(self):
         self.call_test(self._test_update_tags)
 
+    def test_search_tag_category(self):
+        self.call_test(self._test_search_tag_category)
 
 if __name__ == "__main__":
     unittest.main()
