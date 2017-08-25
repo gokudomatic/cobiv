@@ -4,7 +4,7 @@ setup(
     name='cobiv',
     version='0.1',
     packages=['cobiv'],
-    install_requires=['pillow','kivy','yapsy','future']
+    install_requires=['pillow','kivy','yapsy','future','templite','PyYAML']
     url='https://github.com/gokudomatic/cobiv',
     license='MIT',
     author='gokudomatic',
