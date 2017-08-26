@@ -223,6 +223,11 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertEqual(1, len(c))
         self.assertEqual("images\\0001.jpg", c.filename)
 
+        db.search_tag("o","cat1:")
+        self.assertEqual(1, len(c))
+        self.assertEqual("images\\0001.jpg", c.filename)
+
+
 
         db.close_db()
         app.stop()

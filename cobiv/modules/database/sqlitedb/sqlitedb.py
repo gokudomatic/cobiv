@@ -621,62 +621,104 @@ class SqliteDb(Entity):
         if len(args) == 0:
             self.copy_set_to_current('*')
         else:
-            to_include = []
-            to_exclude = []
-            to_include_cat = {}
-            to_exclude_cat = {}
+            to_include = {}
+            to_exclude = {}
 
-            def add_criteria(criteria, global_list, category_list, exclude_mode=False):
-                if ':' in criteria:
-                    key, value = criteria.split(':', 1)
-                    if not category_list.has_key(key):
-                        category_list[key] = []
-                    if (value == '' or value == '*'):
-                        if exclude_mode:
-                            category_list[key] = ['*']
-                            return
-                        else:
-                            value='*'
+            ''' Structure of lists:
+            list:{
+                *:{
+                    in:[val1,val2,val3,...,valn]
+                },
+                kind1:{
+                    in:[val1,val2,val3,...,valn]
+                },
+                date:{
+                    >:value,
+                    ><:[from,to],
+                    <:value
+                },
+                kind2:{
+                    %:substring
+                },
+                kind4:{any:None}
+            }
+            '''
 
-                    elif exclude_mode and len(category_list[key]) ==  1 and category_list[key][0] == '*':
-                        return
-                    category_list[key].append(value)
+            def prepare_in(list, fn, kind, values):
+                if not list[kind].has_key(fn):
+                    list[kind][fn] = []
+                for value in values:
+                    list[kind][fn].append(value)
+
+            def parse_in(kind, values):
+                result = 'value in ("%s")' % '", "'.join(values)
+                if not kind == "*":
+                    result = result + ' and kind="%s"' % kind
+                return result
+
+            def prepare_any(list, fn, kind, values):
+                if not list[kind].has_key(fn):
+                    list[kind][fn] = None
+
+            def parse_any(kind, values):
+                return 'kind="%s"' %  kind
+
+            functions = {
+                'in': [prepare_in, parse_in],
+                'any': [prepare_any, parse_any]
+            }
+
+            def add_criteria(criteria, category_list):
+                if criteria == ":" or criteria == "::":
+                    return
+
+                criterias = criteria.split(":")
+                if len(criterias) == 1:
+                    kind = "*"
+                    fn = "in"
+                    values = [criteria]
+                elif len(criterias) == 2:
+                    kind = criterias[0]
+                    fn = "in"
+                    values = [criterias[1]]
                 else:
-                    global_list.append(criteria)
+                    kind = criterias[0]
+                    fn = criterias[1]
+                    values = criterias[2:]
+
+                if not kind == '*' and len(values) == 1 and (values[0] == "" or values[0] == "*"):
+                    fn = "any"
+                    values = None
+
+                if not category_list.has_key(kind):
+                    category_list[kind] = {}
+
+                functions[fn][0](category_list, fn, kind, values)
 
             for arg in args:
                 if arg[0] == "-":
-                    add_criteria(arg[1:], to_exclude, to_exclude_cat)
+                    add_criteria(arg[1:], to_exclude)
                 else:
-                    add_criteria(arg, to_include, to_include_cat)
+                    add_criteria(arg, to_include)
 
-            query = 'select f.id,f.name from file f ,tag t where t.file_key=f.id '
+            subquery = ""
             if len(to_include) > 0:
-                query += 'and t.value in ("%s") ' % '", "'.join(to_include)
-            if len(to_include_cat) > 0:
-                for (key, values) in viewitems(to_include_cat):
-                    if len(values) == 1 and values[0] == '*':
-                        query += ' and t.kind="%s" ' % key
-                    else:
-                        query += ' and t.kind="%s" and t.value in ("%s") ' % (key, '", "'.join(values))
+                for kind in to_include:
+                    for fn in to_include[kind]:
+                        values = to_include[kind][fn]
+                        if subquery != "":
+                            subquery += " intersect "
+                        subquery += "select file_key from tag where " + functions[fn][1](kind, values)
+            else:
+                subquery = 'select file_key from tag'
 
-            if len(to_exclude)+len(to_exclude_cat) > 0:
-                subquery='select distinct file_key from tag where 1=0 '
+            if len(to_exclude):
+                for kind in to_exclude:
+                    for fn in to_exclude[kind]:
+                        values = to_exclude[kind][fn]
+                        subquery += " except select file_key from tag where " + functions[fn][1](kind, values)
 
-                if len(to_exclude) > 0:
-                    subquery += ' or value in ("%s") ' % '", "'.join(
-                        to_exclude)
-
-                if len(to_exclude_cat) > 0:
-                    for (key, values) in viewitems(to_exclude_cat):
-                        if len(values) == 1 and values[0] == '*':
-                            subquery += ' or kind="%s" ' % key
-                        else:
-                            subquery += ' or (kind="%s" and value in ("%s")) ' % (key, '", "'.join(values))
-
-                query += ' and f.id not in ( '+subquery+') '
-
-            query += ' group by f.id'
+            query = 'select f.id,f.name from file f where f.id in (' + subquery + ')'
             self.regenerate_set(CURRENT_SET_NAME, query)
 
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
