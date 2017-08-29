@@ -105,6 +105,24 @@ class SQLiteCursorTest(unittest.TestCase):
 
         return db
 
+    def init_db_with_numeric_date_tags(self):
+        db = SqliteDb()
+        db.init_test_db()
+        db.session = self.session
+
+        db.search_tag()
+        c = self.session.cursor
+
+        self.assertEqual("images\\0001.jpg", c.filename)
+        c.add_tag("modification_date:1492960627.07539", "width:159", "height:81")  # time=2017.08.23
+        c.go_next()
+        self.assertEqual("images\\0002.jpg", c.filename)
+        c.add_tag("modification_date:1503845435.0", "width:39", "height:81")  # time=2017.08.27
+        c.go_next()
+        self.assertEqual("images\\0003.jpg", c.filename)
+        c.add_tag("modification_date:1458169200.0", "width:60", "height:60")  # time=2016.03.17
+
+        return db
 
     def _test_initialization(self, app, *args):
         db = SqliteDb()
@@ -145,6 +163,10 @@ class SQLiteCursorTest(unittest.TestCase):
         db.search_tag("o", "-one")
         self.assertEqual(1, len(c))
         self.assertEqual("images\\0002.jpg", c.filename)
+
+        db.search_tag("o","e")
+        self.assertEqual(1, len(c))
+
 
         db.close_db()
         app.stop()
@@ -219,20 +241,91 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertEqual(1, len(c))
         self.assertEqual("images\\0002.jpg", c.filename)
 
-        db.search_tag("-cat2:","-cat1:three")
+        db.search_tag("-cat2:", "-cat1:three")
         self.assertEqual(1, len(c))
         self.assertEqual("images\\0001.jpg", c.filename)
 
-        db.search_tag("o","cat1:")
+        db.search_tag("o", "cat1:")
         self.assertEqual(1, len(c))
         self.assertEqual("images\\0001.jpg", c.filename)
-
-
 
         db.close_db()
         app.stop()
 
+    def _test_search_tag_numeric(self, app, *args):
+        db = self.init_db_with_numeric_date_tags()
+        c = self.session.cursor
 
+        # test equals
+        db.search_tag("height:81", "width:159")
+        self.assertEqual(1, len(c))
+
+        # test same kind
+        db.search_tag("height:159", "height:81")
+        self.assertEqual(0, len(c))
+
+        # test lower than
+        db.search_tag("height:<:81")
+        self.assertEqual(1, len(c))
+
+        # test multiple lower than with or
+        db.search_tag("height:<:81:100")
+        self.assertEqual(3, len(c))
+
+        # test multiple lower than with and
+        db.search_tag("height:<:81", "height:<:100")
+        self.assertEqual(1, len(c))
+
+        # test greater than
+        db.search_tag("width:>:40")
+        self.assertEqual(2, len(c))
+
+        # test multiple greater than with or
+        db.search_tag("width:>:40:100")
+        self.assertEqual(2, len(c))
+
+        # test multiple greater than with or
+        db.search_tag("width:>:40", "width:>:100")
+        self.assertEqual(1, len(c))
+
+        # test lower or equals
+        db.search_tag("width:<=:60")
+        self.assertEqual(2, len(c))
+
+        # test lower or equals or
+        db.search_tag("width:<=:60:40")
+        self.assertEqual(2, len(c))
+
+        # test lower or equals or
+        db.search_tag("width:<=:60:40:300")
+        self.assertEqual(3, len(c))
+
+        # test greater or equals
+        db.search_tag("height:>=:81")
+        self.assertEqual(2, len(c))
+
+        # test greater or equals or
+        db.search_tag("height:>=:81:300")
+        self.assertEqual(2, len(c))
+
+        # test greater or equals or
+        db.search_tag("height:>=:81:300:20")
+        self.assertEqual(3, len(c))
+
+        # test height in 50-70
+        db.search_tag("height:><:50:70")
+        self.assertEqual(1, len(c))
+
+        # test width in 50-70 or 130-170
+        db.search_tag("width:><:50:70:130:170")
+        self.assertEqual(2, len(c))
+
+        # test width in 50-70 and 130-170
+        db.search_tag("width:><:50:70", "width:><:130:170")
+        self.assertEqual(0, len(c))
+
+        db.close_db()
+        app.stop()
 
     def call_test(self, func):
         a = TestApp()
@@ -257,6 +350,10 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def test_search_tag_category(self):
         self.call_test(self._test_search_tag_category)
+
+    def test_search_tag_numeric(self):
+        self.call_test(self._test_search_tag_numeric)
+
 
 if __name__ == "__main__":
     unittest.main()

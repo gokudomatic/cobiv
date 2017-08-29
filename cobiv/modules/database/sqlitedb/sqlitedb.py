@@ -3,7 +3,6 @@ import sqlite3
 import threading
 from os import listdir
 from os.path import isfile, join
-from future.utils import viewitems
 
 from PIL import Image
 from kivy.app import App
@@ -20,6 +19,101 @@ CURRENT_SET_NAME = '_current'
 def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
+
+###########################################3
+# sql comparison generator
+
+def prepare_in(crit_list, fn, kind, values):
+    if not crit_list[kind].has_key(fn):
+        crit_list[kind][fn] = []
+    crit_list[kind][fn].append(values)
+
+
+def parse_in(kind, values_set):
+    result = ""
+    for values in values_set:
+        if len(result) > 0:
+            result += ' or ' if kind=='*' else ' and '
+        result += 'value in ("%s")' % '", "'.join(values)
+    if not kind == "*":
+        result = result + ' and kind="%s"' % kind
+    return result
+
+
+def prepare_any(crit_list, fn, kind, values):
+    if not crit_list[kind].has_key(fn):
+        crit_list[kind][fn] = None
+
+
+def parse_any(kind, values):
+    return 'kind="%s"' % kind
+
+
+def prepare_greater_than(crit_list, fn, kind, values):
+    candidate = min([int(i) for i in values])
+    if not crit_list[kind].has_key(fn):
+        crit_list[kind][fn] = candidate
+    else:
+        crit_list[kind][fn] = max(candidate, crit_list[kind][fn])
+
+
+def parse_greater_than(kind, value):
+    return 'kind="%s" and cast(value as integer)>%s' % (kind, value)
+
+
+def prepare_lower_than(crit_list, fn, kind, values):
+    candidate = max([int(i) for i in values])
+    if not crit_list[kind].has_key(fn):
+        crit_list[kind][fn] = candidate
+    else:
+        crit_list[kind][fn] = min(candidate, crit_list[kind][fn])
+
+
+def parse_lower_than(kind, value):
+    return 'kind="%s" and cast(value as integer)<%s' % (kind, value)
+
+
+def parse_greater_equals(kind, value):
+    return 'kind="%s" and cast(value as integer)>=%s' % (kind, value)
+
+
+def parse_lower_equals(kind, value):
+    return 'kind="%s" and cast(value as integer)<=%s' % (kind, value)
+
+
+def parse_between(kind, sets_values):
+    result = 'kind="%s"' % kind
+    for values in sets_values:
+        it = iter(values)
+        subquery=''
+        for val_from in it:
+            val_to = it.next()
+            if len(subquery)>0:
+                subquery += ' or '
+            subquery += '(cast(value as integer)>=%s and cast(value as integer)<=%s)' % (val_from,val_to)
+        result += ' and ('+subquery+')'
+
+    return result
+
+def join_query_default(fn, kind ,values):
+    return "select file_key from tag where " + fn(kind, values)
+
+def join_query_in(fn, kind ,values):
+    if kind=='*':
+        query=''
+        for value in values:
+            if len(query)>0:
+                query+=' intersect '
+            query+="select file_key from tag where " + fn(kind, [value])
+        return query
+    else:
+        return "select file_key from tag where " + fn(kind, values)
+
+
+
+#################################################
+# Cursor
+#################################################
 
 class SqliteCursor(CursorInterface):
     set_head_key = None
@@ -235,10 +329,15 @@ class SqliteCursor(CursorInterface):
         with self.con:
             for tag in args:
                 key, value = self._get_tag_key_value(tag)
-                c = self.con.execute('select 1 from tag where category=1 and kind=? and value=? and file_key=? limit 1',
-                                     (key, value, self.file_id))
-                if c.fetchone() is None:
+                c = self.con.execute(
+                    'select category from tag where kind=? and (value=? or category=0) and file_key=? limit 1',
+                    (key, value, self.file_id))
+                row = c.fetchone()
+                if row is None:
                     c.execute('insert into tag values (?,?,?,?)', (self.file_id, 1, key, value))
+                elif row[0] == 0:
+                    c.execute('update tag set value=? where category=0 and kind=? and file_key=?',
+                              (value, key, self.file_id))
 
     def remove_tag(self, *args):
         if len(args) == 0 or self.file_id is None:
@@ -324,6 +423,10 @@ class SqliteCursor(CursorInterface):
 
         return 0 if row is None else row[0]
 
+
+##############################
+# DB connector
+################################
 
 class SqliteDb(Entity):
     cancel_operation = False
@@ -624,48 +727,14 @@ class SqliteDb(Entity):
             to_include = {}
             to_exclude = {}
 
-            ''' Structure of lists:
-            list:{
-                *:{
-                    in:[val1,val2,val3,...,valn]
-                },
-                kind1:{
-                    in:[val1,val2,val3,...,valn]
-                },
-                date:{
-                    >:value,
-                    ><:[from,to],
-                    <:value
-                },
-                kind2:{
-                    %:substring
-                },
-                kind4:{any:None}
-            }
-            '''
-
-            def prepare_in(list, fn, kind, values):
-                if not list[kind].has_key(fn):
-                    list[kind][fn] = []
-                for value in values:
-                    list[kind][fn].append(value)
-
-            def parse_in(kind, values):
-                result = 'value in ("%s")' % '", "'.join(values)
-                if not kind == "*":
-                    result = result + ' and kind="%s"' % kind
-                return result
-
-            def prepare_any(list, fn, kind, values):
-                if not list[kind].has_key(fn):
-                    list[kind][fn] = None
-
-            def parse_any(kind, values):
-                return 'kind="%s"' %  kind
-
             functions = {
-                'in': [prepare_in, parse_in],
-                'any': [prepare_any, parse_any]
+                'in': [prepare_in, parse_in,join_query_in],
+                'any': [prepare_any, parse_any,join_query_default],
+                '>': [prepare_greater_than, parse_greater_than,join_query_default],
+                '<': [prepare_lower_than, parse_lower_than,join_query_default],
+                '>=': [prepare_greater_than, parse_greater_equals,join_query_default],
+                '<=': [prepare_lower_than, parse_lower_equals,join_query_default],
+                '><': [prepare_in, parse_between,join_query_default]
             }
 
             def add_criteria(criteria, category_list):
@@ -693,7 +762,10 @@ class SqliteDb(Entity):
                 if not category_list.has_key(kind):
                     category_list[kind] = {}
 
-                functions[fn][0](category_list, fn, kind, values)
+                if functions.has_key(fn):
+                    functions[fn][0](category_list, fn, kind, values)
+                else:
+                    return
 
             for arg in args:
                 if arg[0] == "-":
@@ -708,7 +780,7 @@ class SqliteDb(Entity):
                         values = to_include[kind][fn]
                         if subquery != "":
                             subquery += " intersect "
-                        subquery += "select file_key from tag where " + functions[fn][1](kind, values)
+                        subquery += functions[fn][2](functions[fn][1],kind, values)
             else:
                 subquery = 'select file_key from tag'
 
