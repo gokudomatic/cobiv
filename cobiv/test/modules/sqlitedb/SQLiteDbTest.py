@@ -95,13 +95,13 @@ class SQLiteCursorTest(unittest.TestCase):
         c = self.session.cursor
 
         self.assertEqual("images\\0001.jpg", c.filename)
-        c.add_tag("cat1:one", "o", "e")
+        c.add_tag("cat1:one", "o", "e","cat1:3")
         c.go_next()
         self.assertEqual("images\\0002.jpg", c.filename)
         c.add_tag("cat2:two", "o", "t")
         c.go_next()
         self.assertEqual("images\\0003.jpg", c.filename)
-        c.add_tag("cat1:three", "letter:t", "r", "e", "3")
+        c.add_tag("cat1:three", "letter:t", "r", "e", "cat1:3")
 
         return db
 
@@ -249,6 +249,10 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertEqual(1, len(c))
         self.assertEqual("images\\0001.jpg", c.filename)
 
+        db.search_tag("cat1:three", "cat1:3")
+        self.assertEqual(1, len(c))
+
+
         db.close_db()
         app.stop()
 
@@ -327,6 +331,48 @@ class SQLiteCursorTest(unittest.TestCase):
         db.close_db()
         app.stop()
 
+    def _test_search_tag_dates(self, app, *args):
+        db = self.init_db_with_numeric_date_tags()
+        c = self.session.cursor
+
+        # test year
+        db.search_tag("modification_date:YY:2016")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("modification_date:YY:2017")
+        self.assertEqual(2, len(c))
+
+        db.search_tag("modification_date:YY:2016:2017")
+        self.assertEqual(3, len(c))
+
+        # test month
+        db.search_tag("modification_date:YM:201708")
+        self.assertEqual(2, len(c))
+
+        db.search_tag("modification_date:YM:201702")
+        self.assertEqual(0, len(c))
+
+        # test day
+        db.search_tag("modification_date:YMD:20170827")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("modification_date:YMD:20170828")
+        self.assertEqual(0, len(c))
+
+        db.search_tag("modification_date:YMD:20170827:20160317")
+        self.assertEqual(2, len(c))
+
+        # test greater than
+        db.search_tag("modification_date:>:%{MKDATE(20170826)}%")
+        self.assertEqual(0, len(c))
+
+        # test smaller than
+        db.search_tag("modification_date:<:%{MKDATE(20160101)}%")
+        self.assertEqual(0, len(c))
+
+        db.close_db()
+        app.stop()
+
     def call_test(self, func):
         a = TestApp()
         p = partial(func, a)
@@ -353,6 +399,9 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def test_search_tag_numeric(self):
         self.call_test(self._test_search_tag_numeric)
+
+    def test_search_tag_dates(self):
+        self.call_test(self._test_search_tag_dates)
 
 
 if __name__ == "__main__":

@@ -31,10 +31,12 @@ def prepare_in(crit_list, fn, kind, values):
 
 def parse_in(kind, values_set):
     result = ""
-    for values in values_set:
-        if len(result) > 0:
-            result += ' or ' if kind=='*' else ' and '
-        result += 'value in ("%s")' % '", "'.join(values)
+    # for values in values_set:
+    #     if len(result) > 0:
+    #         result += ' or ' if kind=='*' else ' and '
+    #     result += 'value in ("%s")' % '", "'.join(values)
+    result += 'value in ("%s")' % '", "'.join(values_set)
+
     if not kind == "*":
         result = result + ' and kind="%s"' % kind
     return result
@@ -85,30 +87,31 @@ def parse_between(kind, sets_values):
     result = 'kind="%s"' % kind
     for values in sets_values:
         it = iter(values)
-        subquery=''
+        subquery = ''
         for val_from in it:
             val_to = it.next()
-            if len(subquery)>0:
+            if len(subquery) > 0:
                 subquery += ' or '
-            subquery += '(cast(value as integer)>=%s and cast(value as integer)<=%s)' % (val_from,val_to)
-        result += ' and ('+subquery+')'
+            subquery += '(cast(value as integer)>=%s and cast(value as integer)<=%s)' % (val_from, val_to)
+        result += ' and (' + subquery + ')'
 
     return result
 
-def join_query_default(fn, kind ,values):
+
+def join_query_default(fn, kind, values, is_except=False):
     return "select file_key from tag where " + fn(kind, values)
 
-def join_query_in(fn, kind ,values):
-    if kind=='*':
-        query=''
-        for value in values:
-            if len(query)>0:
-                query+=' intersect '
-            query+="select file_key from tag where " + fn(kind, [value])
-        return query
-    else:
-        return "select file_key from tag where " + fn(kind, values)
 
+def join_query_in(fn, kind, valueset, is_except=False):
+    # if kind=='*':
+    query = ''
+    for values in valueset:
+        if len(query) > 0:
+            query += ' except ' if is_except else ' intersect '
+        query += "select file_key from tag where " + fn(kind, values)
+    return query
+    # else:
+    #     return "select file_key from tag where " + fn(kind, values)
 
 
 #################################################
@@ -728,13 +731,13 @@ class SqliteDb(Entity):
             to_exclude = {}
 
             functions = {
-                'in': [prepare_in, parse_in,join_query_in],
-                'any': [prepare_any, parse_any,join_query_default],
-                '>': [prepare_greater_than, parse_greater_than,join_query_default],
-                '<': [prepare_lower_than, parse_lower_than,join_query_default],
-                '>=': [prepare_greater_than, parse_greater_equals,join_query_default],
-                '<=': [prepare_lower_than, parse_lower_equals,join_query_default],
-                '><': [prepare_in, parse_between,join_query_default]
+                'in': [prepare_in, parse_in, join_query_in],
+                'any': [prepare_any, parse_any, join_query_default],
+                '>': [prepare_greater_than, parse_greater_than, join_query_default],
+                '<': [prepare_lower_than, parse_lower_than, join_query_default],
+                '>=': [prepare_greater_than, parse_greater_equals, join_query_default],
+                '<=': [prepare_lower_than, parse_lower_equals, join_query_default],
+                '><': [prepare_in, parse_between, join_query_default]
             }
 
             def add_criteria(criteria, category_list):
@@ -780,7 +783,7 @@ class SqliteDb(Entity):
                         values = to_include[kind][fn]
                         if subquery != "":
                             subquery += " intersect "
-                        subquery += functions[fn][2](functions[fn][1],kind, values)
+                        subquery += functions[fn][2](functions[fn][1], kind, values, False)
             else:
                 subquery = 'select file_key from tag'
 
@@ -788,7 +791,7 @@ class SqliteDb(Entity):
                 for kind in to_exclude:
                     for fn in to_exclude[kind]:
                         values = to_exclude[kind][fn]
-                        subquery += " except select file_key from tag where " + functions[fn][1](kind, values)
+                        subquery += " except " + functions[fn][2](functions[fn][1], kind, values, True)
 
             query = 'select f.id,f.name from file f where f.id in (' + subquery + ')'
             self.regenerate_set(CURRENT_SET_NAME, query)

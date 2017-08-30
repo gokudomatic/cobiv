@@ -6,7 +6,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
-from cobiv.modules.database.sqlitedb import SqliteCursor
+from cobiv.modules.database.sqlitedb.sqlitedb import SqliteCursor
 
 
 class TestMainWidget(Widget):
