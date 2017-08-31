@@ -1,3 +1,4 @@
+import calendar
 import os
 import sqlite3
 import threading
@@ -11,6 +12,9 @@ from kivy.factory import Factory
 from cobiv.common import set_action
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import CursorInterface
+import datetime
+import time
+
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
@@ -30,13 +34,7 @@ def prepare_in(crit_list, fn, kind, values):
 
 
 def parse_in(kind, values_set):
-    result = ""
-    # for values in values_set:
-    #     if len(result) > 0:
-    #         result += ' or ' if kind=='*' else ' and '
-    #     result += 'value in ("%s")' % '", "'.join(values)
-    result += 'value in ("%s")' % '", "'.join(values_set)
-
+    result = 'value in ("%s")' % '", "'.join(values_set)
     if not kind == "*":
         result = result + ' and kind="%s"' % kind
     return result
@@ -97,21 +95,46 @@ def parse_between(kind, sets_values):
 
     return result
 
+def parse_in_date(kind,sets_values,fn_from,fn_to):
+    result = 'kind="%s"' % kind
+    subquery=''
+    for values in sets_values:
+        for value in values:
+            date_from=fn_from(value)
+            date_to=fn_to(value)
+            if len(subquery)>0:
+                subquery+=' or '
+            subquery+='value between %s and %s' % (
+            time.mktime(date_from.timetuple()), time.mktime(date_to.timetuple()))
+    return result+" and (%s)" % subquery
+
+def parse_in_year(kind, sets_values):
+    return parse_in_date(kind,sets_values,lambda d: datetime.date(int(d),1,1), lambda d: datetime.date(int(d), 12, 31))
+
+def parse_in_year_month(kind, sets_values):
+    def fn_to(d):
+        year=int(d[:4])
+        month=int(d[4:])
+        day_of_week,count=calendar.monthrange(year,month)
+        return datetime.date(year,month,count)
+    return parse_in_date(kind,sets_values,lambda d: datetime.date(int(d[:4]),int(d[4:]),1), fn_to)
+
+def parse_in_year_month_day(kind, sets_values):
+    return parse_in_date(kind,sets_values,lambda d: datetime.date(int(d[:4]),int(d[4:6]),int(d[6:])), lambda d: datetime.date(int(d[:4]),int(d[4:6]),int(d[6:]))+datetime.timedelta(days=1))
+
+# Joins
 
 def join_query_default(fn, kind, values, is_except=False):
     return "select file_key from tag where " + fn(kind, values)
 
 
 def join_query_in(fn, kind, valueset, is_except=False):
-    # if kind=='*':
     query = ''
     for values in valueset:
         if len(query) > 0:
             query += ' except ' if is_except else ' intersect '
         query += "select file_key from tag where " + fn(kind, values)
     return query
-    # else:
-    #     return "select file_key from tag where " + fn(kind, values)
 
 
 #################################################
@@ -737,7 +760,10 @@ class SqliteDb(Entity):
                 '<': [prepare_lower_than, parse_lower_than, join_query_default],
                 '>=': [prepare_greater_than, parse_greater_equals, join_query_default],
                 '<=': [prepare_lower_than, parse_lower_equals, join_query_default],
-                '><': [prepare_in, parse_between, join_query_default]
+                '><': [prepare_in, parse_between, join_query_default],
+                'YY': [prepare_in, parse_in_year, join_query_default],
+                'YM': [prepare_in, parse_in_year_month, join_query_default],
+                'YMD': [prepare_in, parse_in_year_month_day, join_query_default]
             }
 
             def add_criteria(criteria, category_list):
@@ -793,6 +819,7 @@ class SqliteDb(Entity):
                         values = to_exclude[kind][fn]
                         subquery += " except " + functions[fn][2](functions[fn][1], kind, values, True)
 
+            print subquery
             query = 'select f.id,f.name from file f where f.id in (' + subquery + ')'
             self.regenerate_set(CURRENT_SET_NAME, query)
 

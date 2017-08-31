@@ -114,7 +114,7 @@ class SQLiteCursorTest(unittest.TestCase):
         c = self.session.cursor
 
         self.assertEqual("images\\0001.jpg", c.filename)
-        c.add_tag("modification_date:1492960627.07539", "width:159", "height:81")  # time=2017.08.23
+        c.add_tag("modification_date:1503439200.0", "width:159", "height:81")  # time=2017.08.23
         c.go_next()
         self.assertEqual("images\\0002.jpg", c.filename)
         c.add_tag("modification_date:1503845435.0", "width:39", "height:81")  # time=2017.08.27
@@ -369,6 +369,18 @@ class SQLiteCursorTest(unittest.TestCase):
         # test smaller than
         db.search_tag("modification_date:<:%{MKDATE(20160101)}%")
         self.assertEqual(0, len(c))
+
+        # test add day and today
+        db.search_tag("modification_date:><:%{TODAY()}%:%{ADD_DATE(TODAY(),'D',2)}%")
+        self.assertEqual(0, len(c))
+
+        # test add month
+        db.search_tag("modification_date:%{ADD_DATE(TODAY(),'M',1)}%")
+        self.assertEqual(0, len(c))
+
+        # test remove year
+        db.search_tag("modification_date:<:%{ADD_DATE(TODAY(),'Y',-13)}%")
+        self.assertEqual(3, len(c))
 
         db.close_db()
         app.stop()
