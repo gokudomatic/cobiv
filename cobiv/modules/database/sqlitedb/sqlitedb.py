@@ -10,11 +10,12 @@ from kivy.app import App
 from kivy.factory import Factory
 
 from cobiv.common import set_action
+from cobiv.libs.templite import Templite
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import CursorInterface
 import datetime
+from dateutil.relativedelta import relativedelta
 import time
-
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
@@ -27,114 +28,174 @@ def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
 ###########################################3
 # sql comparison generator
 
-def prepare_in(crit_list, fn, kind, values):
-    if not crit_list[kind].has_key(fn):
-        crit_list[kind][fn] = []
-    crit_list[kind][fn].append(values)
+class SqliteFunctions(object):
+    fields = {}
 
+    def __init__(self, session, **kwargs):
+        super(SqliteFunctions, self).__init__(**kwargs)
 
-def parse_in(kind, values_set):
-    result = 'value in ("%s")' % '", "'.join(values_set)
-    if not kind == "*":
-        result = result + ' and kind="%s"' % kind
-    return result
+        self.session = session
 
+        self.operator_functions = {
+            'in': [self.prepare_in, self.parse_in, self.join_query_in],
+            'any': [self.prepare_any, self.parse_any, self.join_query_default],
+            '>': [self.prepare_greater_than, self.parse_greater_than, self.join_query_default],
+            '<': [self.prepare_lower_than, self.parse_lower_than, self.join_query_default],
+            '>=': [self.prepare_greater_than, self.parse_greater_equals, self.join_query_default],
+            '<=': [self.prepare_lower_than, self.parse_lower_equals, self.join_query_default],
+            '><': [self.prepare_in, self.parse_between, self.join_query_default],
+            'YY': [self.prepare_in, self.parse_in_year, self.join_query_default],
+            'YM': [self.prepare_in, self.parse_in_year_month, self.join_query_default],
+            'YMD': [self.prepare_in, self.parse_in_year_month_day, self.join_query_default]
+        }
 
-def prepare_any(crit_list, fn, kind, values):
-    if not crit_list[kind].has_key(fn):
-        crit_list[kind][fn] = None
+        self.fields['MKDATE'] = self.mkdate
+        self.fields['NOW'] = self.get_now
+        self.fields['TODAY'] = self.get_today
+        self.fields['ADD_DATE'] = self.add_date
+        self.fields['TO_Y'] = self.get_year
+        self.fields['TO_YM'] = self.get_year_month
+        self.fields['TO_YMD'] = self.get_year_month_day
 
+    def prepare_function(self, category_list, fn, kind, values):
+        if self.operator_functions.has_key(fn):
+            self.operator_functions[fn][0](category_list, fn, kind, values)
 
-def parse_any(kind, values):
-    return 'kind="%s"' % kind
+    def render_function(self, fn, kind, values, is_except):
+        return self.operator_functions[fn][2](self.operator_functions[fn][1], kind, values, is_except)
 
+    def render_text(self, original_text):
+        return Templite(original_text.replace("%{", "${write(").replace("}%", ")}$")).render(**self.fields)
 
-def prepare_greater_than(crit_list, fn, kind, values):
-    candidate = min([int(i) for i in values])
-    if not crit_list[kind].has_key(fn):
-        crit_list[kind][fn] = candidate
-    else:
-        crit_list[kind][fn] = max(candidate, crit_list[kind][fn])
+    def mkdate(self, value_ymd):
+        d = datetime.datetime.strptime(str(value_ymd), '%Y%m%d')
+        return time.mktime(d.timetuple())
 
+    def get_now(self):
+        return time.time()
 
-def parse_greater_than(kind, value):
-    return 'kind="%s" and cast(value as integer)>%s' % (kind, value)
+    def get_today(self):
+        return time.mktime(datetime.date.today().timetuple())
 
+    def get_year(self,ts):
+        return datetime.datetime.fromtimestamp(ts).year
 
-def prepare_lower_than(crit_list, fn, kind, values):
-    candidate = max([int(i) for i in values])
-    if not crit_list[kind].has_key(fn):
-        crit_list[kind][fn] = candidate
-    else:
-        crit_list[kind][fn] = min(candidate, crit_list[kind][fn])
+    def get_year_month(self,ts):
+        return datetime.datetime.fromtimestamp(ts).strftime('%Y%m')
 
+    def get_year_month_day(self,ts):
+        return datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d')
 
-def parse_lower_than(kind, value):
-    return 'kind="%s" and cast(value as integer)<%s' % (kind, value)
+    def add_date(self,ts,kind,value):
+        if kind=='D':
+            diff=relativedelta(days=value)
+        elif kind=='M':
+            diff=relativedelta(months=value)
+        elif kind=='Y':
+            diff=relativedelta(years=value)
+        return time.mktime((datetime.datetime.fromtimestamp(ts)+diff).timetuple())
 
+    def prepare_in(self, crit_list, fn, kind, values):
+        if not crit_list[kind].has_key(fn):
+            crit_list[kind][fn] = []
+        crit_list[kind][fn].append(values)
 
-def parse_greater_equals(kind, value):
-    return 'kind="%s" and cast(value as integer)>=%s' % (kind, value)
+    def parse_in(self, kind, values_set):
+        result = 'value in ("%s")' % '", "'.join(values_set)
+        if not kind == "*":
+            result = result + ' and kind="%s"' % kind
+        return result
 
+    def prepare_any(self, crit_list, fn, kind, values):
+        if not crit_list[kind].has_key(fn):
+            crit_list[kind][fn] = None
 
-def parse_lower_equals(kind, value):
-    return 'kind="%s" and cast(value as integer)<=%s' % (kind, value)
+    def parse_any(self, kind, values):
+        return 'kind="%s"' % kind
 
+    def prepare_greater_than(self, crit_list, fn, kind, values):
+        candidate = min([float(i) for i in values])
+        if not crit_list[kind].has_key(fn):
+            crit_list[kind][fn] = candidate
+        else:
+            crit_list[kind][fn] = max(candidate, crit_list[kind][fn])
 
-def parse_between(kind, sets_values):
-    result = 'kind="%s"' % kind
-    for values in sets_values:
-        it = iter(values)
+    def parse_greater_than(self, kind, value):
+        return 'kind="%s" and cast(value as integer)>%s' % (kind, value)
+
+    def prepare_lower_than(self, crit_list, fn, kind, values):
+        candidate = max([float(i) for i in values])
+        if not crit_list[kind].has_key(fn):
+            crit_list[kind][fn] = candidate
+        else:
+            crit_list[kind][fn] = min(candidate, crit_list[kind][fn])
+
+    def parse_lower_than(self, kind, value):
+        return 'kind="%s" and cast(value as integer)<%s' % (kind, value)
+
+    def parse_greater_equals(self, kind, value):
+        return 'kind="%s" and cast(value as integer)>=%s' % (kind, value)
+
+    def parse_lower_equals(self, kind, value):
+        return 'kind="%s" and cast(value as integer)<=%s' % (kind, value)
+
+    def parse_between(self, kind, sets_values):
+        result = 'kind="%s"' % kind
+        for values in sets_values:
+            it = iter(values)
+            subquery = ''
+            for val_from in it:
+                val_to = it.next()
+                if len(subquery) > 0:
+                    subquery += ' or '
+                subquery += '(cast(value as integer)>=%s and cast(value as integer)<=%s)' % (val_from, val_to)
+            result += ' and (' + subquery + ')'
+
+        return result
+
+    def parse_in_date(self, kind, sets_values, fn_from, fn_to):
+        result = 'kind="%s"' % kind
         subquery = ''
-        for val_from in it:
-            val_to = it.next()
-            if len(subquery) > 0:
-                subquery += ' or '
-            subquery += '(cast(value as integer)>=%s and cast(value as integer)<=%s)' % (val_from, val_to)
-        result += ' and (' + subquery + ')'
+        for values in sets_values:
+            for value in values:
+                date_from = fn_from(value)
+                date_to = fn_to(value)
+                if len(subquery) > 0:
+                    subquery += ' or '
+                subquery += 'value between %s and %s' % (
+                    time.mktime(date_from.timetuple()), time.mktime(date_to.timetuple()))
+        return result + " and (%s)" % subquery
 
-    return result
+    def parse_in_year(self, kind, sets_values):
+        return self.parse_in_date(kind, sets_values, lambda d: datetime.date(int(d), 1, 1),
+                                  lambda d: datetime.date(int(d), 12, 31))
 
-def parse_in_date(kind,sets_values,fn_from,fn_to):
-    result = 'kind="%s"' % kind
-    subquery=''
-    for values in sets_values:
-        for value in values:
-            date_from=fn_from(value)
-            date_to=fn_to(value)
-            if len(subquery)>0:
-                subquery+=' or '
-            subquery+='value between %s and %s' % (
-            time.mktime(date_from.timetuple()), time.mktime(date_to.timetuple()))
-    return result+" and (%s)" % subquery
+    def parse_in_year_month(self, kind, sets_values):
+        def fn_to(d):
+            year = int(d[:4])
+            month = int(d[4:])
+            day_of_week, count = calendar.monthrange(year, month)
+            return datetime.date(year, month, count)
 
-def parse_in_year(kind, sets_values):
-    return parse_in_date(kind,sets_values,lambda d: datetime.date(int(d),1,1), lambda d: datetime.date(int(d), 12, 31))
+        return self.parse_in_date(kind, sets_values, lambda d: datetime.date(int(d[:4]), int(d[4:]), 1), fn_to)
 
-def parse_in_year_month(kind, sets_values):
-    def fn_to(d):
-        year=int(d[:4])
-        month=int(d[4:])
-        day_of_week,count=calendar.monthrange(year,month)
-        return datetime.date(year,month,count)
-    return parse_in_date(kind,sets_values,lambda d: datetime.date(int(d[:4]),int(d[4:]),1), fn_to)
+    def parse_in_year_month_day(self, kind, sets_values):
+        return self.parse_in_date(kind, sets_values, lambda d: datetime.date(int(d[:4]), int(d[4:6]), int(d[6:])),
+                                  lambda d: datetime.date(int(d[:4]), int(d[4:6]), int(d[6:])) + datetime.timedelta(
+                                      days=1))
 
-def parse_in_year_month_day(kind, sets_values):
-    return parse_in_date(kind,sets_values,lambda d: datetime.date(int(d[:4]),int(d[4:6]),int(d[6:])), lambda d: datetime.date(int(d[:4]),int(d[4:6]),int(d[6:]))+datetime.timedelta(days=1))
+    # Joins
 
-# Joins
+    def join_query_default(self, fn, kind, values, is_except=False):
+        return "select file_key from tag where " + fn(kind, values)
 
-def join_query_default(fn, kind, values, is_except=False):
-    return "select file_key from tag where " + fn(kind, values)
-
-
-def join_query_in(fn, kind, valueset, is_except=False):
-    query = ''
-    for values in valueset:
-        if len(query) > 0:
-            query += ' except ' if is_except else ' intersect '
-        query += "select file_key from tag where " + fn(kind, values)
-    return query
+    def join_query_in(self, fn, kind, valueset, is_except=False):
+        query = ''
+        for values in valueset:
+            if len(query) > 0:
+                query += ' except ' if is_except else ' intersect '
+            query += "select file_key from tag where " + fn(kind, values)
+        return query
 
 
 #################################################
@@ -468,6 +529,8 @@ class SqliteDb(Entity):
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
 
+        self.functions = SqliteFunctions(self.session)
+
     def close_db(self):
         self.conn.close()
 
@@ -753,19 +816,6 @@ class SqliteDb(Entity):
             to_include = {}
             to_exclude = {}
 
-            functions = {
-                'in': [prepare_in, parse_in, join_query_in],
-                'any': [prepare_any, parse_any, join_query_default],
-                '>': [prepare_greater_than, parse_greater_than, join_query_default],
-                '<': [prepare_lower_than, parse_lower_than, join_query_default],
-                '>=': [prepare_greater_than, parse_greater_equals, join_query_default],
-                '<=': [prepare_lower_than, parse_lower_equals, join_query_default],
-                '><': [prepare_in, parse_between, join_query_default],
-                'YY': [prepare_in, parse_in_year, join_query_default],
-                'YM': [prepare_in, parse_in_year_month, join_query_default],
-                'YMD': [prepare_in, parse_in_year_month_day, join_query_default]
-            }
-
             def add_criteria(criteria, category_list):
                 if criteria == ":" or criteria == "::":
                     return
@@ -791,16 +841,14 @@ class SqliteDb(Entity):
                 if not category_list.has_key(kind):
                     category_list[kind] = {}
 
-                if functions.has_key(fn):
-                    functions[fn][0](category_list, fn, kind, values)
-                else:
-                    return
+                self.functions.prepare_function(category_list, fn, kind, values)
 
             for arg in args:
-                if arg[0] == "-":
-                    add_criteria(arg[1:], to_exclude)
+                formated_arg = self.functions.render_text(arg)
+                if formated_arg[0] == "-":
+                    add_criteria(formated_arg[1:], to_exclude)
                 else:
-                    add_criteria(arg, to_include)
+                    add_criteria(formated_arg, to_include)
 
             subquery = ""
             if len(to_include) > 0:
@@ -809,7 +857,7 @@ class SqliteDb(Entity):
                         values = to_include[kind][fn]
                         if subquery != "":
                             subquery += " intersect "
-                        subquery += functions[fn][2](functions[fn][1], kind, values, False)
+                        subquery += self.functions.render_function(fn, kind, values, False)
             else:
                 subquery = 'select file_key from tag'
 
@@ -817,7 +865,7 @@ class SqliteDb(Entity):
                 for kind in to_exclude:
                     for fn in to_exclude[kind]:
                         values = to_exclude[kind][fn]
-                        subquery += " except " + functions[fn][2](functions[fn][1], kind, values, True)
+                        subquery += " except " + self.functions.render_function(fn, kind, values, True)
 
             print subquery
             query = 'select f.id,f.name from file f where f.id in (' + subquery + ')'

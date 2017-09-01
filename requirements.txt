@@ -10,5 +10,4 @@ Pillow==4.1.1
 prompt-toolkit==1.0.14
 psutil==5.2.2
 PyYAML==3.12
-templite==0.2.1
 Yapsy==1.11.223

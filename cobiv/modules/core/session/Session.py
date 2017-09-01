@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from templite import Templite
+from cobiv.libs.templite import Templite
 
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import Cursor

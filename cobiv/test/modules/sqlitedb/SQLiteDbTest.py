@@ -95,7 +95,7 @@ class SQLiteCursorTest(unittest.TestCase):
         c = self.session.cursor
 
         self.assertEqual("images\\0001.jpg", c.filename)
-        c.add_tag("cat1:one", "o", "e","cat1:3")
+        c.add_tag("cat1:one", "o", "e", "cat1:3")
         c.go_next()
         self.assertEqual("images\\0002.jpg", c.filename)
         c.add_tag("cat2:two", "o", "t")
@@ -164,9 +164,8 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertEqual(1, len(c))
         self.assertEqual("images\\0002.jpg", c.filename)
 
-        db.search_tag("o","e")
+        db.search_tag("o", "e")
         self.assertEqual(1, len(c))
-
 
         db.close_db()
         app.stop()
@@ -251,7 +250,6 @@ class SQLiteCursorTest(unittest.TestCase):
 
         db.search_tag("cat1:three", "cat1:3")
         self.assertEqual(1, len(c))
-
 
         db.close_db()
         app.stop()
@@ -364,7 +362,7 @@ class SQLiteCursorTest(unittest.TestCase):
 
         # test greater than
         db.search_tag("modification_date:>:%{MKDATE(20170826)}%")
-        self.assertEqual(0, len(c))
+        self.assertEqual(1, len(c))
 
         # test smaller than
         db.search_tag("modification_date:<:%{MKDATE(20160101)}%")
@@ -380,7 +378,16 @@ class SQLiteCursorTest(unittest.TestCase):
 
         # test remove year
         db.search_tag("modification_date:<:%{ADD_DATE(TODAY(),'Y',-13)}%")
+        self.assertEqual(0, len(c))
+        db.search_tag("modification_date:>:%{ADD_DATE(TODAY(),'Y',-13)}%")
         self.assertEqual(3, len(c))
+
+        # test combination
+        db.search_tag("modification_date:YY:%{TO_Y(ADD_DATE(MKDATE(20170827),'Y',-1))}%")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("modification_date:YY:%{TO_Y(MKDATE(20170827))-1}%")
+        self.assertEqual(1, len(c))
 
         db.close_db()
         app.stop()
