@@ -46,3 +46,7 @@ Like for Blender, which also use its own unique kind of UI, cobiv can be hard to
 
 ## Performance and database
 Cobiv uses by default SQLite for file indexing and tag searching. The default search engine generates SQL from cobiv's search syntax, which supports functions and access to variables (like for instance the date of the currently selected image). The functions can also be extended via plugins, which should provide more than enough flexibility to do almost any kind of search and sort. The performance of the search is however very dependant to the kind of query and it can be rather slow with large databases. It is however possible to switch for another database through plugins, as long as the plugin exists. The cursor is an abstract interface and it can be implemented for any kind of database engine, from a classical Postgres to a nosql Mongodb or a file based database. It can be also a mix of various databases and memory caches (key storage and others), as long as Python can handle it.
+
+A test with one million entries and a total of 4 millions tags showed up that a query from cobiv in SQLite takes from 1.5 seconds to 30 seconds on a low spec computer, depending on the complexity of the query.
+
+Once the search is done, the generated resultset is displayed in an infinite list viewer, which guarantees to browse the files at a consistant performance, no matter how large the resultset is.
