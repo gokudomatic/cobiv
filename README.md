@@ -50,3 +50,24 @@ Cobiv uses by default SQLite for file indexing and tag searching. The default se
 A test with one million entries and a total of 4 millions tags showed up that a query from cobiv in SQLite takes from 1.5 seconds to 30 seconds on a low spec computer, depending on the complexity of the query.
 
 Once the search is done, the generated resultset is displayed in an infinite list viewer, which guarantees to browse the files at a consistant performance, no matter how large the resultset is.
+
+## Search syntax
+To search images, it is possible through a syntax to set criterias of various kinds.
+To search just tags, you write:
+:search tag1 tag2 tag3 ... tagN
+Example:
+:search trip island john
+
+To search a tag in a category, you write:
+:search category:tag
+Example:
+:search animal:dog background:house
+
+You can exclude tags with the minus character "-". Example:
+:search show:ducktales -character:donald -mexico
+Which would return all pics about the show "Ducktales" without both the character Donald and being tagged mexico. 
+
+Properties of the file can be searched like any other category. Example:
+:search format:PNG width:800 height:600
+It returns every PNG image with dimension 800x600.
+
