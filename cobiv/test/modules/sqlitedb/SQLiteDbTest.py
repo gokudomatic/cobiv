@@ -78,11 +78,11 @@ class SQLiteCursorTest(unittest.TestCase):
         db.search_tag()
         c = self.session.cursor
 
-        c.add_tag("one", "o", "e")
+        c.add_tag("one", "o", "e","adamanta")
         c.go_next()
-        c.add_tag("two", "o", "t")
+        c.add_tag("two", "o", "t", "adablateno")
         c.go_next()
-        c.add_tag("three", "t", "r", "e", "3")
+        c.add_tag("three", "t", "r", "e", "3","genoblame")
 
         return db
 
@@ -389,6 +389,34 @@ class SQLiteCursorTest(unittest.TestCase):
         db.search_tag("modification_date:YY:%{TO_Y(MKDATE(20170827))-1}%")
         self.assertEqual(1, len(c))
 
+        db.search_tag("modification_date:YM:%{TO_YM(MKDATE(20170827))}%")
+        self.assertEqual(2, len(c))
+
+        db.close_db()
+        app.stop()
+
+    def _test_search_partial_text(self, app, *args):
+        db = self.init_db_with_tags()
+        c = self.session.cursor
+
+        db.search_tag("geno%")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("ada%")
+        self.assertEqual(2, len(c))
+
+        db.search_tag("%eno%")
+        self.assertEqual(2, len(c))
+
+        db.search_tag("*:%:%bla%","%e")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("%ada%","-%bla%")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("*:%:%ada%:%bla%")
+        self.assertEqual(3, len(c))
+
         db.close_db()
         app.stop()
 
@@ -421,6 +449,9 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def test_search_tag_dates(self):
         self.call_test(self._test_search_tag_dates)
+
+    def test_search_partial_text(self):
+        self.call_test(self._test_search_partial_text)
 
 
 if __name__ == "__main__":

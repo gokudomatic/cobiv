@@ -37,16 +37,17 @@ class SqliteFunctions(object):
         self.session = session
 
         self.operator_functions = {
-            'in': [self.prepare_in, self.parse_in, self.join_query_in],
-            'any': [self.prepare_any, self.parse_any, self.join_query_default],
-            '>': [self.prepare_greater_than, self.parse_greater_than, self.join_query_default],
-            '<': [self.prepare_lower_than, self.parse_lower_than, self.join_query_default],
-            '>=': [self.prepare_greater_than, self.parse_greater_equals, self.join_query_default],
-            '<=': [self.prepare_lower_than, self.parse_lower_equals, self.join_query_default],
-            '><': [self.prepare_in, self.parse_between, self.join_query_default],
-            'YY': [self.prepare_in, self.parse_in_year, self.join_query_default],
-            'YM': [self.prepare_in, self.parse_in_year_month, self.join_query_default],
-            'YMD': [self.prepare_in, self.parse_in_year_month_day, self.join_query_default]
+            'in':   [self.prepare_in, self.parse_in, self.join_query_in],
+            '%':    [self.prepare_in, self.parse_partial, self.join_query_in],
+            'any':  [self.prepare_any, self.parse_any, self.join_query_default],
+            '>':    [self.prepare_greater_than, self.parse_greater_than, self.join_query_default],
+            '<':    [self.prepare_lower_than, self.parse_lower_than, self.join_query_default],
+            '>=':   [self.prepare_greater_than, self.parse_greater_equals, self.join_query_default],
+            '<=':   [self.prepare_lower_than, self.parse_lower_equals, self.join_query_default],
+            '><':   [self.prepare_in, self.parse_between, self.join_query_default],
+            'YY':   [self.prepare_in, self.parse_in_year, self.join_query_default],
+            'YM':   [self.prepare_in, self.parse_in_year_month, self.join_query_default],
+            'YMD':  [self.prepare_in, self.parse_in_year_month_day, self.join_query_default]
         }
 
         self.fields['MKDATE'] = self.mkdate
@@ -105,6 +106,18 @@ class SqliteFunctions(object):
         if not kind == "*":
             result = result + ' and kind="%s"' % kind
         return result
+
+    def parse_partial(self, kind, values_set):
+        result=""
+        for value in values_set:
+            if len(result)>0:
+                result+=" or "
+            result += 'value like "%s"' % value
+        if not kind == "*":
+            result = result + ' and kind="%s"' % kind
+        return result
+
+
 
     def prepare_any(self, crit_list, fn, kind, values):
         if not crit_list[kind].has_key(fn):
@@ -191,9 +204,9 @@ class SqliteFunctions(object):
 
     def join_query_in(self, fn, kind, valueset, is_except=False):
         query = ''
+        joiner= ' except ' if is_except else ' intersect '
         for values in valueset:
-            if len(query) > 0:
-                query += ' except ' if is_except else ' intersect '
+            query += joiner * (len(query) > 0)
             query += "select file_key from tag where " + fn(kind, values)
         return query
 
@@ -823,12 +836,12 @@ class SqliteDb(Entity):
                 criterias = criteria.split(":")
                 if len(criterias) == 1:
                     kind = "*"
-                    fn = "in"
+                    fn = "%" if "%" in criteria else "in"
                     values = [criteria]
                 elif len(criterias) == 2:
                     kind = criterias[0]
-                    fn = "in"
-                    values = [criterias[1]]
+                    fn = "%" if "%" in criteria else "in"
+                    values = criterias[1:]
                 else:
                     kind = criterias[0]
                     fn = criterias[1]
