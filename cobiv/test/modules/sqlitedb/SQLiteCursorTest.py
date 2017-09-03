@@ -1,7 +1,7 @@
+import logging
 import sqlite3
 import unittest
 from functools import partial
-
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
@@ -128,6 +128,11 @@ class SQLiteCursorTest(unittest.TestCase):
         return SqliteCursor(row, self.conn)
 
     def add_files(self, amount):
+        """Generates N items for testing purpose
+
+        :param amount: Number of items to generate
+        :return: None
+        """
         c = self.conn.cursor()
 
         # reset file table
@@ -670,11 +675,11 @@ class SQLiteCursorTest(unittest.TestCase):
         c.go_first()
         c.cut_marked()
         self.assertEqual(8, len(c))
-        self.assertEqual(2,c.get_clipboard_size())
+        self.assertEqual(2, c.get_clipboard_size())
         c.mark()
         c.cut_marked()
         self.assertEqual(7, len(c))
-        self.assertEqual(1,c.get_clipboard_size())
+        self.assertEqual(1, c.get_clipboard_size())
 
         app.stop()
 
@@ -843,17 +848,17 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertItemsEqual(c.get_tags(), [])
 
         c.add_tag("one")
-        self.assertItemsEqual(c.get_tags(), [(1,'tag',"one")])
+        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "one")])
         c.add_tag("two")
-        self.assertItemsEqual(c.get_tags(), [(1,'tag',"one"), (1,'tag',"two")])
+        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two")])
         c.remove_tag("one")
-        self.assertItemsEqual(c.get_tags(), [(1,'tag',"two")])
+        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "two")])
         c.add_tag("three")
-        self.assertItemsEqual(c.get_tags(), [(1,'tag',"two"), (1,'tag',"three")])
+        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "two"), (1, 'tag', "three")])
         c.remove_tag("three", "two")
         self.assertItemsEqual(c.get_tags(), [])
         c.add_tag("one", "two")
-        self.assertItemsEqual(c.get_tags(), [(1,'tag',"one"), (1,'tag',"two")])
+        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two")])
 
         self.add_files(3)
         c = self.search()
@@ -865,7 +870,32 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertItemsEqual(c.get_tags(), [])
         c.go_next()
         c.go_next()
-        self.assertItemsEqual(c.get_tags(), [(1,'tag',"a")])
+        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "a")])
+
+        app.stop()
+
+    def _test_sort(self, app, *args):
+        self.add_files(26)
+        c = self.search()
+
+        for i in range(26):
+            c.add_tag("idx:" + str(i), "abc:" + chr(97 + 25 - i))
+            c.go_next()
+
+        c.go_first()
+        self.assertItemsEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z")])
+
+        c.sort("abc")
+        c.go_first()
+        self.assertItemsEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
+
+        c.sort("#idx")
+        c.go_first()
+        self.assertItemsEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z")])
+
+        c.sort("-#idx")
+        c.go_first()
+        self.assertItemsEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
 
         app.stop()
 
@@ -946,6 +976,9 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def test_get_tags(self):
         self.call_test(self._test_tags)
+
+    def test_get_sort(self):
+        self.call_test(self._test_sort)
 
 
 if __name__ == "__main__":

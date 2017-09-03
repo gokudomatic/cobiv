@@ -4,6 +4,7 @@ import sqlite3
 import threading
 from os import listdir
 from os.path import isfile, join
+import logging
 
 from PIL import Image
 from kivy.app import App
@@ -19,16 +20,19 @@ import time
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
+TEMP_SORT_TABLE = 'temp_sort_table'
+TEMP_PRESORT_TABLE = 'temp_presort_table'
 
 
 def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 
-###########################################3
-# sql comparison generator
-
 class SqliteFunctions(object):
+    """ SQL comparison generator
+
+    """
+
     fields = {}
 
     def __init__(self, session, **kwargs):
@@ -37,17 +41,17 @@ class SqliteFunctions(object):
         self.session = session
 
         self.operator_functions = {
-            'in':   [self.prepare_in, self.parse_in, self.join_query_in],
-            '%':    [self.prepare_in, self.parse_partial, self.join_query_in],
-            'any':  [self.prepare_any, self.parse_any, self.join_query_default],
-            '>':    [self.prepare_greater_than, self.parse_greater_than, self.join_query_default],
-            '<':    [self.prepare_lower_than, self.parse_lower_than, self.join_query_default],
-            '>=':   [self.prepare_greater_than, self.parse_greater_equals, self.join_query_default],
-            '<=':   [self.prepare_lower_than, self.parse_lower_equals, self.join_query_default],
-            '><':   [self.prepare_in, self.parse_between, self.join_query_default],
-            'YY':   [self.prepare_in, self.parse_in_year, self.join_query_default],
-            'YM':   [self.prepare_in, self.parse_in_year_month, self.join_query_default],
-            'YMD':  [self.prepare_in, self.parse_in_year_month_day, self.join_query_default]
+            'in': [self.prepare_in, self.parse_in, self.join_query_in],
+            '%': [self.prepare_in, self.parse_partial, self.join_query_in],
+            'any': [self.prepare_any, self.parse_any, self.join_query_default],
+            '>': [self.prepare_greater_than, self.parse_greater_than, self.join_query_default],
+            '<': [self.prepare_lower_than, self.parse_lower_than, self.join_query_default],
+            '>=': [self.prepare_greater_than, self.parse_greater_equals, self.join_query_default],
+            '<=': [self.prepare_lower_than, self.parse_lower_equals, self.join_query_default],
+            '><': [self.prepare_in, self.parse_between, self.join_query_default],
+            'YY': [self.prepare_in, self.parse_in_year, self.join_query_default],
+            'YM': [self.prepare_in, self.parse_in_year_month, self.join_query_default],
+            'YMD': [self.prepare_in, self.parse_in_year_month_day, self.join_query_default]
         }
 
         self.fields['MKDATE'] = self.mkdate
@@ -78,23 +82,23 @@ class SqliteFunctions(object):
     def get_today(self):
         return time.mktime(datetime.date.today().timetuple())
 
-    def get_year(self,ts):
+    def get_year(self, ts):
         return datetime.datetime.fromtimestamp(ts).year
 
-    def get_year_month(self,ts):
+    def get_year_month(self, ts):
         return datetime.datetime.fromtimestamp(ts).strftime('%Y%m')
 
-    def get_year_month_day(self,ts):
+    def get_year_month_day(self, ts):
         return datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d')
 
-    def add_date(self,ts,kind,value):
-        if kind=='D':
-            diff=relativedelta(days=value)
-        elif kind=='M':
-            diff=relativedelta(months=value)
-        elif kind=='Y':
-            diff=relativedelta(years=value)
-        return time.mktime((datetime.datetime.fromtimestamp(ts)+diff).timetuple())
+    def add_date(self, ts, kind, value):
+        if kind == 'D':
+            diff = relativedelta(days=value)
+        elif kind == 'M':
+            diff = relativedelta(months=value)
+        elif kind == 'Y':
+            diff = relativedelta(years=value)
+        return time.mktime((datetime.datetime.fromtimestamp(ts) + diff).timetuple())
 
     def prepare_in(self, crit_list, fn, kind, values):
         if not crit_list[kind].has_key(fn):
@@ -108,16 +112,14 @@ class SqliteFunctions(object):
         return result
 
     def parse_partial(self, kind, values_set):
-        result=""
+        result = ""
         for value in values_set:
-            if len(result)>0:
-                result+=" or "
+            if len(result) > 0:
+                result += " or "
             result += 'value like "%s"' % value
         if not kind == "*":
             result = result + ' and kind="%s"' % kind
         return result
-
-
 
     def prepare_any(self, crit_list, fn, kind, values):
         if not crit_list[kind].has_key(fn):
@@ -204,7 +206,7 @@ class SqliteFunctions(object):
 
     def join_query_in(self, fn, kind, valueset, is_except=False):
         query = ''
-        joiner= ' except ' if is_except else ' intersect '
+        joiner = ' except ' if is_except else ' intersect '
         for values in valueset:
             query += joiner * (len(query) > 0)
             query += "select file_key from tag where " + fn(kind, values)
@@ -216,8 +218,15 @@ class SqliteFunctions(object):
 #################################################
 
 class SqliteCursor(CursorInterface):
+    """ Cursor implementation for SQLite.
+
+    """
+
+    logger = logging.getLogger(__name__)
+
     set_head_key = None
     con = None
+    """ SQLite connection instance """
     current_set = True
 
     def __init__(self, row=None, backend=None, current=True):
@@ -240,6 +249,11 @@ class SqliteCursor(CursorInterface):
             self.file_id = row['file_key']
 
     def clone(self):
+        """
+        Create a new copy instance of the cursor.
+        :return:
+            The new cursor
+        """
         new_cursor = SqliteCursor(backend=self.con, current=self.current_set)
         new_cursor.pos = self.pos
         new_cursor.set_head_key = self.set_head_key
@@ -522,6 +536,48 @@ class SqliteCursor(CursorInterface):
         row = self.con.execute('select count(*) from current_set where position<0').fetchone()
 
         return 0 if row is None else row[0]
+
+    def sort(self, *fields):
+        with self.con:
+
+            # step 1
+            c = self.con.execute('drop table if exists %s' % TEMP_SORT_TABLE)
+            c.execute('drop table if exists %s' % TEMP_PRESORT_TABLE)
+            # step 2
+            subqueries = ''
+            sql_fields = []
+            for field in fields:
+                if field.startswith('-'):
+                    kind, comparator = field[1:], 'min'
+                else:
+                    kind, comparator = field, 'max'
+
+                if kind.startswith('#'):
+                    is_number=True
+                    kind=kind[1:]
+                else:
+                    is_number=False
+
+                if kind != '*':
+                    subqueries += ', (select %s(%s) from tag where file_key=cs.file_key and kind="%s") as %s' % (
+                        comparator, 'CAST(value as INTEGER)' if is_number else 'value', kind, kind)
+                    template_field=('CAST(%s as INTEGER)' if is_number else '%s')+' desc' * field.startswith('-')
+                    sql_fields.append(template_field % kind)
+            query = 'create temporary table %s as select cs.file_key%s from current_set cs' % (
+                TEMP_PRESORT_TABLE, subqueries)
+            self.logger.debug(query)
+            c.execute(query)
+
+            sort_query = 'create temporary table %s as select file_key from %s order by %s ' % (
+                TEMP_SORT_TABLE, TEMP_PRESORT_TABLE, ','.join(sql_fields))
+            self.logger.debug(sort_query)
+            c.execute(sort_query)
+
+            # step 3
+            update_query = 'update current_set set position=(select r.rowid-1 from %s r where r.file_key=current_set.file_key) where exists (select * from %s r where r.file_key=current_set.file_key)' % (
+                TEMP_SORT_TABLE, TEMP_SORT_TABLE)
+            logging.debug(update_query)
+            self.con.execute(update_query)
 
 
 ##############################
@@ -880,7 +936,7 @@ class SqliteDb(Entity):
                         values = to_exclude[kind][fn]
                         subquery += " except " + self.functions.render_function(fn, kind, values, True)
 
-            print subquery
+            logging.debug(subquery)
             query = 'select f.id,f.name from file f where f.id in (' + subquery + ')'
             self.regenerate_set(CURRENT_SET_NAME, query)
 

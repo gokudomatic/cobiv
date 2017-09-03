@@ -89,6 +89,8 @@ class CursorInterface(EventDispatcher):
     def get_clipboard_size(self):
         return 0
 
+    def sort(self,*fields):
+        pass
 
 class EOLCursor(CursorInterface):
     last_cursor = ObjectProperty(None)
@@ -444,3 +446,7 @@ class Cursor(EventDispatcher):
             return self.implementation.get_clipboard_size()
         else:
             return 0
+
+    def sort(self,*fields):
+        if self.implementation is not None:
+            self.implementation.sort(*fields)
