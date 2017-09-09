@@ -41,7 +41,7 @@ class SQLiteCursorTest(unittest.TestCase):
             self.conn.execute(
                 'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
             self.conn.execute(
-                'create table file (id INTEGER PRIMARY KEY, repo_key int, name text, filename text, path text, ext text)')
+                'create table file (id INTEGER PRIMARY KEY, repo_key int, name text)')
             self.conn.execute('create table tag (file_key int,category int, kind text, value text)')
             self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
@@ -142,9 +142,9 @@ class SQLiteCursorTest(unittest.TestCase):
 
         query_to_add = []
         for i in range(amount):
-            query_to_add.append((0, 'f' + str(i), 'f' + str(i) + '.png', '.', 'png'))
+            query_to_add.append((0, 'f' + str(i) + '.png'))
 
-        c.executemany('insert into file(repo_key, name, filename, path, ext) values(?,?,?,?,?)', query_to_add)
+        c.executemany('insert into file(repo_key, name) values(?,?)', query_to_add)
 
         self.regenerate_set('*', "select id from file order by cast(id as integer)")
 
@@ -358,16 +358,16 @@ class SQLiteCursorTest(unittest.TestCase):
         c = self.search()
         self.assertItemsEqual([], c.get_next_ids(5))
         rows = [(r['file_key'], r['position'], r['name']) for r in c.get_next_ids(5, self_included=True)]
-        self.assertItemsEqual([(1, 0, 'f0')], rows)
+        self.assertItemsEqual([(1, 0, 'f0.png')], rows)
 
         self.add_files(15)
         c = self.search()
 
         c.go(8)
         rows = [(r['file_key'], r['position'], r['name']) for r in c.get_next_ids(3)]
-        self.assertItemsEqual([(10, 9, 'f9'), (11, 10, 'f10'), (12, 11, 'f11')], rows)
+        self.assertItemsEqual([(10, 9, 'f9.png'), (11, 10, 'f10.png'), (12, 11, 'f11.png')], rows)
         rows = [(r['file_key'], r['position'], r['name']) for r in c.get_next_ids(3, self_included=True)]
-        self.assertItemsEqual([(9, 8, 'f8'), (10, 9, 'f9'), (11, 10, 'f10')], rows)
+        self.assertItemsEqual([(9, 8, 'f8.png'), (10, 9, 'f9.png'), (11, 10, 'f10.png')], rows)
 
         app.stop()
 
@@ -384,7 +384,7 @@ class SQLiteCursorTest(unittest.TestCase):
 
         c.go(8)
         rows = [(r['file_key'], r['position'], r['name']) for r in c.get_previous_ids(3)]
-        self.assertItemsEqual([(8, 7, 'f7'), (7, 6, 'f6'), (6, 5, 'f5')], rows)
+        self.assertItemsEqual([(8, 7, 'f7.png'), (7, 6, 'f6.png'), (6, 5, 'f5.png')], rows)
 
         app.stop()
 

@@ -6,6 +6,7 @@ from os import listdir
 from os.path import isfile, join
 import logging
 
+import math
 from PIL import Image
 from kivy.app import App
 from kivy.factory import Factory
@@ -61,6 +62,19 @@ class SqliteFunctions(object):
         self.fields['TO_Y'] = self.get_year
         self.fields['TO_YM'] = self.get_year_month
         self.fields['TO_YMD'] = self.get_year_month_day
+        self.fields['CURRENT_FILENAME'] = lambda: self.session.cursor.filename
+        self.fields['CURRENT_FILEDATE'] = lambda: self.get_current_file_tag('modification_date')
+        self.fields['CURRENT'] = lambda kind: self.get_current_file_tag(kind)
+
+    def get_current_file_tag(self, category, field_name):
+        if self.session.cursor.file_id is None:
+            return None
+        if not self.session.cursor.get_tags()[category].has_key(field_name):
+            return None
+
+        values = self.session.cursor.get_tags()[category][field_name]
+        value = values[0] if len(values) > 0 else None
+        return value
 
     def prepare_function(self, category_list, fn, kind, values):
         if self.operator_functions.has_key(fn):
@@ -468,7 +482,9 @@ class SqliteCursor(CursorInterface):
             return []
 
         c = self.con.execute('select t.category,t.kind,t.value from tag t where file_key=?', (self.file_id,))
-        return [(r['category'], r['kind'], r['value']) for r in c.fetchall()]
+        tags = [(r['category'], r['kind'], r['value']) for r in c.fetchall()]
+
+        return tags
 
     def is_changed(self):
         if self.file_id is None:
@@ -553,15 +569,15 @@ class SqliteCursor(CursorInterface):
                     kind, comparator = field, 'max'
 
                 if kind.startswith('#'):
-                    is_number=True
-                    kind=kind[1:]
+                    is_number = True
+                    kind = kind[1:]
                 else:
-                    is_number=False
+                    is_number = False
 
                 if kind != '*':
                     subqueries += ', (select %s(%s) from tag where file_key=cs.file_key and kind="%s") as %s' % (
                         comparator, 'CAST(value as INTEGER)' if is_number else 'value', kind, kind)
-                    template_field=('CAST(%s as INTEGER)' if is_number else '%s')+' desc' * field.startswith('-')
+                    template_field = ('CAST(%s as INTEGER)' if is_number else '%s') + ' desc' * field.startswith('-')
                     sql_fields.append(template_field % kind)
             query = 'create temporary table %s as select cs.file_key%s from current_set cs' % (
                 TEMP_PRESORT_TABLE, subqueries)
@@ -651,7 +667,7 @@ class SqliteDb(Entity):
             self.conn.execute(
                 'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
             self.conn.execute(
-                'create table file (id INTEGER PRIMARY KEY, repo_key int, name text, filename text, path text, ext text)')
+                'create table file (id INTEGER PRIMARY KEY, repo_key int, name text)')
             self.conn.execute('create table tag (file_key int, category int, kind text, value text)')
             self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
@@ -752,10 +768,10 @@ class SqliteDb(Entity):
             for f in to_add:
                 if self.cancel_operation:
                     return
-                query_to_add.append((repo_id, f, os.path.basename(f), os.path.dirname(f), os.path.splitext(f)[1][1:]))
+                query_to_add.append((repo_id, f))
                 self.tick_progress()
 
-            c.executemany('insert into file(repo_key, name, filename, path, ext) values(?,?,?,?,?)', query_to_add)
+            c.executemany('insert into file(repo_key, name) values(?,?)', query_to_add)
             self.tick_progress()
             tags_to_add = []
             for f in to_add:
@@ -822,6 +838,8 @@ class SqliteDb(Entity):
         to_add.append((node_id, 0, 'format', img.format))
         to_add.append((node_id, 0, 'size', os.path.getsize(name)))
         to_add.append((node_id, 0, 'modification_date', os.path.getmtime(name)))
+        to_add.append((node_id, 0, 'ext', os.path.splitext(name)[1]))
+        to_add.append((node_id, 0, 'folder', os.path.dirname(name)))
 
         if img.info:
             for i, v in img.info.iteritems():
