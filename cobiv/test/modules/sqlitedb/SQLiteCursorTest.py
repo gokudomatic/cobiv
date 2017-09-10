@@ -42,14 +42,19 @@ class SQLiteCursorTest(unittest.TestCase):
                 'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
             self.conn.execute(
                 'create table file (id INTEGER PRIMARY KEY, repo_key int, name text)')
-            self.conn.execute('create table tag (file_key int,category int, kind text, value text)')
+            self.conn.execute('create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
+            self.conn.execute('create table tag (file_key int, category int, kind text, type int, value)')
             self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
             self.conn.execute('create table thumbs (file_key int primary key, data blob)')
 
             # indexes
             self.conn.execute('create unique index file_idx on file(name)')
-            self.conn.execute('create unique index tag_idx on tag(file_key,kind,value)')
+            self.conn.execute('create index tag_idx1 on tag(file_key)')
+            self.conn.execute('create index tag_idx2 on tag(category,kind,value)')
+            self.conn.execute('create index tag_idx3 on tag(value)')
+            self.conn.execute('create unique index core_tags_idx1 on core_tags(file_key)')
+            self.conn.execute('create unique index core_tags_idx2 on core_tags(path,size,file_date,ext)')
             self.conn.execute('create unique index set_detail_pos_idx on set_detail(set_head_key,position)')
             self.conn.execute('create unique index set_detail_file_idx on set_detail(set_head_key,file_key)')
 

@@ -53,7 +53,7 @@ class TestApp(App):
         return []
 
 
-class SQLiteCursorTest(unittest.TestCase):
+class SQLiteDbTest(unittest.TestCase):
     def get_user_path(self, *args):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), *args)
 
@@ -68,7 +68,7 @@ class SQLiteCursorTest(unittest.TestCase):
         f_path = self.get_user_path('images', 'test.jpg')
         if os.path.exists(f_path):
             os.remove(f_path)
-        super(SQLiteCursorTest, self).tearDown()
+        super(SQLiteDbTest, self).tearDown()
 
     def init_db_with_tags(self):
         db = SqliteDb()
@@ -205,16 +205,16 @@ class SQLiteCursorTest(unittest.TestCase):
         db.search_tag()
         c.go_last()
         c.get_tags()
-        self.assertEqual(str(os.path.getsize(new_filename)), c.get_tags()[0]['size'][0])
-        self.assertEqual(str(os.path.getsize(self.get_user_path('images', '0003.jpg'))), c.get_tags()[0]['size'][0])
+        self.assertEqual(os.path.getsize(new_filename), c.get_tags()[0]['size'][0])
+        self.assertEqual(os.path.getsize(self.get_user_path('images', '0003.jpg')), c.get_tags()[0]['size'][0])
 
         # test when file content changed
         shutil.copy(self.get_user_path('images', '0001.jpg'), new_filename)
         self.assertItemsEqual([(4, 'images\\test.jpg')], db._check_modified_files(repo_id=1))
         db.update_tags(repo_id=1)
         c.reload()
-        self.assertEqual(str(os.path.getsize(new_filename)), c.get_tags()[0]['size'][0])
-        self.assertEqual(str(os.path.getsize(self.get_user_path('images', '0001.jpg'))), c.get_tags()[0]['size'][0])
+        self.assertEqual(os.path.getsize(new_filename), c.get_tags()[0]['size'][0])
+        self.assertEqual(os.path.getsize(self.get_user_path('images', '0001.jpg')), c.get_tags()[0]['size'][0])
 
         db.close_db()
         app.stop()

@@ -150,7 +150,7 @@ class SqliteFunctions(object):
             crit_list[kind][fn] = max(candidate, crit_list[kind][fn])
 
     def parse_greater_than(self, kind, value):
-        return 'kind="%s" and cast(value as integer)>%s' % (kind, value)
+        return 'kind="%s" and cast(value as float)>%s' % (kind, value)
 
     def prepare_lower_than(self, crit_list, fn, kind, values):
         candidate = max([float(i) for i in values])
@@ -160,13 +160,13 @@ class SqliteFunctions(object):
             crit_list[kind][fn] = min(candidate, crit_list[kind][fn])
 
     def parse_lower_than(self, kind, value):
-        return 'kind="%s" and cast(value as integer)<%s' % (kind, value)
+        return 'kind="%s" and cast(value as float)<%s' % (kind, value)
 
     def parse_greater_equals(self, kind, value):
-        return 'kind="%s" and cast(value as integer)>=%s' % (kind, value)
+        return 'kind="%s" and cast(value as float)>=%s' % (kind, value)
 
     def parse_lower_equals(self, kind, value):
-        return 'kind="%s" and cast(value as integer)<=%s' % (kind, value)
+        return 'kind="%s" and cast(value as float)<=%s' % (kind, value)
 
     def parse_between(self, kind, sets_values):
         result = 'kind="%s"' % kind
@@ -177,7 +177,7 @@ class SqliteFunctions(object):
                 val_to = it.next()
                 if len(subquery) > 0:
                     subquery += ' or '
-                subquery += '(cast(value as integer)>=%s and cast(value as integer)<=%s)' % (val_from, val_to)
+                subquery += 'cast(value as float)>=%s and cast(value as integer)<=%s' % (val_from, val_to)
             result += ' and (' + subquery + ')'
 
         return result
@@ -191,7 +191,7 @@ class SqliteFunctions(object):
                 date_to = fn_to(value)
                 if len(subquery) > 0:
                     subquery += ' or '
-                subquery += 'value between %s and %s' % (
+                subquery += 'cast(value as float) between %s and %s' % (
                     time.mktime(date_from.timetuple()), time.mktime(date_to.timetuple()))
         return result + " and (%s)" % subquery
 
@@ -462,7 +462,7 @@ class SqliteCursor(CursorInterface):
                     (key, value, self.file_id))
                 row = c.fetchone()
                 if row is None:
-                    c.execute('insert into tag values (?,?,?,?)', (self.file_id, 1, key, value))
+                    c.execute('insert into tag values (?,?,?,?,?)', (self.file_id, 1, key, 0, value))
                 elif row[0] == 0:
                     c.execute('update tag set value=? where category=0 and kind=? and file_key=?',
                               (value, key, self.file_id))
@@ -668,14 +668,19 @@ class SqliteDb(Entity):
                 'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
             self.conn.execute(
                 'create table file (id INTEGER PRIMARY KEY, repo_key int, name text)')
-            self.conn.execute('create table tag (file_key int, category int, kind text, value text)')
+            self.conn.execute('create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
+            self.conn.execute('create table tag (file_key int, category int, kind text, type int, value)')
             self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
             self.conn.execute('create table thumbs (file_key int primary key, data blob)')
 
             # indexes
             self.conn.execute('create unique index file_idx on file(name)')
-            self.conn.execute('create unique index tag_idx on tag(file_key,category,kind,value)')
+            self.conn.execute('create index tag_idx1 on tag(file_key)')
+            self.conn.execute('create index tag_idx2 on tag(category,kind,value)')
+            self.conn.execute('create index tag_idx3 on tag(value)')
+            self.conn.execute('create unique index core_tags_idx1 on core_tags(file_key)')
+            self.conn.execute('create unique index core_tags_idx2 on core_tags(path,size,file_date,ext)')
             self.conn.execute('create unique index set_detail_pos_idx on set_detail(set_head_key,position)')
             self.conn.execute('create unique index set_detail_file_idx on set_detail(set_head_key,file_key)')
 
@@ -782,7 +787,7 @@ class SqliteDb(Entity):
                 self.tick_progress()
 
             if len(tags_to_add) > 0:
-                c.executemany('insert into tag values (?,?,?,?)', tags_to_add)
+                c.executemany('insert into tag values (?,?,?,?,?)', tags_to_add)
                 self.tick_progress()
 
     def update_tags(self, repo_id, to_ignore=[]):
@@ -793,9 +798,9 @@ class SqliteDb(Entity):
             for file_id, filename in modified_file_ids:
                 tags_to_add = self.read_tags(file_id, filename)
 
-                c.executemany('update tag set value=? where file_key=? and category=0 and kind=?',
-                              [(tag[3], tag[0], tag[2]) for tag in tags_to_add if tag[1] == 0])
-                c.executemany('insert or ignore into tag values (?,?,?,?)', [tag for tag in tags_to_add if tag[1] == 1])
+                c.executemany('update tag set value=?,type=? where file_key=? and category=0 and kind=?',
+                              [(tag[4], tag[3],tag[0], tag[2]) for tag in tags_to_add if tag[1] == 0])
+                c.executemany('insert or ignore into tag values (?,?,?,?,?)', [tag for tag in tags_to_add if tag[1] == 1])
 
                 self.get_app().fire_event('on_file_content_change', file_id)
 
@@ -833,20 +838,20 @@ class SqliteDb(Entity):
         to_add = []
         img = Image.open(name)
 
-        to_add.append((node_id, 0, 'width', img.size[0]))
-        to_add.append((node_id, 0, 'height', img.size[1]))
-        to_add.append((node_id, 0, 'format', img.format))
-        to_add.append((node_id, 0, 'size', os.path.getsize(name)))
-        to_add.append((node_id, 0, 'modification_date', os.path.getmtime(name)))
-        to_add.append((node_id, 0, 'ext', os.path.splitext(name)[1]))
-        to_add.append((node_id, 0, 'folder', os.path.dirname(name)))
+        to_add.append((node_id, 0, 'width', 1, img.size[0]))
+        to_add.append((node_id, 0, 'height', 1, img.size[1]))
+        to_add.append((node_id, 0, 'format', 0, img.format))
+        to_add.append((node_id, 0, 'size', 1, os.path.getsize(name)))
+        to_add.append((node_id, 0, 'modification_date', 1, os.path.getmtime(name)))
+        to_add.append((node_id, 0, 'ext', 0, os.path.splitext(name)[1]))
+        to_add.append((node_id, 0, 'folder', 0, os.path.dirname(name)))
 
         if img.info:
             for i, v in img.info.iteritems():
                 if i == "tags":
                     tag_list = v.split(",")
                     for tag in tag_list:
-                        to_add.append((node_id, 1, 'tag', tag.strip()))
+                        to_add.append((node_id, 1, 'tag', 0, tag.strip()))
 
         for reader in self.get_app().lookups("TagReader"):
             reader.read_file_tags(node_id, name, to_add)
@@ -955,6 +960,7 @@ class SqliteDb(Entity):
                         subquery += " except " + self.functions.render_function(fn, kind, values, True)
 
             logging.debug(subquery)
+            print subquery
             query = 'select f.id,f.name from file f where f.id in (' + subquery + ')'
             self.regenerate_set(CURRENT_SET_NAME, query)
 

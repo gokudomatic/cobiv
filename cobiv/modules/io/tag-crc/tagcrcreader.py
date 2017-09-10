@@ -12,4 +12,4 @@ class TagCrcReader(TagReader):
         with open(filename, 'rb') as afile:
             buf = afile.read()
             self.hasher.update(buf)
-        list_to_add.append((file_id, 0, 'crc', self.hasher.hexdigest()))
+        list_to_add.append((file_id, 0, 'crc', 0, self.hasher.hexdigest()))
