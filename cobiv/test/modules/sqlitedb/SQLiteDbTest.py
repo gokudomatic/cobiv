@@ -1,3 +1,6 @@
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 import os
 import shutil
 import unittest
@@ -69,6 +72,13 @@ class SQLiteDbTest(unittest.TestCase):
         if os.path.exists(f_path):
             os.remove(f_path)
         super(SQLiteDbTest, self).tearDown()
+
+    def init_db(self):
+        db = SqliteDb()
+        db.init_test_db()
+        db.session = self.session
+
+        return db
 
     def init_db_with_tags(self):
         db = SqliteDb()
@@ -395,6 +405,61 @@ class SQLiteDbTest(unittest.TestCase):
         db.close_db()
         app.stop()
 
+    def _test_search_core_tags(self, app, *args):
+        db = self.init_db()
+        c = self.session.cursor
+
+        # test extension
+        db.search_tag("ext:jpg")
+        self.assertEqual(3, len(c))
+
+        db.search_tag("ext:in:gif:png")
+        self.assertEqual(0, len(c))
+
+        db.search_tag("ext:in:jpg:png")
+        self.assertEqual(3, len(c))
+
+        # search for date
+        db.search_tag("file_date:YY:2017")
+        self.assertEqual(3, len(c))
+
+        db.search_tag("file_date:YM:201709")
+        self.assertEqual(1, len(c))
+
+        db.search_tag("file_date:YM:201708")
+        self.assertEqual(0, len(c))
+
+        db.search_tag("file_date:YM:201704")
+        self.assertEqual(2, len(c))
+
+
+        # search for both extension and date
+        db.search_tag("ext:jpg","file_date:YY:2017")
+        self.assertEqual(3, len(c))
+
+        db.search_tag("ext:jpg","file_date:YY:2016")
+        self.assertEqual(0, len(c))
+
+        # search with negation
+        db.search_tag("ext:jpg","file_date:YY:2017","-file_date:YM:201709")
+        self.assertEqual(2, len(c))
+
+        db.search_tag("ext:jpg","file_date:YY:2017","-file_date:YM:201709","-size:<:1000")
+        self.assertEqual(1, len(c))
+
+        # mix core tags and custom tags
+        db.search_tag()
+        c = self.session.cursor
+
+        c.add_tag("one")
+
+        db.search_tag("file_date:YM:201704","*:in:one:toto")
+        self.assertEqual(1, len(c))
+
+
+        db.close_db()
+        app.stop()
+
     def _test_search_partial_text(self, app, *args):
         db = self.init_db_with_tags()
         c = self.session.cursor
@@ -452,6 +517,9 @@ class SQLiteDbTest(unittest.TestCase):
 
     def test_search_partial_text(self):
         self.call_test(self._test_search_partial_text)
+
+    def test_search_core_tags(self):
+        self.call_test(self._test_search_core_tags)
 
 
 if __name__ == "__main__":

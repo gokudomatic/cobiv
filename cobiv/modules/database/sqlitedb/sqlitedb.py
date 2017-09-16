@@ -1,23 +1,18 @@
-import calendar
+import logging
 import os
 import sqlite3
 import threading
 from os import listdir
 from os.path import isfile, join
-import logging
 
-import math
 from PIL import Image
 from kivy.app import App
 from kivy.factory import Factory
 
 from cobiv.common import set_action
-from cobiv.libs.templite import Templite
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import CursorInterface
-import datetime
-from dateutil.relativedelta import relativedelta
-import time
+from cobiv.modules.database.sqlitedb.search.searchmanager import SearchManager
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
@@ -28,205 +23,6 @@ TEMP_PRESORT_TABLE = 'temp_presort_table'
 def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
-
-class SqliteFunctions(object):
-    """ SQL comparison generator
-
-    """
-
-    fields = {}
-
-    def __init__(self, session, **kwargs):
-        super(SqliteFunctions, self).__init__(**kwargs)
-
-        self.session = session
-
-        self.operator_functions = {
-            'in': [self.prepare_in, self.parse_in, self.join_query_in],
-            '%': [self.prepare_in, self.parse_partial, self.join_query_in],
-            'any': [self.prepare_any, self.parse_any, self.join_query_default],
-            '>': [self.prepare_greater_than, self.parse_greater_than, self.join_query_default],
-            '<': [self.prepare_lower_than, self.parse_lower_than, self.join_query_default],
-            '>=': [self.prepare_greater_than, self.parse_greater_equals, self.join_query_default],
-            '<=': [self.prepare_lower_than, self.parse_lower_equals, self.join_query_default],
-            '><': [self.prepare_in, self.parse_between, self.join_query_default],
-            'YY': [self.prepare_in, self.parse_in_year, self.join_query_default],
-            'YM': [self.prepare_in, self.parse_in_year_month, self.join_query_default],
-            'YMD': [self.prepare_in, self.parse_in_year_month_day, self.join_query_default]
-        }
-
-        self.fields['MKDATE'] = self.mkdate
-        self.fields['NOW'] = self.get_now
-        self.fields['TODAY'] = self.get_today
-        self.fields['ADD_DATE'] = self.add_date
-        self.fields['TO_Y'] = self.get_year
-        self.fields['TO_YM'] = self.get_year_month
-        self.fields['TO_YMD'] = self.get_year_month_day
-        self.fields['CURRENT_FILENAME'] = lambda: self.session.cursor.filename
-        self.fields['CURRENT_FILEDATE'] = lambda: self.get_current_file_tag('modification_date')
-        self.fields['CURRENT'] = lambda kind: self.get_current_file_tag(kind)
-
-    def get_current_file_tag(self, category, field_name):
-        if self.session.cursor.file_id is None:
-            return None
-        if not self.session.cursor.get_tags()[category].has_key(field_name):
-            return None
-
-        values = self.session.cursor.get_tags()[category][field_name]
-        value = values[0] if len(values) > 0 else None
-        return value
-
-    def prepare_function(self, category_list, fn, kind, values):
-        if self.operator_functions.has_key(fn):
-            self.operator_functions[fn][0](category_list, fn, kind, values)
-
-    def render_function(self, fn, kind, values, is_except):
-        return self.operator_functions[fn][2](self.operator_functions[fn][1], kind, values, is_except)
-
-    def render_text(self, original_text):
-        return Templite(original_text.replace("%{", "${write(").replace("}%", ")}$")).render(**self.fields)
-
-    def mkdate(self, value_ymd):
-        d = datetime.datetime.strptime(str(value_ymd), '%Y%m%d')
-        return time.mktime(d.timetuple())
-
-    def get_now(self):
-        return time.time()
-
-    def get_today(self):
-        return time.mktime(datetime.date.today().timetuple())
-
-    def get_year(self, ts):
-        return datetime.datetime.fromtimestamp(ts).year
-
-    def get_year_month(self, ts):
-        return datetime.datetime.fromtimestamp(ts).strftime('%Y%m')
-
-    def get_year_month_day(self, ts):
-        return datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d')
-
-    def add_date(self, ts, kind, value):
-        if kind == 'D':
-            diff = relativedelta(days=value)
-        elif kind == 'M':
-            diff = relativedelta(months=value)
-        elif kind == 'Y':
-            diff = relativedelta(years=value)
-        return time.mktime((datetime.datetime.fromtimestamp(ts) + diff).timetuple())
-
-    def prepare_in(self, crit_list, fn, kind, values):
-        if not crit_list[kind].has_key(fn):
-            crit_list[kind][fn] = []
-        crit_list[kind][fn].append(values)
-
-    def parse_in(self, kind, values_set):
-        result = 'value in ("%s")' % '", "'.join(values_set)
-        if not kind == "*":
-            result = result + ' and kind="%s"' % kind
-        return result
-
-    def parse_partial(self, kind, values_set):
-        result = ""
-        for value in values_set:
-            if len(result) > 0:
-                result += " or "
-            result += 'value like "%s"' % value
-        if not kind == "*":
-            result = result + ' and kind="%s"' % kind
-        return result
-
-    def prepare_any(self, crit_list, fn, kind, values):
-        if not crit_list[kind].has_key(fn):
-            crit_list[kind][fn] = None
-
-    def parse_any(self, kind, values):
-        return 'kind="%s"' % kind
-
-    def prepare_greater_than(self, crit_list, fn, kind, values):
-        candidate = min([float(i) for i in values])
-        if not crit_list[kind].has_key(fn):
-            crit_list[kind][fn] = candidate
-        else:
-            crit_list[kind][fn] = max(candidate, crit_list[kind][fn])
-
-    def parse_greater_than(self, kind, value):
-        return 'kind="%s" and cast(value as float)>%s' % (kind, value)
-
-    def prepare_lower_than(self, crit_list, fn, kind, values):
-        candidate = max([float(i) for i in values])
-        if not crit_list[kind].has_key(fn):
-            crit_list[kind][fn] = candidate
-        else:
-            crit_list[kind][fn] = min(candidate, crit_list[kind][fn])
-
-    def parse_lower_than(self, kind, value):
-        return 'kind="%s" and cast(value as float)<%s' % (kind, value)
-
-    def parse_greater_equals(self, kind, value):
-        return 'kind="%s" and cast(value as float)>=%s' % (kind, value)
-
-    def parse_lower_equals(self, kind, value):
-        return 'kind="%s" and cast(value as float)<=%s' % (kind, value)
-
-    def parse_between(self, kind, sets_values):
-        result = 'kind="%s"' % kind
-        for values in sets_values:
-            it = iter(values)
-            subquery = ''
-            for val_from in it:
-                val_to = it.next()
-                if len(subquery) > 0:
-                    subquery += ' or '
-                subquery += 'cast(value as float)>=%s and cast(value as integer)<=%s' % (val_from, val_to)
-            result += ' and (' + subquery + ')'
-
-        return result
-
-    def parse_in_date(self, kind, sets_values, fn_from, fn_to):
-        result = 'kind="%s"' % kind
-        subquery = ''
-        for values in sets_values:
-            for value in values:
-                date_from = fn_from(value)
-                date_to = fn_to(value)
-                if len(subquery) > 0:
-                    subquery += ' or '
-                subquery += 'cast(value as float) between %s and %s' % (
-                    time.mktime(date_from.timetuple()), time.mktime(date_to.timetuple()))
-        return result + " and (%s)" % subquery
-
-    def parse_in_year(self, kind, sets_values):
-        return self.parse_in_date(kind, sets_values, lambda d: datetime.date(int(d), 1, 1),
-                                  lambda d: datetime.date(int(d), 12, 31))
-
-    def parse_in_year_month(self, kind, sets_values):
-        def fn_to(d):
-            year = int(d[:4])
-            month = int(d[4:])
-            day_of_week, count = calendar.monthrange(year, month)
-            return datetime.date(year, month, count)
-
-        return self.parse_in_date(kind, sets_values, lambda d: datetime.date(int(d[:4]), int(d[4:]), 1), fn_to)
-
-    def parse_in_year_month_day(self, kind, sets_values):
-        return self.parse_in_date(kind, sets_values, lambda d: datetime.date(int(d[:4]), int(d[4:6]), int(d[6:])),
-                                  lambda d: datetime.date(int(d[:4]), int(d[4:6]), int(d[6:])) + datetime.timedelta(
-                                      days=1))
-
-    # Joins
-
-    def join_query_default(self, fn, kind, values, is_except=False):
-        return "select file_key from tag where " + fn(kind, values)
-
-    def join_query_in(self, fn, kind, valueset, is_except=False):
-        query = ''
-        joiner = ' except ' if is_except else ' intersect '
-        for values in valueset:
-            query += joiner * (len(query) > 0)
-            query += "select file_key from tag where " + fn(kind, values)
-        return query
-
-
 #################################################
 # Cursor
 #################################################
@@ -236,6 +32,7 @@ class SqliteCursor(CursorInterface):
 
     """
 
+    core_tags = ["path", "size", "file_date", "ext"]
     logger = logging.getLogger(__name__)
 
     set_head_key = None
@@ -481,8 +278,14 @@ class SqliteCursor(CursorInterface):
         if self.file_id is None:
             return []
 
-        c = self.con.execute('select t.category,t.kind,t.value from tag t where file_key=?', (self.file_id,))
+        c = self.con.cursor()
+        c.execute('select t.category,t.kind,t.value from tag t where file_key=?', (self.file_id,))
         tags = [(r['category'], r['kind'], r['value']) for r in c.fetchall()]
+
+        c = c.execute('select %s from core_tags where file_key=?' % ','.join(self.core_tags), (self.file_id,))
+        row = c.fetchone()
+        for t in self.core_tags:
+            tags.append((0, t, row[t]))
 
         return tags
 
@@ -592,7 +395,7 @@ class SqliteCursor(CursorInterface):
             # step 3
             update_query = 'update current_set set position=(select r.rowid-1 from %s r where r.file_key=current_set.file_key) where exists (select * from %s r where r.file_key=current_set.file_key)' % (
                 TEMP_SORT_TABLE, TEMP_SORT_TABLE)
-            logging.debug(update_query)
+            self.logger.debug(update_query)
             self.con.execute(update_query)
 
 
@@ -601,6 +404,9 @@ class SqliteCursor(CursorInterface):
 ################################
 
 class SqliteDb(Entity):
+
+    logger = logging.getLogger(__name__)
+
     cancel_operation = False
     session = None
 
@@ -614,7 +420,7 @@ class SqliteDb(Entity):
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
 
-        self.functions = SqliteFunctions(self.session)
+        self.search_manager = SearchManager(self.session)
 
     def close_db(self):
         self.conn.close()
@@ -668,7 +474,8 @@ class SqliteDb(Entity):
                 'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
             self.conn.execute(
                 'create table file (id INTEGER PRIMARY KEY, repo_key int, name text)')
-            self.conn.execute('create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
+            self.conn.execute(
+                'create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
             self.conn.execute('create table tag (file_key int, category int, kind text, type int, value)')
             self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
@@ -769,14 +576,26 @@ class SqliteDb(Entity):
                 self.tick_progress()
 
             query_to_add = []
+            query_tag_to_add = []
             # add new ones
             for f in to_add:
                 if self.cancel_operation:
                     return
                 query_to_add.append((repo_id, f))
+                query_tag_to_add.append(
+                    (repo_id, f, os.path.getsize(f), os.path.getmtime(f), os.path.splitext(f)[1][1:], os.path.dirname(f)))
+
                 self.tick_progress()
 
             c.executemany('insert into file(repo_key, name) values(?,?)', query_to_add)
+
+            c.execute('create temporary table t1(repo int,file text,size int,cdate float,ext text, path text)')
+
+            c.executemany('insert into t1(repo,file,size,cdate,ext,path) values(?,?,?,?,?,?)', query_tag_to_add)
+            c.execute(
+                'insert into core_tags (file_key, path, size, file_date, ext) select f.rowid,t.path,t.size,t.cdate,t.ext from file f,t1 t where f.repo_key=t.repo and f.name=t.file')
+
+            c.execute('drop table t1')
             self.tick_progress()
             tags_to_add = []
             for f in to_add:
@@ -796,11 +615,15 @@ class SqliteDb(Entity):
 
             modified_file_ids = self._check_modified_files(repo_id, to_ignore=to_ignore)
             for file_id, filename in modified_file_ids:
+                c.execute('update core_tags set size=?,file_date=?,ext=?,path=? where file_key=?',
+                (os.path.getsize(filename), os.path.getmtime(filename), os.path.splitext(filename)[1][1:], os.path.dirname(filename),file_id))
+
                 tags_to_add = self.read_tags(file_id, filename)
 
                 c.executemany('update tag set value=?,type=? where file_key=? and category=0 and kind=?',
-                              [(tag[4], tag[3],tag[0], tag[2]) for tag in tags_to_add if tag[1] == 0])
-                c.executemany('insert or ignore into tag values (?,?,?,?,?)', [tag for tag in tags_to_add if tag[1] == 1])
+                              [(tag[4], tag[3], tag[0], tag[2]) for tag in tags_to_add if tag[1] == 0])
+                c.executemany('insert or ignore into tag values (?,?,?,?,?)',
+                              [tag for tag in tags_to_add if tag[1] == 1])
 
                 self.get_app().fire_event('on_file_content_change', file_id)
 
@@ -809,28 +632,17 @@ class SqliteDb(Entity):
 
         with self.conn:
             c = self.conn.execute(
-                'select f.id,f.name,t.kind,t.value from file f,tag t where repo_key=? and f.id=t.file_key and t.category=0 and t.kind in ("size","modification_date") order by f.id',
+                'select f.id,f.name,t.file_date,t.size from file f,core_tags t where repo_key=? and f.id=t.file_key order by f.id',
                 (repo_id,))
-            current_id = None
-            changed = None
-            for file_id, filename, kind, value in c.fetchall():
+
+            for file_id, filename, file_date, size in c.fetchall():
                 if file_id in to_ignore:
                     continue
 
-                if file_id != current_id:
-                    if current_id is not None and changed:
-                        result.append((file_id, filename))
-                    current_id = file_id
-                    changed = False
-
-                if kind == 'size':
-                    changed = changed or int(value) != os.path.getsize(filename)
-                elif kind == 'modification_date':
-                    changed = changed or not is_close(float(value), os.path.getmtime(filename), abs_tol=1e-05,
-                                                      rel_tol=0)
-
-            if current_id is not None and changed:
-                result.append((file_id, filename))
+                if int(size) != os.path.getsize(filename) or not is_close(float(file_date),
+                                                                          os.path.getmtime(filename),
+                                                                          abs_tol=1e-05, rel_tol=0):
+                    result.append((file_id, filename))
 
         return result
 
@@ -841,10 +653,6 @@ class SqliteDb(Entity):
         to_add.append((node_id, 0, 'width', 1, img.size[0]))
         to_add.append((node_id, 0, 'height', 1, img.size[1]))
         to_add.append((node_id, 0, 'format', 0, img.format))
-        to_add.append((node_id, 0, 'size', 1, os.path.getsize(name)))
-        to_add.append((node_id, 0, 'modification_date', 1, os.path.getmtime(name)))
-        to_add.append((node_id, 0, 'ext', 0, os.path.splitext(name)[1]))
-        to_add.append((node_id, 0, 'folder', 0, os.path.dirname(name)))
 
         if img.info:
             for i, v in img.info.iteritems():
@@ -905,63 +713,8 @@ class SqliteDb(Entity):
         if len(args) == 0:
             self.copy_set_to_current('*')
         else:
-            to_include = {}
-            to_exclude = {}
-
-            def add_criteria(criteria, category_list):
-                if criteria == ":" or criteria == "::":
-                    return
-
-                criterias = criteria.split(":")
-                if len(criterias) == 1:
-                    kind = "*"
-                    fn = "%" if "%" in criteria else "in"
-                    values = [criteria]
-                elif len(criterias) == 2:
-                    kind = criterias[0]
-                    fn = "%" if "%" in criteria else "in"
-                    values = criterias[1:]
-                else:
-                    kind = criterias[0]
-                    fn = criterias[1]
-                    values = criterias[2:]
-
-                if not kind == '*' and len(values) == 1 and (values[0] == "" or values[0] == "*"):
-                    fn = "any"
-                    values = None
-
-                if not category_list.has_key(kind):
-                    category_list[kind] = {}
-
-                self.functions.prepare_function(category_list, fn, kind, values)
-
-            for arg in args:
-                formated_arg = self.functions.render_text(arg)
-                if formated_arg[0] == "-":
-                    add_criteria(formated_arg[1:], to_exclude)
-                else:
-                    add_criteria(formated_arg, to_include)
-
-            subquery = ""
-            if len(to_include) > 0:
-                for kind in to_include:
-                    for fn in to_include[kind]:
-                        values = to_include[kind][fn]
-                        if subquery != "":
-                            subquery += " intersect "
-                        subquery += self.functions.render_function(fn, kind, values, False)
-            else:
-                subquery = 'select file_key from tag'
-
-            if len(to_exclude):
-                for kind in to_exclude:
-                    for fn in to_exclude[kind]:
-                        values = to_exclude[kind][fn]
-                        subquery += " except " + self.functions.render_function(fn, kind, values, True)
-
-            logging.debug(subquery)
-            print subquery
-            query = 'select f.id,f.name from file f where f.id in (' + subquery + ')'
+            query=self.search_manager.generate_search_query(*args)
+            self.logger.debug(query)
             self.regenerate_set(CURRENT_SET_NAME, query)
 
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
