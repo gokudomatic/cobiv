@@ -1,4 +1,9 @@
 import logging
+logging.basicConfig(level=logging.DEBUG)
+
+from cobiv.modules.database.sqlitedb.search.searchmanager import SearchManager
+
+
 import sqlite3
 import unittest
 from functools import partial
@@ -31,6 +36,9 @@ class TestApp(App):
 
 class SQLiteCursorTest(unittest.TestCase):
     def setUp(self):
+        # self.session = Session()
+        self.search_manager=SearchManager(None)
+
         self.conn = sqlite3.connect(':memory:', check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute('PRAGMA temp_store = MEMORY')
@@ -64,6 +72,8 @@ class SQLiteCursorTest(unittest.TestCase):
 
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
+
+
 
     def tearDown(self):
         self.conn.close()
@@ -130,7 +140,7 @@ class SQLiteCursorTest(unittest.TestCase):
             self.regenerate_set("default", query)
 
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
-        return SqliteCursor(row, self.conn)
+        return SqliteCursor(row=row, backend=self.conn,search_manager=self.search_manager)
 
     def add_files(self, amount):
         """Generates N items for testing purpose
@@ -901,6 +911,12 @@ class SQLiteCursorTest(unittest.TestCase):
         c.sort("-#idx")
         c.go_first()
         self.assertItemsEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
+
+        c.sort("file_date")
+
+        c.sort("file_date","-size")
+
+        c.sort("#file_date","size","abc")
 
         app.stop()
 

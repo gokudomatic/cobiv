@@ -12,12 +12,10 @@ from kivy.factory import Factory
 from cobiv.common import set_action
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import CursorInterface
-from cobiv.modules.database.sqlitedb.search.searchmanager import SearchManager
+from cobiv.modules.database.sqlitedb.search.searchmanager import SearchManager, TEMP_SORT_TABLE, TEMP_PRESORT_TABLE
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
-TEMP_SORT_TABLE = 'temp_sort_table'
-TEMP_PRESORT_TABLE = 'temp_presort_table'
 
 
 def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
@@ -40,9 +38,10 @@ class SqliteCursor(CursorInterface):
     """ SQLite connection instance """
     current_set = True
 
-    def __init__(self, row=None, backend=None, current=True):
+    def __init__(self, row=None, backend=None, current=True, search_manager=None):
         self.con = backend
         self.current_set = current
+        self.search_manager=search_manager
         self.init_row(row)
         self.thumbs_path = App.get_running_app().get_config_value('thumbnails.path')
 
@@ -65,7 +64,7 @@ class SqliteCursor(CursorInterface):
         :return:
             The new cursor
         """
-        new_cursor = SqliteCursor(backend=self.con, current=self.current_set)
+        new_cursor = SqliteCursor(backend=self.con, current=self.current_set,search_manager=self.search_manager)
         new_cursor.pos = self.pos
         new_cursor.set_head_key = self.set_head_key
         new_cursor.filename = self.filename
@@ -182,7 +181,7 @@ class SqliteCursor(CursorInterface):
         return True
 
     def get_cursor_by_pos(self, pos):
-        return SqliteCursor(self.get(pos), self.con)
+        return SqliteCursor(row=self.get(pos), backend=self.con,search_manager=self.search_manager)
 
     def get_thumbnail_filename(self, file_id):
         return os.path.join(self.thumbs_path, str(file_id) + '.png')
@@ -284,8 +283,9 @@ class SqliteCursor(CursorInterface):
 
         c = c.execute('select %s from core_tags where file_key=?' % ','.join(self.core_tags), (self.file_id,))
         row = c.fetchone()
-        for t in self.core_tags:
-            tags.append((0, t, row[t]))
+        if row is not None:
+            for t in self.core_tags:
+                tags.append((0, t, row[t]))
 
         return tags
 
@@ -363,33 +363,9 @@ class SqliteCursor(CursorInterface):
             c = self.con.execute('drop table if exists %s' % TEMP_SORT_TABLE)
             c.execute('drop table if exists %s' % TEMP_PRESORT_TABLE)
             # step 2
-            subqueries = ''
-            sql_fields = []
-            for field in fields:
-                if field.startswith('-'):
-                    kind, comparator = field[1:], 'min'
-                else:
-                    kind, comparator = field, 'max'
-
-                if kind.startswith('#'):
-                    is_number = True
-                    kind = kind[1:]
-                else:
-                    is_number = False
-
-                if kind != '*':
-                    subqueries += ', (select %s(%s) from tag where file_key=cs.file_key and kind="%s") as %s' % (
-                        comparator, 'CAST(value as INTEGER)' if is_number else 'value', kind, kind)
-                    template_field = ('CAST(%s as INTEGER)' if is_number else '%s') + ' desc' * field.startswith('-')
-                    sql_fields.append(template_field % kind)
-            query = 'create temporary table %s as select cs.file_key%s from current_set cs' % (
-                TEMP_PRESORT_TABLE, subqueries)
-            self.logger.debug(query)
+            # query=self.search_manager.generate_search_query(fields)
+            query,sort_query=self.search_manager.generate_sort_query(fields)
             c.execute(query)
-
-            sort_query = 'create temporary table %s as select file_key from %s order by %s ' % (
-                TEMP_SORT_TABLE, TEMP_PRESORT_TABLE, ','.join(sql_fields))
-            self.logger.debug(sort_query)
             c.execute(sort_query)
 
             # step 3
@@ -718,7 +694,7 @@ class SqliteDb(Entity):
             self.regenerate_set(CURRENT_SET_NAME, query)
 
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
-        self.session.cursor.set_implementation(None if row is None else SqliteCursor(row, self.conn))
+        self.session.cursor.set_implementation(None if row is None else SqliteCursor(row=row, backend=self.conn,search_manager=self.search_manager))
 
         self.execute_cmd("load-set")
 

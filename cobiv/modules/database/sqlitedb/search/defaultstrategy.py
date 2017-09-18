@@ -1,9 +1,10 @@
-import calendar,datetime, time
+import calendar, datetime, time
 
 from cobiv.modules.database.sqlitedb.search.abstractsearchstrategy import AbstractSearchStrategy
 
 
 class DefaultSearchStrategy(AbstractSearchStrategy):
+    tablename = "tag"
 
     def __init__(self):
         super(DefaultSearchStrategy, self).__init__()
@@ -29,34 +30,33 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
         if not lists.has_key('default'):
             return
 
-        to_include,to_exclude = lists['default']
+        to_include, to_exclude = lists['default']
 
         if len(to_include) > 0:
             for kind in to_include:
                 for fn in to_include[kind]:
                     values = to_include[kind][fn]
-                    subqueries.append((False,self.render_function(fn, kind, values, False)))
+                    subqueries.append((False, self.render_function(fn, kind, values, False)))
 
         if len(to_exclude):
             for kind in to_exclude:
                 for fn in to_exclude[kind]:
                     values = to_exclude[kind][fn]
-                    subqueries.append((True,self.render_function(fn, kind, values, True)))
+                    subqueries.append((True, self.render_function(fn, kind, values, True)))
 
-
-    def prepare(self, is_excluding,lists,kind,fn,values):
+    def prepare(self, is_excluding, lists, kind, fn, values):
 
         if not lists.has_key('default'):
             lists['default'] = ({}, {})
 
-        to_include,to_exclude = lists['default']
+        to_include, to_exclude = lists['default']
 
         self.prepare_function(to_exclude if is_excluding else to_include, fn, kind, values)
 
     def prepare_function(self, category_list, fn, kind, values):
         if self.operator_functions.has_key(fn):
             if not category_list.has_key(kind):
-                category_list[kind]={}
+                category_list[kind] = {}
             self.operator_functions[fn][0](category_list, fn, kind, values)
 
     def render_function(self, fn, kind, values, is_except):
@@ -75,10 +75,10 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
 
     def parse_partial(self, kind, values_set):
         result = ""
+        subquery = ""
         for value in values_set:
-            if len(result) > 0:
-                result += " or "
-            result += 'value like "%s"' % value
+            subquery += self.add_query(subquery, " or ", 'value like "%s"' % value)
+        result = "(%s)" % subquery
         if not kind == "*":
             result = result + ' and kind="%s"' % kind
         return result
@@ -123,9 +123,9 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
             subquery = ''
             for val_from in it:
                 val_to = it.next()
-                if len(subquery) > 0:
-                    subquery += ' or '
-                subquery += 'cast(value as float)>=%s and cast(value as integer)<=%s' % (val_from, val_to)
+                subquery += self.add_query(subquery, ' or ',
+                                           'cast(value as float)>=%s and cast(value as float)<=%s' % (
+                                               val_from, val_to))
             result += ' and (' + subquery + ')'
 
         return result
@@ -137,10 +137,8 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
             for value in values:
                 date_from = fn_from(value)
                 date_to = fn_to(value)
-                if len(subquery) > 0:
-                    subquery += ' or '
-                subquery += 'cast(value as float) between %s and %s' % (
-                    time.mktime(date_from.timetuple()), time.mktime(date_to.timetuple()))
+                subquery += self.add_query(subquery, ' or ', 'cast(value as float) between %s and %s' % (
+                    time.mktime(date_from.timetuple()), time.mktime(date_to.timetuple())))
         return result + " and (%s)" % subquery
 
     def parse_in_year(self, kind, sets_values):
@@ -170,6 +168,14 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
         query = ''
         joiner = ' except ' if is_except else ' intersect '
         for values in valueset:
-            query += joiner * (len(query) > 0)
-            query += "select file_key from tag where " + fn(kind, values)
+            query += self.add_query(query, joiner, "select file_key from tag where " + fn(kind, values))
         return query
+
+    def get_sort_field(self, kind, order, is_number):
+        comparator = 'min' if order else 'max'
+
+        return '(select %s(%s) from tag where file_key=current_set.file_key and kind="%s") as %s' % (
+        comparator, 'CAST(value as float)' if is_number else 'value', kind,kind)
+
+    def get_sort_query(self, kind, order, is_number):
+        return ('CAST(%s as float)' if is_number else '%s') % kind + ' desc' * order

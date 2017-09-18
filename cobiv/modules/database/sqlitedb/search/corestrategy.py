@@ -1,15 +1,22 @@
-import calendar,datetime,time
+import time
 
 from cobiv.modules.database.sqlitedb.search.defaultstrategy import DefaultSearchStrategy
 
 
 class CoreStrategy(DefaultSearchStrategy):
     tablename = "core_tags"
-    file_key_name = "file_key"
     fields = ['path', 'size', 'file_date', 'ext']
 
-    def __init__(self):
+    def __init__(self,**kwargs):
         super(CoreStrategy, self).__init__()
+
+        if kwargs.has_key('tablename'):
+            self.tablename=kwargs.get('tablename')
+        if kwargs.has_key('file_key'):
+            self.file_key_name=kwargs.get('file_key')
+        if kwargs.has_key('fields'):
+            self.fields=kwargs.get('fields')
+
         self.operator_functions = {
             'in': [self.prepare_in, self.parse_in, self.join_query_core_tags],
             '%': [self.prepare_in, self.parse_partial, self.join_query_core_tags],
@@ -36,25 +43,23 @@ class CoreStrategy(DefaultSearchStrategy):
 
         to_include, to_exclude = lists[self.tablename]
 
-        subquery=""
+        subquery = ""
 
         if len(to_include) > 0:
             for kind in to_include:
                 for fn in to_include[kind]:
                     values = to_include[kind][fn]
-                    if len(subquery)>0:
-                        subquery+=" and "
-                    subquery+=self.render_function(fn, kind, values, False)
+                    subquery += " and " * (len(subquery) > 0)
+                    subquery += self.render_function(fn, kind, values, False)
 
-        if len(to_exclude):
+        if len(to_exclude) > 0:
             for kind in to_exclude:
                 for fn in to_exclude[kind]:
                     values = to_exclude[kind][fn]
-                    if len(subquery)>0:
-                        subquery+=" and "
-                    subquery+="not "+self.render_function(fn, kind, values, True)
+                    subquery += " and " * (len(subquery) > 0)
+                    subquery += "not " + self.render_function(fn, kind, values, True)
 
-        subqueries.append((False, "select %s from %s where %s" % (self.file_key_name,self.tablename,subquery)))
+        subqueries.append((False, "select %s from %s where %s" % (self.file_key_name, self.tablename, subquery)))
 
     def is_managing_kind(self, kind):
         return kind in self.fields
@@ -65,19 +70,15 @@ class CoreStrategy(DefaultSearchStrategy):
         crit_list[kind][fn].append(values)
 
     def parse_in(self, kind, values_set):
-        result=""
+        result = ""
         for values in values_set:
-            if len(result)>0:
-                result+=" and "
-            result+='%s in ("%s")' % (kind, '", "'.join(values))
+            result += self.add_query(result, " and ", '%s in ("%s")' % (kind, '", "'.join(values)))
         return result
 
     def parse_partial(self, kind, values_set):
         result = ""
         for value in values_set:
-            if len(result) > 0:
-                result += " or "
-            result += '%s like "%s"' % (kind, value)
+            result += self.add_query(result, " or ", '%s like "%s"' % (kind, value))
         return result
 
     def parse_greater_than(self, kind, value):
@@ -99,12 +100,10 @@ class CoreStrategy(DefaultSearchStrategy):
             subquery = ''
             for val_from in it:
                 val_to = it.next()
-                if len(subquery) > 0:
-                    subquery += ' or '
-                subquery += 'cast(%s as float) between %s and %s' % (kind, val_from, val_to)
-            if len(result) > 0:
-                result += ' and '
-            result = '(%s)' % subquery
+                subquery += self.add_query(subquery, ' or ',
+                                           'cast(%s as float) between %s and %s' % (kind, val_from, val_to))
+
+            result += self.add_query(result, ' and ', '(%s)' % subquery)
 
         return result
 
@@ -114,11 +113,11 @@ class CoreStrategy(DefaultSearchStrategy):
             for value in values:
                 date_from = fn_from(value)
                 date_to = fn_to(value)
-                if len(subquery) > 0:
-                    subquery += ' or '
-                subquery += 'cast(%s as float) between %s and %s' % (kind,
-                                                                     time.mktime(date_from.timetuple()),
-                                                                     time.mktime(date_to.timetuple()))
+                subquery += self.add_query(subquery, ' or ', 'cast(%s as float) between %s and %s' % (kind,
+                                                                                                      time.mktime(
+                                                                                                          date_from.timetuple()),
+                                                                                                      time.mktime(
+                                                                                                          date_to.timetuple())))
         return "(%s)" % subquery
 
     # Joins
@@ -129,7 +128,13 @@ class CoreStrategy(DefaultSearchStrategy):
         query = ''
         joiner = ' or ' if is_except else ' and '
         for values in valueset:
-            query += joiner * (len(query) > 0)
-            query += fn(kind, values)
+            query += self.add_query(query, joiner, fn(kind, values))
 
-        return "%s (%s)" %("not" if is_except else "",query)
+        return "%s (%s)" % ("not" if is_except else "", query)
+
+    def get_sort_query(self, kind, order, is_number):
+        return kind + ' desc' * order
+
+    def get_sort_field(self, kind, order, is_number):
+        return kind
+
