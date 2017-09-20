@@ -10,6 +10,7 @@ from MainContainer import MainContainer
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.hud import Hud
 from cobiv.modules.core.view import View
+from cobiv.modules.database.datasources.datasource import Datasource
 from cobiv.modules.io.reader.tagreader import TagReader
 
 kivy.require('1.9.1')
@@ -29,7 +30,8 @@ class Cobiv(App):
             "View": View,
             "Entity": Entity,
             "Hud": Hud,
-            "TagReader": TagReader
+            "TagReader": TagReader,
+            "Datasource": Datasource
         })
 
         self.plugin_manager.locatePlugins()

@@ -1,5 +1,6 @@
 ? ''
-: database: {path: 'C:\Users\edwin\.cobiv\cobiv.db'}
+: version: 0.1
+sqlite: {url: 'C:\Users\edwin\.cobiv\cobiv.db'}
 browser:
   hotkeys:
   - {binding: up, key: '273'}
@@ -25,7 +26,7 @@ browser:
         parameters:
           text: |
                 Size: %{file_size()}%
-                Modified: %{modified_date()}%
+                Modified: %{file_date()}%
                 Format: %{file_format()}%
                 Dimension: %{image_size()}%
       - {class: SeparatorWidget}

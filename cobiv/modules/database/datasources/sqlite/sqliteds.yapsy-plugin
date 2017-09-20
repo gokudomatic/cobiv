@@ -1,0 +1,8 @@
+[Core]
+Name = sqlite_ds
+Module = Sqliteds
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = A Plugin to read crc hash from files and store it as a crc tag

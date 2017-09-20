@@ -52,7 +52,7 @@ class SearchManager(object):
 
         return is_excluding, kind, fn, values
 
-    def generate_search_query(self, args):
+    def generate_search_query(self, *args):
 
         container = {}
 

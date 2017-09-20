@@ -1,5 +1,4 @@
 from kivy.app import App
-from yapsy.IPlugin import IPlugin
 
 from cobiv.common import set_action, set_hotkey
 
@@ -77,3 +76,6 @@ class Component(object):
 
     def execute_cmd(self,cmd, force_default=False):
         self.get_app().root.execute_cmd(cmd,force_default=force_default)
+
+    def lookup(self,name,category):
+        return self.get_app().lookup(name,category)

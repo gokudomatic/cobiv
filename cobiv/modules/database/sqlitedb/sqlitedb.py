@@ -405,13 +405,8 @@ class SqliteDb(Entity):
         if not os.path.exists(self.get_app().get_user_path('thumbnails')):
             os.makedirs(self.get_app().get_user_path('thumbnails'))
 
-        self.conn = sqlite3.connect(
-            self.get_global_config_value('database.path', self.get_app().get_user_path('cobiv.db')),
-            check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
-
-        self.conn.execute('PRAGMA temp_store = MEMORY')
-        self.conn.execute('PRAGMA locking_mode = EXCLUSIVE')
+        self.conn =self.lookup('sqlite_ds','Datasource').get_connection()
+        self.search_manager = SearchManager(self.session)
 
         # add actions
         set_action("search", self.search_tag, "viewer")
@@ -722,12 +717,12 @@ class SqliteDb(Entity):
         self.session.cursor.invert_marked()
         self.execute_cmd("refresh-marked")
 
-    def build_yaml_config(self, config):
-        config[self.get_name()] = {
-            'database': {
-                'path': self.get_app().get_user_path('cobiv.db')
-            }
-        }
+    # def build_yaml_config(self, config):
+    #     config[self.get_name()] = {
+    #         'database': {
+    #             'path': self.get_app().get_user_path('cobiv.db')
+    #         }
+    #     }
 
     def reenumerate_current_set_positions(self):
         self.session.cursor.reenumerate_current_set_positions()
