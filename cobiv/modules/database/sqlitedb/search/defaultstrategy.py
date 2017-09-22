@@ -4,6 +4,12 @@ from cobiv.modules.database.sqlitedb.search.abstractsearchstrategy import Abstra
 
 
 class DefaultSearchStrategy(AbstractSearchStrategy):
+    """Default search strategy. It looks in the `tag` table, which supports a dynamic number of tags, usually for custom tags.
+        Since the table is structured vertically, where each kind of tag is an entry, the value of the tag can be either
+        a text or a numeric. Performance is sacrified in exchange of the flexibility. This strategy can handle any kind of tag
+        and it should be the last strategy to use when there aren't any other more performant strategy of a kind of tag.
+    """
+
     tablename = "tag"
 
     def __init__(self):

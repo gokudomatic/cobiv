@@ -1,6 +1,6 @@
 import logging
 
-from cobiv.modules.database.sqlitedb.search.corestrategy import CoreStrategy
+from cobiv.modules.database.sqlitedb.search.customtablestrategy import CustomTableStrategy
 from cobiv.modules.database.sqlitedb.search.defaultstrategy import DefaultSearchStrategy
 from cobiv.modules.database.sqlitedb.search.sqlitefunctions import SqliteFunctions
 from cobiv.libs.templite import Templite
@@ -22,32 +22,32 @@ class SearchManager(object):
         self.functions = SqliteFunctions(self.session)
 
         self.strategies = []
-        self.strategies.append(CoreStrategy())
+        self.strategies.append(CustomTableStrategy(tablename="core_tags",fields=['path', 'size', 'file_date', 'ext']))
         self.strategies.append(DefaultSearchStrategy())
 
     def render_text(self, original_text):
-        """
-            Parse a text with Templite and evaluate function calls in it.
+        """Parse a text with Templite and evaluate function calls in it.
+
         :param original_text: Text to parse
         :return: Parsed and evaluated text given in return by Templite
         """
         return Templite(original_text.replace("%{", "${write(").replace("}%", ")}$")).render(**self.functions.fields)
 
     def explode_criteria(self, criteria):
-        """
-        Explode the criteria in fields.
-        The criteria is expected to come in this format:
-            [kind:[function:]]arg1[:arg2:arg3:...:argN]
+        """Explode the criteria in fields.
+The criteria is expected to come in this format:
+    [kind:[function:]]arg1[:arg2:arg3:...:argN]
 
-        Since there is only one separator, the order of the options is:
-        #. arg1
-        #. kind:arg1
-        #. kind:function:arg1
-        #. kind:function:arg1:arg2:...:argN
+Since there is only one separator, the order of the options is:
+#. arg1
+#. kind:arg1
+#. kind:function:arg1
+#. kind:function:arg1:arg2:...:argN
 
-        By default:
-        * kind == *
-        * function == in
+By default:
+* kind == * (any kind)
+* function == in
+
         :param criteria: criteria to parse and explode
         :return: True if an exclusion, kind, function, list of arguments
         """
@@ -79,8 +79,8 @@ class SearchManager(object):
         return is_excluding, kind, fn, values
 
     def generate_search_query(self, *args):
-        """
-        Generate the SQL query based from the criteria given in parameter.
+        """Generate the SQL query based from the criteria given in parameter.
+
         :param args: list of criterias following the syntax of search queries.
         :return: sql query text.
         """
@@ -116,9 +116,9 @@ class SearchManager(object):
         return query
 
     def generate_sort_query(self, fields):
-        """
-        Generate the SQL queries for sorting the current set. There are 2 queries, one for building a temporary table
+        """Generate the SQL queries for sorting the current set. There are 2 queries, one for building a temporary table
         with all fields as columns, and one for building a temporary table of file key sorted by the first temp table.
+
         :param fields: list of fields to sort, following the format of sorting syntax.
         :return: query for the first temp table, query for the sorted temp table.
         """

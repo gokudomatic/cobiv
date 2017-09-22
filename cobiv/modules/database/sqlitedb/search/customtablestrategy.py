@@ -3,19 +3,22 @@ import time
 from cobiv.modules.database.sqlitedb.search.defaultstrategy import DefaultSearchStrategy
 
 
-class CoreStrategy(DefaultSearchStrategy):
-    tablename = "core_tags"
-    fields = ['path', 'size', 'file_date', 'ext']
+class CustomTableStrategy(DefaultSearchStrategy):
+    """Common search strategy for custom tables. Given a custom table with a least a file key column, the strategy maps
+    automatically all the specified fields of the table to be sortable and searchable"""
 
-    def __init__(self,**kwargs):
-        super(CoreStrategy, self).__init__()
+    def __init__(self,tablename,fields,file_key="file_key"):
+        """Constructor
 
-        if kwargs.has_key('tablename'):
-            self.tablename=kwargs.get('tablename')
-        if kwargs.has_key('file_key'):
-            self.file_key_name=kwargs.get('file_key')
-        if kwargs.has_key('fields'):
-            self.fields=kwargs.get('fields')
+        :param tablename: Name of the SQL table
+        :param fields: list of columns of the table to map as searchable and sortable
+        :param file_key: column name that is the foreign key to the file id
+        """
+        super(CustomTableStrategy, self).__init__()
+
+        self.tablename=tablename
+        self.file_key_name=file_key
+        self.fields=fields
 
         self.operator_functions = {
             'in': [self.prepare_in, self.parse_in, self.join_query_core_tags],
