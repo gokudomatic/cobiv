@@ -1,5 +1,9 @@
 import os
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+
 import kivy
 import yaml
 from kivy.app import App
@@ -21,6 +25,8 @@ Builder.load_file('main.kv')
 class Cobiv(App):
     root = None
     observers={}
+
+    logger = logging.getLogger(__name__)
 
     def __init__(self, **kwargs):
         super(Cobiv, self).__init__(**kwargs)
@@ -67,7 +73,7 @@ class Cobiv(App):
 
         for plugin in self.plugin_manager.getAllPlugins():
             plugin.plugin_object.ready()
-            print("plugin ready : "+str(plugin.plugin_object))
+            self.logger.debug("plugin ready : "+str(plugin.plugin_object))
 
         self.root.switch_view("browser")
 

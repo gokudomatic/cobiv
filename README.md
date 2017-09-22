@@ -69,8 +69,9 @@ You can exclude tags with the minus character "-". Example:
 :search show:ducktales -character:donald -mexico
 Which would return all pics about the show "Ducktales" without both the character Donald and being tagged mexico. 
 
-Tags are by default considered as alphabetic text. When sorting by a category of tag or when comparing tags with greater or lesser than a value, numbers will be considered as text rather than numbers. That leads to incoherent results, for instance where "2" is greater than "19". To avoid that problem, you can cast the criteria as number with the sharp character "#". Example:
-:search #zip:10118
+Tags are stored as text by default. When numbers are stored, they are also stored as text. There's however an automatic casting as number when using numeric comparators, which are > < <= >= and ><. For equality, text comparison is enough.
+For sorting, however, there is not automatic casting. To sort on a numeric tag, you must add sharp (#) in front of the category. Example:
+:sort #zip
 
 ### Comparators
 A tag can be searched with various comparators. The most common is the equality comparator, checking that the value is exactly the same in the criteria as in the tag value. But it is possible to compare partial text and numbers (including dates).

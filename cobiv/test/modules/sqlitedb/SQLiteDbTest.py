@@ -272,6 +272,9 @@ class SQLiteDbTest(unittest.TestCase):
         db.search_tag("height:81", "width:159")
         self.assertEqual(1, len(c))
 
+        db.search_tag("width:39")
+        self.assertEqual(1, len(c))
+
         # test same kind
         db.search_tag("height:159", "height:81")
         self.assertEqual(0, len(c))
@@ -446,6 +449,12 @@ class SQLiteDbTest(unittest.TestCase):
 
         db.search_tag("ext:jpg","file_date:YY:2017","-file_date:YM:201709","-size:<:1000")
         self.assertEqual(1, len(c))
+
+        db.search_tag("width:39")
+        self.assertEqual(3, len(c))
+
+        db.search_tag("width:<:40")
+        self.assertEqual(3, len(c))
 
         # mix core tags and custom tags
         db.search_tag()

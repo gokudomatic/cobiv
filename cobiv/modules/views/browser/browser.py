@@ -116,6 +116,7 @@ class Browser(View, FloatLayout):
         self.set_action("cut-marked", self.cut_marked)
         self.set_action("paste-marked", self.paste_marked)
         self.set_action("tg_sidebar", self.toggle_side_bar)
+        self.set_action("sort", self.sort)
 
     def get_name(self=None):
         return "browser"
@@ -731,7 +732,7 @@ class Browser(View, FloatLayout):
         current_pos = self.cursor.pos
 
         clipboard_size = self.cursor.get_clipboard_size()
-        to_load = min(clipboard_size, self.max_items() - self.cursor.pos + self.page_cursor.pos)
+        # to_load = min(clipboard_size, self.max_items() - self.cursor.pos + self.page_cursor.pos)
 
         pos_to_send = self.cursor.pos
 
@@ -747,33 +748,6 @@ class Browser(View, FloatLayout):
             self.cursor.go(current_pos, force=True)
         return
 
-
-        # if len(self.grid.children) == 0:
-        #     self.load_set()
-        #     return
-        #
-        # c1 = self.cursor.clone()
-        # c1.go(pos_to_send, force=True)
-        #
-        # next_ids = c1.get_next_ids(to_load, self_included=True)
-        # pos_to_insert = len(self.grid.children) - self.cursor.pos + self.page_cursor.pos
-        #
-        # for file_id, position, image_filename in next_ids:
-        #     thumb_filename = os.path.join(self.thumbs_path, str(file_id) + '.png')
-        #     thumb = self.thumb_loader.get_image(file_id, thumb_filename, image_filename)
-        #
-        #     item = Item(thumb=thumb, container=self,
-        #                 cell_size=self.cell_size, file_id=file_id, position=position, duration=0)
-        #
-        #     self.grid.add_widget(item, pos_to_insert)
-        #     if position == self.page_cursor.pos and file_id != self.page_cursor.file_id:
-        #         self.page_cursor.go(position, force=True)
-        #
-        # self.refresh_positions()
-        #
-        # self.cursor.go(self.cursor.pos, force=True)
-        # self._remove_recenter(0)
-
     def toggle_side_bar(self, value=None):
         if value is None:
             visibility = self.right_sidebar_size == 0
@@ -781,3 +755,8 @@ class Browser(View, FloatLayout):
             visibility = value
         self.right_sidebar_size = self.right_sidebar_full_size if visibility else 0
         self.on_size_change(None, 0)
+
+    def sort(self,*args):
+        if self.cursor is not None and len(args)>0:
+            self.cursor.sort(*args)
+            self.load_set()

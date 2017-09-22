@@ -21,6 +21,7 @@ CURRENT_SET_NAME = '_current'
 def is_close(a, b, rel_tol=1e-09, abs_tol=0.0):
     return abs(a - b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
+
 #################################################
 # Cursor
 #################################################
@@ -41,7 +42,7 @@ class SqliteCursor(CursorInterface):
     def __init__(self, row=None, backend=None, current=True, search_manager=None):
         self.con = backend
         self.current_set = current
-        self.search_manager=search_manager
+        self.search_manager = search_manager
         self.init_row(row)
         self.thumbs_path = App.get_running_app().get_config_value('thumbnails.path')
 
@@ -64,7 +65,7 @@ class SqliteCursor(CursorInterface):
         :return:
             The new cursor
         """
-        new_cursor = SqliteCursor(backend=self.con, current=self.current_set,search_manager=self.search_manager)
+        new_cursor = SqliteCursor(backend=self.con, current=self.current_set, search_manager=self.search_manager)
         new_cursor.pos = self.pos
         new_cursor.set_head_key = self.set_head_key
         new_cursor.filename = self.filename
@@ -181,7 +182,7 @@ class SqliteCursor(CursorInterface):
         return True
 
     def get_cursor_by_pos(self, pos):
-        return SqliteCursor(row=self.get(pos), backend=self.con,search_manager=self.search_manager)
+        return SqliteCursor(row=self.get(pos), backend=self.con, search_manager=self.search_manager)
 
     def get_thumbnail_filename(self, file_id):
         return os.path.join(self.thumbs_path, str(file_id) + '.png')
@@ -358,15 +359,15 @@ class SqliteCursor(CursorInterface):
 
     def sort(self, *fields):
         with self.con:
-
             # step 1
             c = self.con.execute('drop table if exists %s' % TEMP_SORT_TABLE)
             c.execute('drop table if exists %s' % TEMP_PRESORT_TABLE)
             # step 2
-            # query=self.search_manager.generate_search_query(fields)
-            query,sort_query=self.search_manager.generate_sort_query(fields)
+            query, sort_query = self.search_manager.generate_sort_query(fields)
             c.execute(query)
             c.execute(sort_query)
+
+            c.execute('create index temp_sort_index1 on %s(file_key)' % TEMP_SORT_TABLE)
 
             # step 3
             update_query = 'update current_set set position=(select r.rowid-1 from %s r where r.file_key=current_set.file_key) where exists (select * from %s r where r.file_key=current_set.file_key)' % (
@@ -380,7 +381,6 @@ class SqliteCursor(CursorInterface):
 ################################
 
 class SqliteDb(Entity):
-
     logger = logging.getLogger(__name__)
 
     cancel_operation = False
@@ -394,7 +394,7 @@ class SqliteDb(Entity):
         self.create_database(sameThread=True)
         with self.conn:
             self.conn.execute('create temporary table marked (file_key int)')
-            self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
+            self.conn.execute('create temporary table if not exists current_set as select * from set_detail where 1=2')
 
         self.search_manager = SearchManager(self.session)
 
@@ -405,7 +405,7 @@ class SqliteDb(Entity):
         if not os.path.exists(self.get_app().get_user_path('thumbnails')):
             os.makedirs(self.get_app().get_user_path('thumbnails'))
 
-        self.conn =self.lookup('sqlite_ds','Datasource').get_connection()
+        self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
         self.search_manager = SearchManager(self.session)
 
         # add actions
@@ -455,7 +455,7 @@ class SqliteDb(Entity):
             # indexes
             self.conn.execute('create unique index file_idx on file(name)')
             self.conn.execute('create index tag_idx1 on tag(file_key)')
-            self.conn.execute('create index tag_idx2 on tag(category,kind,value)')
+            self.conn.execute('create index tag_idx2 on tag(kind,value)')
             self.conn.execute('create index tag_idx3 on tag(value)')
             self.conn.execute('create unique index core_tags_idx1 on core_tags(file_key)')
             self.conn.execute('create unique index core_tags_idx2 on core_tags(path,size,file_date,ext)')
@@ -554,7 +554,8 @@ class SqliteDb(Entity):
                     return
                 query_to_add.append((repo_id, f))
                 query_tag_to_add.append(
-                    (repo_id, f, os.path.getsize(f), os.path.getmtime(f), os.path.splitext(f)[1][1:], os.path.dirname(f)))
+                    (repo_id, f, os.path.getsize(f), os.path.getmtime(f), os.path.splitext(f)[1][1:],
+                     os.path.dirname(f)))
 
                 self.tick_progress()
 
@@ -587,7 +588,8 @@ class SqliteDb(Entity):
             modified_file_ids = self._check_modified_files(repo_id, to_ignore=to_ignore)
             for file_id, filename in modified_file_ids:
                 c.execute('update core_tags set size=?,file_date=?,ext=?,path=? where file_key=?',
-                (os.path.getsize(filename), os.path.getmtime(filename), os.path.splitext(filename)[1][1:], os.path.dirname(filename),file_id))
+                          (os.path.getsize(filename), os.path.getmtime(filename), os.path.splitext(filename)[1][1:],
+                           os.path.dirname(filename), file_id))
 
                 tags_to_add = self.read_tags(file_id, filename)
 
@@ -621,8 +623,8 @@ class SqliteDb(Entity):
         to_add = []
         img = Image.open(name)
 
-        to_add.append((node_id, 0, 'width', 1, img.size[0]))
-        to_add.append((node_id, 0, 'height', 1, img.size[1]))
+        to_add.append((node_id, 0, 'width', 1, str(img.size[0])))
+        to_add.append((node_id, 0, 'height', 1, str(img.size[1])))
         to_add.append((node_id, 0, 'format', 0, img.format))
 
         if img.info:
@@ -645,9 +647,10 @@ class SqliteDb(Entity):
             c = self.conn.cursor()
 
             if is_current:
-                self.conn.execute('drop table if exists current_set') \
+                c.execute('drop table if exists current_set') \
                     .execute(
-                    'create temporary table current_set as select * from set_detail where 1=2')
+                    'create temporary table current_set as select * from set_detail where 1=2') \
+                    .execute('create index cs_index1 on current_set(file_key)')
                 head_key = 0
             else:
                 row = c.execute('select id from set_head where name=?', (set_name,)).fetchone()
@@ -675,21 +678,21 @@ class SqliteDb(Entity):
 
     def copy_set_to_current(self, set_name):
         with self.conn:
-            self.conn.execute('drop table if exists current_set') \
-                .execute(
+            c = self.conn.execute('drop table if exists current_set').execute(
                 'create temporary table current_set as select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? order by d.position',
-                set_name)
+                set_name).execute('create index cs_index1 on current_set(file_key)')
 
     def search_tag(self, *args):
         if len(args) == 0:
             self.copy_set_to_current('*')
         else:
-            query=self.search_manager.generate_search_query(*args)
+            query = self.search_manager.generate_search_query(*args)
             self.logger.debug(query)
             self.regenerate_set(CURRENT_SET_NAME, query)
 
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
-        self.session.cursor.set_implementation(None if row is None else SqliteCursor(row=row, backend=self.conn,search_manager=self.search_manager))
+        self.session.cursor.set_implementation(
+            None if row is None else SqliteCursor(row=row, backend=self.conn, search_manager=self.search_manager))
 
         self.execute_cmd("load-set")
 
@@ -716,13 +719,6 @@ class SqliteDb(Entity):
     def invert_marked(self):
         self.session.cursor.invert_marked()
         self.execute_cmd("refresh-marked")
-
-    # def build_yaml_config(self, config):
-    #     config[self.get_name()] = {
-    #         'database': {
-    #             'path': self.get_app().get_user_path('cobiv.db')
-    #         }
-    #     }
 
     def reenumerate_current_set_positions(self):
         self.session.cursor.reenumerate_current_set_positions()
