@@ -358,6 +358,10 @@ class SqliteCursor(CursorInterface):
         return 0 if row is None else row[0]
 
     def sort(self, *fields):
+        """
+            Sort the current set with various criteria
+        :param fields: list of sort criteria
+        """
         with self.con:
             # step 1
             c = self.con.execute('drop table if exists %s' % TEMP_SORT_TABLE)

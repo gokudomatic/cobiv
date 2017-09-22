@@ -8,7 +8,11 @@ from cobiv.libs.templite import Templite
 TEMP_SORT_TABLE = 'temp_sort_table'
 TEMP_PRESORT_TABLE = 'temp_presort_table'
 
+
 class SearchManager(object):
+    """
+        Class for generating SQL queries to search and sort in the Sqlite database.
+    """
     logger = logging.getLogger(__name__)
 
     def __init__(self, session):
@@ -22,9 +26,31 @@ class SearchManager(object):
         self.strategies.append(DefaultSearchStrategy())
 
     def render_text(self, original_text):
+        """
+            Parse a text with Templite and evaluate function calls in it.
+        :param original_text: Text to parse
+        :return: Parsed and evaluated text given in return by Templite
+        """
         return Templite(original_text.replace("%{", "${write(").replace("}%", ")}$")).render(**self.functions.fields)
 
     def explode_criteria(self, criteria):
+        """
+        Explode the criteria in fields.
+        The criteria is expected to come in this format:
+            [kind:[function:]]arg1[:arg2:arg3:...:argN]
+
+        Since there is only one separator, the order of the options is:
+        #. arg1
+        #. kind:arg1
+        #. kind:function:arg1
+        #. kind:function:arg1:arg2:...:argN
+
+        By default:
+        * kind == *
+        * function == in
+        :param criteria: criteria to parse and explode
+        :return: True if an exclusion, kind, function, list of arguments
+        """
         if criteria == ":" or criteria == "::":
             return None
 
@@ -53,7 +79,11 @@ class SearchManager(object):
         return is_excluding, kind, fn, values
 
     def generate_search_query(self, *args):
-
+        """
+        Generate the SQL query based from the criteria given in parameter.
+        :param args: list of criterias following the syntax of search queries.
+        :return: sql query text.
+        """
         container = {}
 
         for arg in args:
@@ -86,14 +116,20 @@ class SearchManager(object):
         return query
 
     def generate_sort_query(self, fields):
+        """
+        Generate the SQL queries for sorting the current set. There are 2 queries, one for building a temporary table
+        with all fields as columns, and one for building a temporary table of file key sorted by the first temp table.
+        :param fields: list of fields to sort, following the format of sorting syntax.
+        :return: query for the first temp table, query for the sorted temp table.
+        """
         sql_fields = ["current_set.file_key"]
         sql_sort = []
-        sql_tables=[("current_set","file_key")]
-        checked_tablenames=set()
+        sql_tables = [("current_set", "file_key")]
+        checked_tablenames = set()
 
         for field in fields:
 
-            order=field.startswith('-')
+            order = field.startswith('-')
             kind = field[1:] if order else field
 
             if kind.startswith('#'):
@@ -109,27 +145,27 @@ class SearchManager(object):
                 if strategy.is_managing_kind(kind):
                     if strategy.tablename not in checked_tablenames:
                         checked_tablenames.add(strategy.tablename)
-                        sql_tables.append((strategy.tablename,strategy.file_key_name))
-                    sql_fields.append(strategy.get_sort_field(kind,order,is_number))
-                    sql_sort.append(strategy.get_sort_query(kind,order,is_number))
+                        sql_tables.append((strategy.tablename, strategy.file_key_name))
+                    sql_fields.append(strategy.get_sort_field(kind, order, is_number))
+                    sql_sort.append(strategy.get_sort_query(kind, order, is_number))
                     break
 
-        ref_table,ref_col=sql_tables[0]
-        join_query=ref_table
-        if len(sql_tables)>1:
-            for tablename,colname in sql_tables[1:]:
-                join_query+=" inner join %s on %s.%s=%s.%s" % (tablename,tablename,colname,ref_table,ref_col)
+        ref_table, ref_col = sql_tables[0]
+        join_query = ref_table
+        if len(sql_tables) > 1:
+            for tablename, colname in sql_tables[1:]:
+                join_query += " inner join %s on %s.%s=%s.%s" % (tablename, tablename, colname, ref_table, ref_col)
 
         query = 'create temporary table %s as select %s from %s' % (
-            TEMP_PRESORT_TABLE, ', '.join(sql_fields),join_query)
+            TEMP_PRESORT_TABLE, ', '.join(sql_fields), join_query)
 
-        if len(sql_sort)>0:
+        if len(sql_sort) > 0:
             sort_query = 'create temporary table %s as select file_key from %s order by %s ' % (
                 TEMP_SORT_TABLE, TEMP_PRESORT_TABLE, ','.join(sql_sort))
         else:
             sort_query = 'create temporary table %s as select file_key from %s' % (
                 TEMP_SORT_TABLE, TEMP_PRESORT_TABLE)
 
-        self.logger.debug("query : "+query)
-        self.logger.debug("sort query : "+sort_query)
+        self.logger.debug("query : " + query)
+        self.logger.debug("sort query : " + sort_query)
         return query, sort_query
