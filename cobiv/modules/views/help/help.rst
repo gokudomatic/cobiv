@@ -1,32 +1,169 @@
-Cobiv
-=====
+====================================
+COBIV - COnsole Based Image Viewer
+====================================
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam sed augue arcu. Duis ultricies lectus vitae pretium posuere. Suspendisse eget purus lacinia, tincidunt purus in, maximus lectus. Proin eu aliquam dui. Donec dignissim sed orci in bibendum. In sodales sem eu elit tempus, eget imperdiet odio mollis. Morbi interdum ac magna eu feugiat. Nam semper diam eu nibh molestie eleifend. Quisque in mauris felis. Maecenas fermentum magna neque, id dignissim odio vulputate eu.
+::
 
-Quisque eget nisl scelerisque, aliquam odio et, sollicitudin ante. Cras congue feugiat quam, at rutrum erat blandit eu. Maecenas commodo rutrum enim consequat sollicitudin. Morbi in finibus augue. Phasellus porta est vel massa volutpat lacinia. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris eu sapien diam. Fusce eget scelerisque massa, in laoreet dui. Nulla at vulputate ante, ac blandit justo. Maecenas orci neque, finibus et aliquet non, elementum in turpis. Integer tempus felis nec placerat congue. Suspendisse arcu elit, aliquam nec ultrices non, sagittis feugiat felis. Donec interdum lectus dui, quis finibus nunc elementum in. Etiam pellentesque sem tortor, eu placerat est sodales quis.
+  Version 0.0.1 alpha
+  by Edwin Cox
+  Cobiv is open source under MIT license and freely distributable
 
-Aenean nec leo et orci dapibus tincidunt ut non justo. Praesent in scelerisque diam. Donec hendrerit non diam non aliquet. In hac habitasse platea dictumst. Cras fringilla magna erat, quis tempor massa accumsan luctus. Etiam finibus egestas nisi, facilisis congue magna sollicitudin ut. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 
-Pellentesque non sapien nunc. Nullam nisi ligula, iaculis et lacus pellentesque, interdum imperdiet tortor. Aenean facilisis luctus dolor, at auctor sem mollis sed. Ut vestibulum non lacus placerat placerat. Praesent fringilla orci nibh, nec faucibus sapien iaculis vitae. Mauris et lectus vehicula, venenatis elit et, euismod nisi. Nullam enim orci, pellentesque at turpis at, dapibus dapibus felis. Donec dapibus congue lacinia. Donec et urna nec elit varius hendrerit. In sodales massa est, non malesuada nulla pharetra et.
+========================== ====================================
+**Type**                   **Action**
+-------------------------- ------------------------------------
+*<up arrow>*               to scroll up
+*<down arrow>*             to scroll down
+:q *<Enter>*               to exit
+:help *<Enter>*            for on-line info
+:switch-view {view-name}   to switch to a specific view
+/{search query} *<Enter>*  start a search with the given query
+========================== ====================================
 
-Sed venenatis, elit vel iaculis congue, libero purus faucibus sem, at tincidunt augue sapien vel massa. Aliquam consectetur arcu congue, pulvinar ipsum vitae, ultricies neque. Nunc vel dolor augue. Cras pharetra odio non nibh rutrum ullamcorper. Vivamus metus est, efficitur vel pellentesque eu, auctor at ex. Sed ut tempor sem. Integer sollicitudin magna id metus luctus consequat. Duis tempus ullamcorper imperdiet. Pellentesque ultrices urna eu nunc sagittis luctus et id sapien. Maecenas molestie egestas velit, eu consequat lectus molestie in.
+:Notes: Any text in <...> are keyboard keys. *<Enter>* is the enter key.
 
-Ut facilisis ipsum sit amet ipsum convallis luctus. In ultrices nisl vitae tincidunt congue. Nulla id aliquam ex. Aliquam elit lacus, imperdiet vel convallis a, faucibus eu nisl. Curabitur porttitor ex et justo tincidunt placerat. Nullam ornare pretium turpis. Aliquam blandit libero eget fringilla vestibulum.
+    Texts in {...} are custom parameters to be entered by the user. The characters { and } must not be entered.
 
-Pellentesque sit amet velit neque. Pellentesque vel ultricies enim. Quisque porta dignissim mi, in pellentesque augue elementum eget. Integer in diam sed ligula sodales facilisis eu in dui. Donec vehicula tempus tellus, non lobortis velit gravida eu. Proin orci purus, molestie vel neque et, facilisis pretium velit. Etiam ut enim lacus. In hac habitasse platea dictumst. Phasellus eget auctor urna. Morbi vel sem eget elit vehicula pellentesque. Cras ornare tellus eu sem mattis, in laoreet nibh elementum. Maecenas velit diam, pulvinar at posuere ut, eleifend ut tellus. Praesent eu magna sollicitudin, bibendum odio sed, bibendum augue. Nunc sed faucibus augue, vel fringilla diam. Quisque felis lorem, semper id dui quis, porta laoreet magna. Aenean id suscipit nisi, id tempor ex.
+Quickstart
+----------
 
-Sed ut auctor ante. Sed rhoncus, nibh sed vehicula semper, nulla ante suscipit mauris, nec dapibus justo ex et sapien. Vivamus pellentesque placerat metus, in consectetur ligula eleifend sit amet. Aliquam id hendrerit lectus. Mauris aliquam ex sed lorem venenatis tristique. Suspendisse at enim lacinia, varius orci eget, luctus diam. Sed tellus purus, rutrum et quam in, dapibus tincidunt lectus. Praesent scelerisque sollicitudin egestas. Nulla convallis sollicitudin nulla in mattis. Integer varius egestas tincidunt. Pellentesque leo tortor, efficitur id odio non, tempor maximus nunc. Sed convallis scelerisque blandit. Mauris quis mauris nibh.
 
-Duis eu ante lacus. Curabitur gravida ut felis ultrices commodo. Vivamus consectetur finibus lectus sit amet interdum. Nulla turpis lacus, lacinia et tortor sit amet, pulvinar tempus lacus. Curabitur lacus eros, tempus eu ante id, elementum maximus justo. Morbi pulvinar convallis pulvinar. Donec tempor turpis convallis velit posuere placerat. Sed sagittis facilisis augue, ac convallis neque. Quisque nec lorem erat. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam felis nunc, sagittis ac condimentum non, sollicitudin ac est. Suspendisse dapibus a neque ac imperdiet. Aliquam leo est, rhoncus eget aliquet a, tincidunt id velit.
+Introduction
+------------
+Cobiv is a digital asset manager (DAM) mostly focused on organizing and retrieving images.
+It is written in Python with Kivy, and therefore it can run on any platform that supports Python and OpenGL.
 
-Aliquam sodales nisl nec tellus imperdiet, sit amet gravida mauris pellentesque. Nunc non nisi at sapien bibendum ultricies eget non nisi. Interdum et malesuada fames ac ante ipsum primis in faucibus. Cras vitae urna velit. Suspendisse finibus, ipsum vel rutrum auctor, magna nisi venenatis ex, pharetra elementum urna magna sed lacus. Cras molestie quam interdum, consequat ligula nec, fringilla elit. Nunc ultrices, nunc ac vestibulum sollicitudin, ex diam commodo lorem, non mollis massa tellus eu lorem.
+Cobiv is heavily inspired by the in-terminal text editor VI. Even though VI is a command line based editor, Cobiv runs
+on its own window. But it shares the concept of executing commands by typing them, which provides scripting features and
+the ability to command Cobiv with a mere keyboard (a mouse is not required). Thanks to the framework Kivy, Cobiv also
+features touch screen support, and by extension also mouse support. The main target platforms of Cobiv are desktop computers
+and laptops with touch screen.
 
-Vestibulum cursus ac nulla fringilla pulvinar. Suspendisse non lectus lectus. Donec aliquet ante ut augue mattis aliquet ut semper ex. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Donec imperdiet ipsum eget vehicula tempor. Maecenas ultricies suscipit ultricies. Suspendisse tincidunt faucibus fermentum. Mauris felis urna, rhoncus volutpat congue vitae, iaculis eget elit. Nunc vel mauris vulputate, feugiat ipsum eu, mollis nisi.
+Like in VI, the main idea of this application is speed and modularity. The user interface is not meant to be easy to learn
+but it focuses more on simplicity and efficiency. Its integrated plugin system allows to add or replace features on every
+level of the application. The idea behind that is to give the ability to customize at will Cobiv for the user's particular needs.
+Therefore the core of the application is meant to be lightweight and very extensible with plugins written in Python.
 
-Phasellus varius, eros id faucibus blandit, erat arcu mollis nibh, in mattis massa dolor a nisi. Cras lobortis turpis sit amet odio facilisis tristique. Aenean eros orci, ultricies at orci vel, condimentum luctus dolor. Etiam nunc tellus, congue a libero in, auctor semper massa. Curabitur eget enim eu metus auctor imperdiet vel euismod nibh. Integer dui magna, rutrum eu sollicitudin in, venenatis eget est. Nulla semper velit vitae metus tincidunt molestie. Curabitur efficitur nunc et tortor tincidunt lobortis. Pellentesque eu molestie risus, quis fermentum purus. Duis ornare sem non dui accumsan suscipit. Nullam sit amet ante vitae est faucibus gravida. Ut pharetra nisi ligula, eu finibus urna ultrices sed. Quisque pulvinar ultricies enim non efficitur. Nullam id mauris id mauris aliquet porttitor id ac purus.
+The default plugins for image management are also meant to be basic but very performing in their task, which are:
 
-Morbi vitae fringilla eros. Cras dictum placerat purus sit amet egestas. Nunc sed metus id quam rutrum viverra. Cras tincidunt, enim in bibendum sodales, leo justo viverra lacus, eu semper nisl neque ut ante. In sit amet augue magna. Fusce in mauris ut magna mollis eleifend eu in lacus. Integer nec viverra sem. Etiam eu ornare diam, vitae rutrum magna. Mauris fermentum scelerisque ligula eu vestibulum. Nunc volutpat blandit lacinia. Maecenas ut leo fermentum, malesuada mauris et, commodo erat. In hac habitasse platea dictumst. Vestibulum vestibulum ex at nibh laoreet, ultrices blandit elit tempor. Sed elementum dignissim felis et blandit. Donec euismod tempor lacus ut ultricies. Suspendisse posuere vehicula velit, vitae malesuada mauris porta pharetra.
+* Handle very large sets of images, up to million files.
+* Advanced fast search images by tags, including functions and comparators.
+* Sort by multiple tags.
+* Customizable user interface.
+* Mass tagging.
 
-Mauris ac efficitur dolor. Aliquam erat volutpat. Suspendisse nec sem ultrices, molestie diam nec, pulvinar orci. Nulla mollis ligula vitae enim pulvinar, id sodales nisi vehicula. Proin quam ipsum, suscipit a placerat id, suscipit nec metus. Aenean vel ex eget orci laoreet porta. Pellentesque eu laoreet eros. Nunc cursus, nunc a commodo rutrum, diam arcu viverra neque, nec suscipit felis neque a urna. Aliquam turpis tortor, placerat non felis cursus, ornare dignissim est. Morbi sed lobortis justo. Quisque commodo porttitor ornare. Vivamus luctus nisi vel facilisis sodales. Maecenas et nulla malesuada, bibendum est venenatis, sagittis erat.
+For performance, SQLite is used as the main engine for both tagging and search. It is possible to change it with another
+database for better performances via plugins. This allows fast search on even low end laptops and netbooks.
 
-Cras non posuere odio. Morbi auctor mattis orci in congue. Phasellus vehicula dui sit amet leo hendrerit, at convallis metus volutpat. Suspendisse ut dictum est, et viverra tortor. Etiam vel malesuada sapien. Aliquam nec rhoncus augue, a egestas turpis. Maecenas orci nunc, ultrices a magna in, fringilla blandit libero. Donec neque augue, luctus vel dapibus sed, efficitur bibendum dolor. Sed vel dolor tincidunt, lobortis turpis ut, volutpat elit. Proin accumsan, enim sit amet rhoncus commodo, orci ex dictum orci, in dignissim libero leo imperdiet sem. Nulla facilisi. Sed rhoncus tellus maximus dolor lacinia ultricies ac vel dolor.
+Overview
+--------
+Cobiv being a modular program, it is composed of a core and plugins. The core is the overall layout, with a command bar
+and overlays, but except for that it only take care of background tasks, configuration and the plugin loader.
+
+:Views:
+        The most important type of plugin is the view. It is like a mini application and it defines what's on screen. This help
+        screen is a view that display a formated text. The image viewer, which display one image at a time, is another view.
+        The thumbnail browser is yet another kind of view. Each view has its own implementation and it can be pretty much anything
+        visual. From an image editor to a video player, or even a torrent downloader or a spreadsheet application, as long as
+        it's possible to do it in Kivy, it can be implemented as plugin in Cobiv.
+
+:HUD:
+        Hud plugins are visual widgets that can be added on top of the current view or in the overlays.
+
+:I/O:
+        This plugin are file readers or writers. It can be image file formats, like TIFF or PCX, or streams on an internet url.
+        In the default image viewer plugins, they are mostly used to define which tags to read or write.
+
+:Database:
+        Since Cobiv uses a database to speed up the search and index, it is possible to configure connectors for new kinds
+        of databases. Whether it is another SQL compatible database, a NoSQL database or a mere file based database,
+        as long as the interfaces for it are implemented, Cobiv can use it. Performance is very depend of the quality of
+        implementation and the inherent speed of the database engine behind.
+
+:Entities:
+        Every other kinds of plugin that are Python data structures or tools.
+
+Thumbnail Browser plugin
+---------------
+
+
+Image Viewer plugin
+--------------
+
+Searching images
+----------------
+To search images, the command is:
+
+::
+
+    :search criteria1 [criteria2 criteria3 ... criteriaN]
+
+where a criteria syntax is:
+
+::
+
+    [-][kind:[fn:]]arg1[:arg2:arg3:...:argN]
+
+:arg1..N: keywords in tags to search. Only the first one is required.
+:kind:    kind of tag to delimite the search. By default it's *, which means all kinds.
+:fn:      Comparator function to use. The possible functions are :
+
+    - in  : search in tags that are one of the keywords of the list. Only tags with exact match are returned.
+    - %   : partial text search. Text must also contain the character % to tell where it should try all possibilities.
+    - <   : numeric comparator of lesser than arg1. The field is considered as a float.
+    - <=  : numeric comparator of lesser or equals than arg1. The field is considered as a float.
+    - >   : numeric comparator of greater than arg1. The field is considered as a float.
+    - >=  : numeric comparator of greater or equals than arg1. The field is considered as a float.
+    - ><  : numeric comparator of between arg1 and arg2. The field is considered as a float.
+    - YY  : date comparator of within year. Args must be years in 4 digits (YYYY).
+    - YM  : date comparator of within year and month. Args must be years in 4 digits and month in 2 digits (YYYYMM).
+    - YMD : date comparator of within year, month and day. Args must be years in 4 digits, months in 2 digits and days in 2 digits (YYYYMMDD).
+
+The general rule for multiple arguments is as follow. The query is divided in groups by space. Each group is required.
+The boolean operator for groups is AND.
+
+Within a group, each argument is separated by the character : and the boolean operator for arguments is OR.
+
+Therefore a query that looks like :
+::
+
+    arg1:arg2:arg3 argA argB:argC
+
+will be translated as :
+::
+
+    (arg1 or arg2 or arg3) and argA and (argB or argC)
+
+:Note: kinds of tag, also known as categories, can be anything, even information of the file or the image, like its size or dimension.
+    Some pre-etablished kinds that are sure to be always present, like the file modification date or the file size, are stored in
+    a separate table than the custom tags. They can be searched the same way as any other kind of tag. But for performance's
+    sake the search on any kind of tag (*) won't search in those special tags. The kind must be specified in order to search
+    in those special kinds of tags.
+
+**Examples :**
+::
+
+    Searching any image tagged mountain
+    :search mountain
+
+    Searching any image tagged cat in kind pet and which was dated from 2015 :
+    :search pet:cat file_date:YY:2015
+
+    Searching any image tagged either john or peter but also with any tag starting with Samant
+    :search john:peter *:%:Samant%
+
+    Searching any image whose dimensions are 800x600 or less
+    :search width:<=:800 height:<=:600
+
+    Searching a combination of multiple kinds of tags, as an icon of 32x32 with 16 bits color, dated in januar 2017, extension is either ico or bmp, and tagged outlook.
+    :search width:32 height:32 color_dept:16 file_date:YM:201701 outlook ext:ico:bmp
+
+Sorting images
+--------------
+
+
+Functions
+---------
+
+Tagging
+-------

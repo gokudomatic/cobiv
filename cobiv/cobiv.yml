@@ -44,6 +44,7 @@ browser:
     height: 30
 
 main:
+  startview: help
   hotkeys:
   - {binding: q, key: '113'}
   - {binding: fullscreen, key: '292'}
@@ -66,3 +67,7 @@ viewer:
   - {binding: zoom-out, key: '57'}
   - {binding: switch-view browser, key: '13'}
 repository: C:\Users\edwin\Pictures\nums
+help:
+  hotkeys:
+  - {binding: up, key: '273'}
+  - {binding: down, key: '274'}

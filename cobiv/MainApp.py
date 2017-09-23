@@ -75,7 +75,7 @@ class Cobiv(App):
             plugin.plugin_object.ready()
             self.logger.debug("plugin ready : "+str(plugin.plugin_object))
 
-        self.root.switch_view("browser")
+        self.root.switch_view(self.get_config_value('startview','help'))
 
         self.root.ready()
 

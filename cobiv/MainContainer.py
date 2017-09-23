@@ -1,4 +1,4 @@
-import shlex
+import shlex, logging
 
 import sys
 from kivy.app import App
@@ -13,6 +13,8 @@ this = sys.modules[__name__]
 
 
 class MainContainer(FloatLayout):
+    logger = logging.getLogger(__name__)
+
     cmd_input = ObjectProperty(None)
     current_view = ObjectProperty(None)
     hud_layout = ObjectProperty(None)
@@ -49,7 +51,6 @@ class MainContainer(FloatLayout):
         print(str(process.memory_info().rss / float(2 ** 20)) + " MB")
 
     def switch_view(self, view_name):
-        # print "switch to "+view_name
         if len(self.current_view.children) > 0:
             self.current_view.children[0].on_switch_lose_focus()
 
@@ -87,7 +88,7 @@ class MainContainer(FloatLayout):
                 self._set_cmd_visible(True, "/")
             elif cmd_hotkeys.has_key(keycode[0]) and not self.is_enter_command:
                 if keycode[0] == 13L:
-                    print("enter pressed")
+                    self.logger.info("enter pressed")
                 view_name = self.get_view_name()
                 command = get_hotkey_command(keycode[0], modcode, view_name)
                 if command:
@@ -98,7 +99,7 @@ class MainContainer(FloatLayout):
                         self.execute_cmd(command)
             else:
                 if keycode[0] != 13L:
-                    print("code : " + str(keycode) + " " + str(modifiers))
+                    self.logger.info("code : " + str(keycode) + " " + str(modifiers))
                 pass
 
             self.is_enter_command = False
