@@ -15,7 +15,7 @@ from cobiv.modules.database.sqlitedb.sqlitedb import SqliteDb
 
 
 class TestMainWidget(Widget):
-    def execute_cmd(self, *args, **kwargs):
+    def execute_cmds(self, *args, **kwargs):
         pass
 
     def show_progressbar(self, *args, **kwargs):

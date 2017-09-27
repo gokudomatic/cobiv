@@ -24,10 +24,6 @@ COBIV - COnsole Based Image Viewer
 
     Texts in {...} are custom parameters to be entered by the user. The characters { and } must not be entered.
 
-Quickstart
-----------
-
-
 Introduction
 ------------
 Cobiv is a digital asset manager (DAM) mostly focused on organizing and retrieving images.
@@ -84,11 +80,15 @@ and overlays, but except for that it only take care of background tasks, configu
         Every other kinds of plugin that are Python data structures or tools.
 
 Thumbnail Browser plugin
----------------
+-------------------------
 
 
 Image Viewer plugin
---------------
+-------------------
+
+Image sets and current set
+--------------------------
+
 
 Searching images
 ----------------
@@ -124,15 +124,17 @@ The boolean operator for groups is AND.
 
 Within a group, each argument is separated by the character : and the boolean operator for arguments is OR.
 
+If a criteria starts with the minus character - , it will be considered as an exclusion. Boolean operator is NOT.
+
 Therefore a query that looks like :
 ::
 
-    arg1:arg2:arg3 argA argB:argC
+    arg1:arg2:arg3 argA argB:argC -arg5 -argD:argE
 
 will be translated as :
 ::
 
-    (arg1 or arg2 or arg3) and argA and (argB or argC)
+    (arg1 or arg2 or arg3) and argA and (argB or argC) and not arg5 and not (argD or argE)
 
 :Note: kinds of tag, also known as categories, can be anything, even information of the file or the image, like its size or dimension.
     Some pre-etablished kinds that are sure to be always present, like the file modification date or the file size, are stored in
@@ -160,10 +162,53 @@ will be translated as :
 
 Sorting images
 --------------
+To sort images, the command is :
+::
 
+    :sort [-][#]arg1 [[-][#]arg2 ... [-][#]argN]
 
-Functions
----------
+:arg1..N: kind of tag to sort on, first takes priority.
+:-: sort descending instead of ascending
+:#: force cast tag as number instead of text. It helps preventing problems where 2 is considered as larger than 19 when sorting by text. Not needed for special kinds, as it is automatically casted.
+
+:Notes: Only the current set can be sorted.
+
+**Examples :**
+::
+
+    Sort by date and then by filename:
+    :sort file_date filename
+
+    Sort by file size desc
+    :sort -size
+
+    Sort by custom kind1 as text and custom kind2 as number
+    :sort kind1 #kind2
+
+Search Functions
+----------------
+In addition of the comparator functions, there are a list of functions that gather data, like the current date
+or the current select image, or transform data, like get the year of a date or
+
+List of default functions:
+
+==================== ============
+**Name**             **Description**
+-------------------- ------------
+NOW()                get current timestamp
+TODAY()              get timestamp of current day, with time at midnight
+MKDATE(str)          create a date timestamp from a string of format YYYYMMDD
+ADD_DATE(type,value) add or remove days from a timestamp. If value is positive, it's adding. If value is negative, it's substracting.
+                     Possible types: Y for years, M for months and D for days.
+CURRENT_FILENAME()   get the filename of the current selected image.
+CURRENT_FILEDATE()   get the file date of the current selected image.
+CURRENT(kind)        get the tag(s) of the current selected image for a given kind of tag.
+==================== ============
+
 
 Tagging
 -------
+
+
+Configuration
+-------------

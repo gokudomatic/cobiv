@@ -75,7 +75,7 @@ class Component(object):
         self.get_app().root.notify(message, is_error=is_error)
 
     def execute_cmd(self,cmd, force_default=False):
-        self.get_app().root.execute_cmd(cmd,force_default=force_default)
+        self.get_app().root.execute_cmds(cmd,force_default=force_default)
 
     def lookup(self,name,category):
         return self.get_app().lookup(name,category)

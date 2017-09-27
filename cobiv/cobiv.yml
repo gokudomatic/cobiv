@@ -48,6 +48,7 @@ main:
   hotkeys:
   - {binding: q, key: '113'}
   - {binding: fullscreen, key: '292'}
+  - {binding: set-command search, key: '167'}
 thumbloader:
   path: 'C:\Users\edwin\.cobiv\thumbnails'
   image_size: 120
@@ -71,3 +72,7 @@ help:
   hotkeys:
   - {binding: up, key: '273'}
   - {binding: down, key: '274'}
+aliases:
+  b: switch-view browser
+  v: switch-view viewer
+  h: switch-view help

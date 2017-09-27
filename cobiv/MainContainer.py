@@ -21,6 +21,8 @@ class MainContainer(FloatLayout):
     modal_hud_layout = ObjectProperty(None)
     notification_hud_layout = ObjectProperty(None)
 
+    aliases = {}
+
     cmd_visible = True
 
     is_enter_command = False
@@ -39,6 +41,7 @@ class MainContainer(FloatLayout):
         set_action("switch-view", self.switch_view)
         set_action("hello", self.hello)
         set_action("memory", self.memory)
+        set_action("set-command", self.set_command)
 
     def ready(self):
         # self.execute_cmd("search")
@@ -84,19 +87,17 @@ class MainContainer(FloatLayout):
                 self._toggle_cmd(":")
             elif keycode[0] == 304:
                 pass
-            elif keycode[0] == 267:
-                self._set_cmd_visible(True, "/")
             elif cmd_hotkeys.has_key(keycode[0]) and not self.is_enter_command:
                 if keycode[0] == 13L:
                     self.logger.info("enter pressed")
                 view_name = self.get_view_name()
                 command = get_hotkey_command(keycode[0], modcode, view_name)
                 if command:
-                    self.execute_cmd(command)
+                    self.execute_cmds(command)
                 else:
                     command = get_hotkey_command(keycode[0], modcode)
                     if command:
-                        self.execute_cmd(command)
+                        self.execute_cmds(command)
             else:
                 if keycode[0] != 13L:
                     self.logger.info("code : " + str(keycode) + " " + str(modifiers))
@@ -146,20 +147,48 @@ class MainContainer(FloatLayout):
     def on_enter_cmd(self, text):
         self.is_enter_command = True
         if text[0] == ":":
-            self.execute_cmd(text[1:])
+            self.execute_cmds(text[1:])
 
-    def execute_cmd(self, command, force_default=False):
+    def execute_cmds(self, command, force_default=False, recursive_iteration=0):
+
+        lines = command.split('|')
+        for line in lines:
+            self.execute_cmd(line.strip(), recursive_iteration=recursive_iteration + 1, force_default=force_default)
+
+    def execute_cmd(self, command, recursive_iteration, force_default=False):
+        if recursive_iteration>100:
+            return
+
         line = shlex.split(command)
         action = line[0]
         args = line[1:]
-        if cmd_actions.has_key(action):
+
+        found_cmd = cmd_actions.has_key(action)
+        if not found_cmd and self.aliases.has_key(action):
+            alias_action = action
+            alias_command = self.aliases[alias_action]
+
+            new_command = alias_command + command[len(action):]
+            self.execute_cmds(new_command, recursive_iteration=recursive_iteration + 1, force_default=force_default)
+
+            # action=self.aliases[alias_action][0]
+            # default_args = self.aliases[alias_action][1:]
+            # found_cmd = cmd_actions.has_key(action)
+            # if default_args is not None and len(default_args)>0:
+            #     default_args.extend(args)
+            #     args=default_args
+
+        elif found_cmd:
             list_func = cmd_actions[action]
             profile_name = "default"
             if not force_default and list_func.has_key(self.get_view_name()):
                 profile_name = self.get_view_name()
             if list_func.has_key(profile_name):
                 func = list_func[profile_name]
-                func(*args)
+                try:
+                    func(*args)
+                except TypeError as err:
+                    self.logger.error("The number of arguments for action "+action+" ("+profile_name+") is not right : " + str(err))
 
     def quit(self, *args):
         if len(self.current_view.children) > 0:
@@ -205,12 +234,21 @@ class MainContainer(FloatLayout):
             for hotkey_config in config['main'].get('hotkeys', []):
                 set_hotkey(long(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0))
 
+        if config.has_key('aliases'):
+            aliases = config['aliases']
+            for alias in aliases:
+                self.aliases[alias] = aliases[alias]
+
     def build_yaml_main_config(self):
         return {
             'main': {
                 'hotkeys': [
                     {'key': '113', 'binding': 'q'},
+                    {'key': '167', 'binding': 'set-command search'},
                     {'key': '292', 'binding': 'fullscreen'}
                 ]
             }
         }
+
+    def set_command(self, *args):
+        self._toggle_cmd(":" + " ".join(args) + " ")
