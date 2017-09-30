@@ -295,25 +295,25 @@ class Browser(View, FloatLayout):
 
         self.image_queue.clear()
         idx = 0
-        for id_file, position, filename in list_ids:
+        for id_file, position, filename, repo_key in list_ids:
             if idx < max_count:
-                self.thumb_loader.append((id_file, filename))
+                self.thumb_loader.append((id_file, filename, repo_key))
                 thumb_filename = os.path.join(self.thumb_loader.thumb_path, str(id_file) + '.png')
-                self.image_queue.append((thumb_filename, id_file, position, filename))
+                self.image_queue.append((thumb_filename, id_file, position, filename, repo_key))
             else:
-                self.thumb_loader.append((id_file, filename))
+                self.thumb_loader.append((id_file, filename, repo_key))
 
             idx += 1
 
         if len(list_ids) < max_count:
-            self.image_queue.append((None, None, "eol", None))
+            self.image_queue.append((None, None, "eol", None, None))
         if idx > 0:
             self.reset_progress()
             self.do_next_action()
 
-    def get_image(self, file_id, filename, image_full_path):
+    def get_image(self, file_id, filename, image_full_path, repo_key):
         if not os.path.exists(filename):
-            self.thumb_loader.append((file_id, image_full_path))
+            self.thumb_loader.append((file_id, image_full_path, repo_key))
         name = self.thumb_loader.get_filename_caption(image_full_path)
         img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
         thumb = Thumb(image=img, cell_size=self.thumb_loader.cell_size, caption=name, selected=False)
@@ -325,14 +325,14 @@ class Browser(View, FloatLayout):
             marked_list = self.page_cursor.get_all_marked()
 
             for i in range(queue_len):
-                thumb_filename, file_id, pos, image_filename = self.image_queue.popleft()
+                thumb_filename, file_id, pos, image_filename, repo_key = self.image_queue.popleft()
 
                 if pos == "eol":
                     e = EOLItem(cell_size=self.cell_size, container=self)
                     self.grid.add_widget(e)
                 else:
 
-                    thumb = self.get_image(file_id, thumb_filename, image_filename)
+                    thumb = self.get_image(file_id, thumb_filename, image_filename, repo_key)
 
                     item = Item(thumb=thumb, container=self,
                                 cell_size=self.cell_size, file_id=file_id, position=pos, duration=0)
@@ -502,16 +502,16 @@ class Browser(View, FloatLayout):
                 list_id = c.get_previous_ids(to_cache)
 
             idx = 0
-            for id_file, position, filename in list_id:
+            for id_file, position, filename, repo_key in list_id:
                 if idx < to_load:
                     thumb_filename = os.path.join(self.thumb_loader.thumb_path, str(id_file) + '.png')
-                    self.image_queue.append((thumb_filename, id_file, position, filename))
+                    self.image_queue.append((thumb_filename, id_file, position, filename,repo_key))
                 else:
-                    self.thumb_loader.append((id_file, filename))
+                    self.thumb_loader.append((id_file, filename,repo_key))
                 idx += 1
 
             if do_add_eol:
-                self.image_queue.append((None, None, "eol", None))
+                self.image_queue.append((None, None, "eol", None, None))
 
         if len(self.image_queue) > 0:
             self.pending_actions.append(self._load_process)

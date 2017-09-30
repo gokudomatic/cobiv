@@ -1,5 +1,5 @@
 import logging
-import os
+import io,os
 import sys
 import threading
 import time
@@ -26,6 +26,7 @@ class ThumbLoader(Entity):
         self.cell_size = 120
         self.thumb_path = None
         self.queue_empty = True
+        self.session = self.lookup("session", "Entity")
 
     def ready(self):
         super(ThumbLoader, self).ready()
@@ -63,11 +64,11 @@ class ThumbLoader(Entity):
             while self.thread_alive:
                 if not self.queue_empty:
                     try:
-                        file_id, filename = self.to_cache.popleft()
+                        file_id, filename, repo_key = self.to_cache.popleft()
 
                         thumb_filename = self.get_fullpath_from_file_id(file_id)
                         if not os.path.exists(thumb_filename):
-                            self.create_thumbnail_data(filename, self.cell_size, thumb_filename)
+                            self.create_thumbnail_data(repo_key, filename, self.cell_size, thumb_filename)
                     except IndexError:
                         self.queue_empty = True
                     time.sleep(0.5)
@@ -96,9 +97,12 @@ class ThumbLoader(Entity):
             except WindowsError:
                 pass
 
-    def create_thumbnail_data(self, filename, size, destination):
+    def create_thumbnail_data(self, repo_key, filename, size, destination):
         self.logger.debug("creating thumbnail for " + filename)
-        img = Image.open(filename)
+
+        file_fs=self.session.get_filesystem(repo_key)
+        data=file_fs.getbytes(filename)
+        img = Image.open(io.BytesIO(data))
         try:
             img.load()
         except SyntaxError as e:

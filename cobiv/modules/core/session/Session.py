@@ -15,8 +15,10 @@ class CoreVariables:
         session.fields['file_format'] = self.get_image_format
         session.fields['file_date'] = self.get_file_date
         session.fields['filename'] = lambda: self.session.cursor.filename
-        session.fields['currentset_position'] = lambda: (self.session.cursor.pos+1) if self.session.cursor.pos is not None else "0"
-        session.fields['currentset_count'] = lambda: len(self.session.cursor) if self.session.cursor.pos is not None else "0"
+        session.fields['currentset_position'] = lambda: (
+        self.session.cursor.pos + 1) if self.session.cursor.pos is not None else "0"
+        session.fields['currentset_count'] = lambda: len(
+            self.session.cursor) if self.session.cursor.pos is not None else "0"
 
     def get_simple_field(self, category, field_name, formatter=None):
         if self.session.cursor.file_id is None:
@@ -67,6 +69,8 @@ class Session(Entity):
 
     fields = {}
 
+    active_fs = {}
+
     def __init__(self):
         self.cursor = Cursor()
         CoreVariables(self)
@@ -81,3 +85,9 @@ class Session(Entity):
 
     def fill_text_fields(self, original_text):
         return Templite(original_text.replace("%{", "${write(").replace("}%", ")}$")).render(**self.fields)
+
+    def get_filesystem(self, key):
+        return self.active_fs[key]
+
+    def add_filesystem(self, key, filesystem):
+        self.active_fs[key] = filesystem

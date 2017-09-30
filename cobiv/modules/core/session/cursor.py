@@ -5,6 +5,7 @@ from kivy.properties import StringProperty, NumericProperty, ObjectProperty
 
 class CursorInterface(EventDispatcher):
     filename = StringProperty(None, allownone=True)
+    repo_key = NumericProperty(None, allownone=True)
     pos = NumericProperty(None, allownone=True)
     file_id = NumericProperty(None, allownone=True)
 
@@ -198,6 +199,7 @@ class EOLCursor(CursorInterface):
 
 class Cursor(EventDispatcher):
     filename = StringProperty(None, allownone=True)
+    repo_key = NumericProperty(None, allownone=True)
     implementation = None
     pos = NumericProperty(None, allownone=True)
     file_id = NumericProperty(None, allownone=True)
@@ -213,12 +215,14 @@ class Cursor(EventDispatcher):
         if self.implementation is not None:
             new_cursor.implementation = self.implementation.clone()
             new_cursor.implementation.bind(filename=new_cursor.on_filename_change)
+            new_cursor.implementation.bind(repo_key=new_cursor.on_repo_key_change)
             new_cursor.implementation.bind(file_id=new_cursor.on_file_id_change)
             new_cursor.implementation.bind(pos=new_cursor.on_pos_change)
 
         new_cursor.pos = self.pos
         new_cursor.file_id = self.file_id
         new_cursor.filename = self.filename
+        new_cursor.repo_key = self.repo_key
         new_cursor.eol_implementation = self.eol_implementation
         new_cursor.tags = self.tags
         return new_cursor
@@ -236,10 +240,11 @@ class Cursor(EventDispatcher):
 
         if self.implementation is not None:
             self.implementation.unbind(filename=self.on_filename_change, file_id=self.on_file_id_change,
-                                       pos=self.on_pos_change)
+                                       pos=self.on_pos_change,repo_key=self.on_repo_key_change)
         self.implementation = instance
         if instance == self.eol_implementation:
             self.filename = None
+            self.repo_key = None
             self.file_id = None
             self.pos = self.eol_implementation.pos
             self.implementation.bind(pos=self.on_pos_change)
@@ -253,12 +258,15 @@ class Cursor(EventDispatcher):
             self.implementation.bind(filename=self.on_filename_change)
             self.implementation.bind(file_id=self.on_file_id_change)
             self.implementation.bind(pos=self.on_pos_change)
+            self.implementation.bind(repo_key=self.on_repo_key_change)
             self.pos = self.implementation.pos
             self.filename = self.implementation.filename
+            self.repo_key=self.implementation.repo_key
             self.file_id = self.implementation.file_id
         else:
             self.set_eol_implementation(None)
             self.filename = None
+            self.repo_key = None
             self.file_id = None
             self.pos = None
 
@@ -276,6 +284,9 @@ class Cursor(EventDispatcher):
 
     def on_filename_change(self, instance, value):
         self.filename = value
+
+    def on_repo_key_change(self, instance ,value):
+        self.repo_key = value
 
     def on_file_id_change(self, instance, value):
         self.tags = None
@@ -353,6 +364,19 @@ class Cursor(EventDispatcher):
                     self.tags[int(cat)][kind]=[]
                 self.tags[int(cat)][kind].append(value)
         return self.tags
+
+    def get_tag(self,category,kind):
+        if self.implementation is None:
+            return []
+
+        if self.tags is None:
+            self.get_tags()
+
+        if self.tags[category].has_key(kind):
+            return self.tags[category][kind]
+        else:
+            return []
+
 
     def mark(self, value=None):
         self.implementation.mark(value)

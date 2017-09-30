@@ -67,7 +67,6 @@ viewer:
   - {binding: zoom-in, key: '48'}
   - {binding: zoom-out, key: '57'}
   - {binding: switch-view browser, key: '13'}
-repository: C:\Users\edwin\Pictures\nums
 help:
   hotkeys:
   - {binding: up, key: '273'}
@@ -76,3 +75,5 @@ aliases:
   b: switch-view browser
   v: switch-view viewer
   h: switch-view help
+repositories:
+  - osfs://C:/Users/edwin/Pictures/nums
