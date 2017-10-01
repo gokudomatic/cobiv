@@ -28,6 +28,9 @@ class TestMainWidget(GridLayout):
         else:
             pass
 
+    def execute_cmds(self,*args,**kwargs):
+        return self.execute_cmd(*args,**kwargs)
+
     def show_progressbar(self, *args, **kwargs):
         pass
 
@@ -41,13 +44,11 @@ class TestMainWidget(GridLayout):
         self.browser = instance
         self.add_widget(instance)
 
+
 class MockThumbloader(Entity):
-
-
-
     def __init__(self):
         super(MockThumbloader, self).__init__()
-        self.thumb_path=os.path.join(expanduser('~'), '.cobiv', 'thumbnails')
+        self.thumb_path = os.path.join(expanduser('~'), '.cobiv', 'thumbnails')
         self.cell_size = 120
 
     def stop(self):
@@ -75,7 +76,6 @@ class MockThumbloader(Entity):
         pass
 
 
-
 class TestApp(App):
     session = None
 
@@ -83,7 +83,7 @@ class TestApp(App):
         super(TestApp, self).__init__(**kwargs)
         self.configuration = {
             'thumbnails.path': '',
-            'repository': 'images',
+            'repositories': ['osfs://images'],
             'thumbnails.path': self.get_user_path('thumbs')
         }
 
@@ -107,8 +107,9 @@ class TestApp(App):
         else:
             return None
 
-    def lookups(self,category):
+    def lookups(self, category):
         return []
+
 
 class BrowserTest(unittest.TestCase):
     def setUp(self):
@@ -121,8 +122,7 @@ class BrowserTest(unittest.TestCase):
         app.session = Session()
 
         db = SqliteDb()
-        db.init_test_db()
-        db.session = app.session
+        db.init_test_db(app.session)
 
         b = Browser()
 
@@ -165,7 +165,7 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(27, len(b.image_queue))
 
         for i in range(27):
-            self.assertEqual("images\\%04d.jpg" % (i + 1,), b.image_queue[i][3])
+            self.assertEqual("/%04d.jpg" % (i + 1,), b.image_queue[i][3])
         Clock.tick()
 
         self.assertEqual(len(b.grid.children), 27)
@@ -296,7 +296,7 @@ class BrowserTest(unittest.TestCase):
         b.select_next(0)
         b.select_custom(cursor.pos)
         self.assertEqual(1, cursor.pos)
-        self.assertEqual("images\\0002.jpg", cursor.filename)
+        self.assertEqual("/0002.jpg", cursor.filename)
         self.assertEqual(0, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
 
@@ -304,7 +304,7 @@ class BrowserTest(unittest.TestCase):
         b.select_custom(8)
         Clock.tick()
         self.assertEqual(8, cursor.pos)
-        self.assertEqual("images\\0009.jpg", cursor.filename)
+        self.assertEqual("/0009.jpg", cursor.filename)
         self.assertEqual(0, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
 
@@ -312,7 +312,7 @@ class BrowserTest(unittest.TestCase):
         b.select_custom(25)
         Clock.tick()
         self.assertEqual(25, cursor.pos)
-        self.assertEqual("images\\0026.jpg", cursor.filename)
+        self.assertEqual("/0026.jpg", cursor.filename)
         self.assertEqual(3, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
 
@@ -322,7 +322,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(70, cursor.pos)
-        self.assertEqual("images\\0071.jpg", cursor.filename)
+        self.assertEqual("/0071.jpg", cursor.filename)
         self.assertEqual(len(b.grid.children), 27)
         self.assertEqual(54, b.page_cursor.pos)
 
@@ -331,10 +331,9 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(69, cursor.pos)
-        self.assertEqual("images\\0070.jpg", cursor.filename)
+        self.assertEqual("/0070.jpg", cursor.filename)
         self.assertEqual(54, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
-
 
         # go multiple times
         b.select_custom(5)
@@ -353,7 +352,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
 
         self.assertEqual(80, cursor.pos)
-        self.assertEqual("images\\0081.jpg", cursor.filename)
+        self.assertEqual("/0081.jpg", cursor.filename)
         self.assertEqual(66, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
 
@@ -369,7 +368,7 @@ class BrowserTest(unittest.TestCase):
             b.select_first()
             Clock.tick()
         self.assertEqual(0, cursor.pos)
-        self.assertEqual("images\\0001.jpg", cursor.filename)
+        self.assertEqual("/0001.jpg", cursor.filename)
         self.assertEqual(0, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
 
@@ -380,7 +379,7 @@ class BrowserTest(unittest.TestCase):
             Clock.tick()
 
             self.assertEqual(0, cursor.pos)
-            self.assertEqual("images\\0001.jpg", cursor.filename)
+            self.assertEqual("/0001.jpg", cursor.filename)
             self.assertEqual(0, b.page_cursor.pos)
             self.assertEqual(len(b.grid.children), 27)
 
@@ -396,7 +395,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(0, cursor.pos)
-        self.assertEqual("images\\0001.jpg", cursor.filename)
+        self.assertEqual("/0001.jpg", cursor.filename)
         self.assertEqual(0, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
 
@@ -406,7 +405,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(99, cursor.pos)
-        self.assertEqual("images\\0100.jpg", cursor.filename)
+        self.assertEqual("/0100.jpg", cursor.filename)
         self.assertEqual(75, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 26)
 
@@ -414,14 +413,14 @@ class BrowserTest(unittest.TestCase):
         b.select_previous(0)
         b.select_previous(0)
         self.assertEqual(96, cursor.pos)
-        self.assertEqual("images\\0097.jpg", cursor.filename)
+        self.assertEqual("/0097.jpg", cursor.filename)
         self.assertEqual(75, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 26)
         Clock.tick()
         b.select_last()
         Clock.tick()
         self.assertEqual(99, cursor.pos)
-        self.assertEqual("images\\0100.jpg", cursor.filename)
+        self.assertEqual("/0100.jpg", cursor.filename)
         self.assertEqual(75, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 26)
 
@@ -455,7 +454,7 @@ class BrowserTest(unittest.TestCase):
         b.select_previous(0)
         Clock.tick()
         self.assertEqual(99, cursor.pos)
-        self.assertEqual("images\\0100.jpg", cursor.filename)
+        self.assertEqual("/0100.jpg", cursor.filename)
         self.assertFalse(cursor.is_eol())
         self.assertEqual(75, b.page_cursor.pos)
 
@@ -468,7 +467,7 @@ class BrowserTest(unittest.TestCase):
         b.select_up(0)
         Clock.tick()
         self.assertEqual(97, cursor.pos)
-        self.assertEqual("images\\0098.jpg", cursor.filename)
+        self.assertEqual("/0098.jpg", cursor.filename)
         self.assertFalse(cursor.is_eol())
         self.assertEqual(75, b.page_cursor.pos)
 
@@ -483,7 +482,7 @@ class BrowserTest(unittest.TestCase):
         b.select_last()
         Clock.tick()
         self.assertEqual(99, cursor.pos)
-        self.assertEqual("images\\0100.jpg", cursor.filename)
+        self.assertEqual("/0100.jpg", cursor.filename)
         self.assertEqual(75, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 26)
 
@@ -496,7 +495,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(0, cursor.pos)
-        self.assertEqual("images\\0001.jpg", cursor.filename)
+        self.assertEqual("/0001.jpg", cursor.filename)
         self.assertEqual(0, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
 
@@ -514,7 +513,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(50, cursor.pos)
-        self.assertEqual("images\\0051.jpg", cursor.filename)
+        self.assertEqual("/0051.jpg", cursor.filename)
         self.assertEqual(36, b.page_cursor.pos)
         self.assertEqual(len(b.grid.children), 27)
 
@@ -662,26 +661,26 @@ class BrowserTest(unittest.TestCase):
         # test direct cut
         # # one
         cut(cut_one, 2)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(28) if i != 4])
-        self.assertEqual("images\\0001.jpg", b.page_cursor.filename)
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(28) if i != 4])
+        self.assertEqual("/0001.jpg", b.page_cursor.filename)
 
         cut(cut_one)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(28) if i != 4])
-        self.assertEqual("images\\0001.jpg", b.page_cursor.filename)
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(28) if i != 4])
+        self.assertEqual("/0001.jpg", b.page_cursor.filename)
 
         # # row
         cut(cut_row, 0)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(30) if i not in range(6, 9)])
-        self.assertEqual("images\\0001.jpg", b.page_cursor.filename)
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(30) if i not in range(6, 9)])
+        self.assertEqual("/0001.jpg", b.page_cursor.filename)
 
         cut(cut_row)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(30) if i not in range(6, 9)])
-        self.assertEqual("images\\0001.jpg", b.page_cursor.filename)
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(30) if i not in range(6, 9)])
+        self.assertEqual("/0001.jpg", b.page_cursor.filename)
 
         # # page
         cut(cut_page, 0)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(27, 27 * 2)])
-        self.assertEqual("images\\0028.jpg", b.page_cursor.filename)
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(27, 27 * 2)])
+        self.assertEqual("/0028.jpg", b.page_cursor.filename)
 
         # test load more
         # # one
@@ -692,7 +691,7 @@ class BrowserTest(unittest.TestCase):
             b.select_up(0)
             Clock.tick()
         self.assertEqual(0, b.page_cursor.pos)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(28) if i != 4])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(28) if i != 4])
 
         # # row
         cut(cut_row, 38)
@@ -701,7 +700,7 @@ class BrowserTest(unittest.TestCase):
             b.select_up(0)
             Clock.tick()
         self.assertEqual(0, b.page_cursor.pos)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(30) if i not in range(6, 9)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(30) if i not in range(6, 9)])
 
         # # page
         cut(cut_page, 69)
@@ -712,7 +711,7 @@ class BrowserTest(unittest.TestCase):
             b.select_up(0)
             Clock.tick()
         self.assertEqual(0, b.page_cursor.pos)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(27, 27 * 2)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(27, 27 * 2)])
 
         # test load set
         # # one
@@ -721,7 +720,7 @@ class BrowserTest(unittest.TestCase):
         sleep(0.1)
         Clock.tick()
         Clock.tick()
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(28) if i != 4])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(28) if i != 4])
 
         # # row
         cut(cut_row, 38)
@@ -729,7 +728,7 @@ class BrowserTest(unittest.TestCase):
         sleep(0.1)
         Clock.tick()
         Clock.tick()
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(30) if i not in range(6, 9)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(30) if i not in range(6, 9)])
 
         # # page
         cut(cut_page, 69)
@@ -737,7 +736,7 @@ class BrowserTest(unittest.TestCase):
         sleep(0.1)
         Clock.tick()
         Clock.tick()
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(27, 27 * 2)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(27, 27 * 2)])
 
         app.stop()
 
@@ -768,7 +767,7 @@ class BrowserTest(unittest.TestCase):
 
         def cut_first(qty):
             self.proceed_search(db)
-            self.assertEqual('images\\0001.jpg', cursor.filename)
+            self.assertEqual('/0001.jpg', cursor.filename)
             for i in range(qty):
                 b.mark_current()
                 b.select_next(0)
@@ -782,7 +781,7 @@ class BrowserTest(unittest.TestCase):
             sleep(0.1)
             Clock.tick()
             Clock.tick()
-            self.assertEqual('images\\0100.jpg', cursor.filename)
+            self.assertEqual('/0100.jpg', cursor.filename)
             self.assertEqual(26, len(b.grid.children))
             for i in range(qty):
                 b.mark_current()
@@ -799,7 +798,7 @@ class BrowserTest(unittest.TestCase):
             sleep(0.1)
             Clock.tick()
             Clock.tick()
-            self.assertEqual('images\\0100.jpg', cursor.filename)
+            self.assertEqual('/0100.jpg', cursor.filename)
             self.assertEqual(26, len(b.grid.children))
             for i in range(qty):
                 b.mark_current()
@@ -817,24 +816,24 @@ class BrowserTest(unittest.TestCase):
         c1 = cursor.clone()
         c1.go_first()
         self.assertEqual(c1.file_id, b.page_cursor.file_id)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(1, 1 + 27)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(1, 1 + 27)])
 
         cut_first(3)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(3, 3 + 27)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(3, 3 + 27)])
 
         # test last
         cut_last(1)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(75, 99)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(75, 99)])
 
         cut_last(3)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(72, 97)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(72, 97)])
 
         # test eol
         cut_eol(1)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(75, 99)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(75, 99)])
 
         cut_eol(3)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(72, 97)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(72, 97)])
 
         # # test some navigation after cut
         self.assertEqual(97, cursor.pos)
@@ -918,8 +917,8 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(27, len(b.grid.children))
         self.assertEqual(70, cursor.pos)
         self.assertEqual(54, b.page_cursor.pos)
-        self.assertEqual("images\\%04d.jpg" % (71,), cursor.filename)
-        self.assertEqual("images\\%04d.jpg" % (55,), b.page_cursor.filename)
+        self.assertEqual("/%04d.jpg" % (71,), cursor.filename)
+        self.assertEqual("/%04d.jpg" % (55,), b.page_cursor.filename)
         self.assertEqual(cursor.file_id, b.grid.children[10].file_id)
         self.assertEqual(b.page_cursor.file_id, b.grid.children[-1].file_id)
 
@@ -928,8 +927,8 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(27, len(b.grid.children))
         self.assertEqual(70, cursor.pos)
         self.assertEqual(54, b.page_cursor.pos)
-        self.assertEqual("images\\%04d.jpg" % (72,), cursor.filename)
-        self.assertEqual("images\\%04d.jpg" % (56,), b.page_cursor.filename)
+        self.assertEqual("/%04d.jpg" % (72,), cursor.filename)
+        self.assertEqual("/%04d.jpg" % (56,), b.page_cursor.filename)
         self.assertEqual(cursor.file_id, b.grid.children[10].file_id)
         self.assertEqual(b.page_cursor.file_id, b.grid.children[-1].file_id)
 
@@ -945,8 +944,8 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(27, len(b.grid.children))
         self.assertEqual(70, cursor.pos)
         self.assertEqual(54, b.page_cursor.pos)
-        self.assertEqual("images\\%04d.jpg" % (73,), cursor.filename)
-        self.assertEqual("images\\%04d.jpg" % (56,), b.page_cursor.filename)
+        self.assertEqual("/%04d.jpg" % (73,), cursor.filename)
+        self.assertEqual("/%04d.jpg" % (56,), b.page_cursor.filename)
         self.assertEqual(cursor.file_id, b.grid.children[10].file_id)
         self.assertEqual(b.page_cursor.file_id, b.grid.children[-1].file_id)
 
@@ -957,7 +956,7 @@ class BrowserTest(unittest.TestCase):
         self.proceed_search(db)
         cursor = b.cursor
 
-        def test_pos(qty,pos):
+        def test_pos(qty, pos):
             self.proceed_search(db)
             for i in range(qty):
                 b.select_custom(i)
@@ -977,23 +976,22 @@ class BrowserTest(unittest.TestCase):
             self.assertEqual(b.page_cursor.pos, b.grid.children[-1].position)
             self.assertEqual(pos, cursor.pos)
 
+        test_pos(27, 28)
 
-        test_pos(27,28)
-
-        test_pos(1,1)
-        test_pos(1,2)
-        test_pos(1,15)
-        test_pos(1,27)
-        test_pos(1,65)
-        test_pos(3,3)
-        test_pos(3,4)
-        test_pos(3,15)
-        test_pos(3,27)
-        test_pos(3,65)
-        test_pos(10,27)
-        test_pos(12,65)
-        test_pos(27,65)
-        test_pos(20,64)
+        test_pos(1, 1)
+        test_pos(1, 2)
+        test_pos(1, 15)
+        test_pos(1, 27)
+        test_pos(1, 65)
+        test_pos(3, 3)
+        test_pos(3, 4)
+        test_pos(3, 15)
+        test_pos(3, 27)
+        test_pos(3, 65)
+        test_pos(10, 27)
+        test_pos(12, 65)
+        test_pos(27, 65)
+        test_pos(20, 64)
 
         app.stop()
 
@@ -1010,7 +1008,7 @@ class BrowserTest(unittest.TestCase):
                 pc.go_next()
             return filenames
 
-        def test_page(expected,debug=False):
+        def test_page(expected, debug=False):
             self.assertEqual(b.grid.children[-1].position, b.page_cursor.pos)
             self.assertEqual(b.grid.children[-1].file_id, b.page_cursor.file_id)
 
@@ -1051,7 +1049,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(4, cursor.pos)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(27)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(27)])
         self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         mark_row()
@@ -1066,7 +1064,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
 
         self.assertEqual(6, cursor.pos)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(27)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(27)])
         self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         mark_page()
@@ -1092,7 +1090,7 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(0, cursor.pos)
         self.assertEqual(0, b.page_cursor.pos)
 
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(27)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(27)])
         self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         # test different cut and paste
@@ -1106,7 +1104,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
 
         self.assertEqual(2, cursor.pos)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in [0,1,3,2]+range(4,27)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in [0, 1, 3, 2] + range(4, 27)])
         self.assertItemsEqual(range(27), [i.position for i in b.grid.children])
 
         mark_row()
@@ -1115,17 +1113,17 @@ class BrowserTest(unittest.TestCase):
         sleep(0.1)
         Clock.tick()
         Clock.tick()
-        self.assertEqual("images\\%04d.jpg" % (39 + 1,), b.page_cursor.filename)
+        self.assertEqual("/%04d.jpg" % (39 + 1,), b.page_cursor.filename)
         b.paste_marked()
         sleep(0.1)
         Clock.tick()
         Clock.tick()
         self.assertEqual(50, cursor.pos)
         self.assertEqual(36, b.page_cursor.pos)
-        self.assertEqual(27,len(b.grid.children))
-        self.assertEqual(b.page_cursor.file_id,b.grid.children[-1].file_id)
-        self.assertEqual("images\\%04d.jpg" % (39 + 1,),b.page_cursor.filename)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(39,53)+range(6,9)+range(53,63)])
+        self.assertEqual(27, len(b.grid.children))
+        self.assertEqual(b.page_cursor.file_id, b.grid.children[-1].file_id)
+        self.assertEqual("/%04d.jpg" % (39 + 1,), b.page_cursor.filename)
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(39, 53) + range(6, 9) + range(53, 63)])
 
         mark_page()
         b.cut_marked()
@@ -1133,12 +1131,12 @@ class BrowserTest(unittest.TestCase):
         sleep(0.1)
         Clock.tick()
         Clock.tick()
-        self.assertEqual(26,len(b.grid.children))
-        self.assertEqual(72,cursor.pos)
-        self.assertEqual(48,b.page_cursor.pos)
+        self.assertEqual(26, len(b.grid.children))
+        self.assertEqual(72, cursor.pos)
+        self.assertEqual(48, b.page_cursor.pos)
         self.assertEqual(b.page_cursor.file_id, b.grid.children[-1].file_id)
-        self.assertEqual("images\\%04d.jpg" % (75 + 1,),b.page_cursor.filename)
-        self.assertEqual("images\\%04d.jpg" % (99 + 1,),cursor.filename)
+        self.assertEqual("/%04d.jpg" % (75 + 1,), b.page_cursor.filename)
+        self.assertEqual("/%04d.jpg" % (99 + 1,), cursor.filename)
         b.paste_marked()
         sleep(0.1)
         Clock.tick()
@@ -1146,8 +1144,8 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(27, len(b.grid.children))
         self.assertEqual(57, b.page_cursor.pos)
         self.assertEqual(72, cursor.pos)
-        self.assertEqual("images\\%04d.jpg" % (84 + 1,), b.page_cursor.filename)
-        self.assertEqual("images\\%04d.jpg" % (0 + 1,), b.cursor.filename)
+        self.assertEqual("/%04d.jpg" % (84 + 1,), b.page_cursor.filename)
+        self.assertEqual("/%04d.jpg" % (0 + 1,), b.cursor.filename)
 
         # test multiple cut
         mark_one()
@@ -1159,7 +1157,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(4, cursor.pos)
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(4)+range(5,28)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(4) + range(5, 28)])
         self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         # test cut and paste all
@@ -1177,7 +1175,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         self.assertEqual(0, cursor.pos)
 
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(27)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(27)])
         self.assertItemsEqual(range(27), [i.position for i in b.grid.children])
 
         app.stop()
@@ -1195,7 +1193,7 @@ class BrowserTest(unittest.TestCase):
                 pc.go_next()
             return filenames
 
-        def test_page(expected,debug=False):
+        def test_page(expected, debug=False):
             self.assertEqual(b.grid.children[-1].position, b.page_cursor.pos)
             self.assertEqual(b.grid.children[-1].file_id, b.page_cursor.file_id)
 
@@ -1247,9 +1245,9 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
 
         self.assertTrue(cursor.is_eol())
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(75,100)])
-        self.assertEqual(26,len(b.grid.children))
-        self.assertItemsEqual(range(72,97),[c.position for c in b.grid.children if not isinstance(c,EOLItem)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(75, 100)])
+        self.assertEqual(26, len(b.grid.children))
+        self.assertItemsEqual(range(72, 97), [c.position for c in b.grid.children if not isinstance(c, EOLItem)])
 
         # test paste
         b.paste_marked()
@@ -1257,30 +1255,27 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
 
-        self.assertTrue(96,cursor.pos)
+        self.assertTrue(96, cursor.pos)
         self.assertFalse(cursor.is_eol())
-        test_page(["images\\%04d.jpg" % (i + 1,) for i in range(78,100)+range(6,9)])
-        self.assertEqual(26,len(b.grid.children))
-        self.assertItemsEqual(range(75,100),[c.position for c in b.grid.children if not isinstance(c,EOLItem)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in range(78, 100) + range(6, 9)])
+        self.assertEqual(26, len(b.grid.children))
+        self.assertItemsEqual(range(75, 100), [c.position for c in b.grid.children if not isinstance(c, EOLItem)])
 
         app.stop()
-
 
     def _test_calculate_to_remove(self, app, *args):
         b, db = self.prepare_browser(app)
 
-        self.assertEqual(0,b._calculate_lines_to_remove(local_pos=0,page_size=27,actual_size=27))
-        self.assertEqual(0,b._calculate_lines_to_remove(local_pos=13,page_size=27,actual_size=27))
-        self.assertEqual(0,b._calculate_lines_to_remove(local_pos=26,page_size=27,actual_size=27))
+        self.assertEqual(0, b._calculate_lines_to_remove(local_pos=0, page_size=27, actual_size=27))
+        self.assertEqual(0, b._calculate_lines_to_remove(local_pos=13, page_size=27, actual_size=27))
+        self.assertEqual(0, b._calculate_lines_to_remove(local_pos=26, page_size=27, actual_size=27))
 
-        self.assertEqual(0,b._calculate_lines_to_remove(local_pos=0,page_size=27,actual_size=30))
-        self.assertEqual(0,b._calculate_lines_to_remove(local_pos=5,page_size=27,actual_size=30))
-        self.assertEqual(0,b._calculate_lines_to_remove(local_pos=13,page_size=27,actual_size=36))
-        self.assertEqual(9,b._calculate_lines_to_remove(local_pos=26,page_size=27,actual_size=36))
-
+        self.assertEqual(0, b._calculate_lines_to_remove(local_pos=0, page_size=27, actual_size=30))
+        self.assertEqual(0, b._calculate_lines_to_remove(local_pos=5, page_size=27, actual_size=30))
+        self.assertEqual(0, b._calculate_lines_to_remove(local_pos=13, page_size=27, actual_size=36))
+        self.assertEqual(9, b._calculate_lines_to_remove(local_pos=26, page_size=27, actual_size=36))
 
         app.stop()
-
 
     def call_test(self, func):
         a = TestApp()
@@ -1311,8 +1306,6 @@ class BrowserTest(unittest.TestCase):
 
     def test_08_mark(self):
         self.call_test(self._test_mark)
-
-
 
     def test_17_cut_1(self):
         self.call_test(self._test_cut_1)

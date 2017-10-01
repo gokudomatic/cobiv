@@ -1,8 +1,8 @@
 import logging
+
 logging.basicConfig(level=logging.DEBUG)
 
 from cobiv.modules.database.sqlitedb.search.searchmanager import SearchManager
-
 
 import sqlite3
 import unittest
@@ -37,7 +37,7 @@ class TestApp(App):
 class SQLiteCursorTest(unittest.TestCase):
     def setUp(self):
         # self.session = Session()
-        self.search_manager=SearchManager(None)
+        self.search_manager = SearchManager(None)
 
         self.conn = sqlite3.connect(':memory:', check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
@@ -50,7 +50,8 @@ class SQLiteCursorTest(unittest.TestCase):
                 'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
             self.conn.execute(
                 'create table file (id INTEGER PRIMARY KEY, repo_key int, name text)')
-            self.conn.execute('create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
+            self.conn.execute(
+                'create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
             self.conn.execute('create table tag (file_key int, category int, kind text, type int, value)')
             self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
@@ -72,8 +73,6 @@ class SQLiteCursorTest(unittest.TestCase):
 
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
-
-
 
     def tearDown(self):
         self.conn.close()
@@ -140,7 +139,7 @@ class SQLiteCursorTest(unittest.TestCase):
             self.regenerate_set("default", query)
 
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
-        return SqliteCursor(row=row, backend=self.conn,search_manager=self.search_manager)
+        return SqliteCursor(row=row, backend=self.conn, search_manager=self.search_manager)
 
     def add_files(self, amount):
         """Generates N items for testing purpose
@@ -914,9 +913,9 @@ class SQLiteCursorTest(unittest.TestCase):
 
         c.sort("file_date")
 
-        c.sort("file_date","-size")
+        c.sort("file_date", "-size")
 
-        c.sort("#file_date","size","abc")
+        c.sort("#file_date", "size", "abc")
 
         app.stop()
 
