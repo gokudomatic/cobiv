@@ -1,9 +1,9 @@
 import logging
-import os
 import sqlite3
 import threading
-from os import listdir
-from os.path import isfile, join
+
+import os, io, time
+from fs import open_fs
 
 from PIL import Image
 from kivy.app import App
@@ -52,12 +52,14 @@ class SqliteCursor(CursorInterface):
             self.set_head_key = None
             self.filename = ''
             self.file_id = None
+            self.repo_key = None
         else:
             self.pos = row['position']
             self.set_head_key = row['set_head_key']
-            row1 = self.con.execute('select name from file where id=?', (row['file_key'],)).fetchone()
+            row1 = self.con.execute('select name, repo_key from file where id=?', (row['file_key'],)).fetchone()
             self.filename = row1['name'] if row is not None else None
             self.file_id = row['file_key']
+            self.repo_key = row1['repo_key']
 
     def clone(self):
         """
@@ -70,6 +72,7 @@ class SqliteCursor(CursorInterface):
         new_cursor.set_head_key = self.set_head_key
         new_cursor.filename = self.filename
         new_cursor.file_id = self.file_id
+        new_cursor.repo_key = self.repo_key
         return new_cursor
 
     def go_next(self):
@@ -111,7 +114,7 @@ class SqliteCursor(CursorInterface):
         start_pos = self.pos - (1 if self_included else 0)
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position>? and c.position<=? order by position',
+            'select c.file_key,c.position,f.name,f.repo_key from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position>? and c.position<=? order by position',
             (self.set_head_key, start_pos, start_pos + amount)).fetchall()
         return rows
 
@@ -120,7 +123,7 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position<? and c.position>=? order by position desc',
+            'select c.file_key,c.position,f.name,f.repo_key from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position<? and c.position>=? order by position desc',
             (self.set_head_key, self.pos, self.pos - amount)).fetchall()
         return rows
 
@@ -290,24 +293,6 @@ class SqliteCursor(CursorInterface):
 
         return tags
 
-    def is_changed(self):
-        if self.file_id is None:
-            return False
-
-        tags = self.get_tags()
-        for tag in tags:
-            if tag[0] != 0:
-                continue
-
-            if tag[1] == 'modification_date':
-                if tag[2] != os.path.getmtime(self.filename):
-                    return True
-            elif tag[1] == 'size':
-                if tag[2] != os.path.getsize(self.filename):
-                    return True
-
-        return False
-
     def cut_marked(self):
         with self.con:
             self.con.execute('delete from current_set where position<0')
@@ -390,7 +375,8 @@ class SqliteDb(Entity):
     cancel_operation = False
     session = None
 
-    def init_test_db(self):
+    def init_test_db(self, session):
+        self.session = session
         self.conn = sqlite3.connect(':memory:', check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute('PRAGMA temp_store = MEMORY')
@@ -402,12 +388,20 @@ class SqliteDb(Entity):
 
         self.search_manager = SearchManager(self.session)
 
+        # open file systems
+        c = self.conn.execute('select id,path from repository')
+        for repo_key, path in c.fetchall():
+            fs = open_fs(path)
+            self.session.add_filesystem(repo_key, fs)
+
     def close_db(self):
         self.conn.close()
 
     def ready(self):
         if not os.path.exists(self.get_app().get_user_path('thumbnails')):
             os.makedirs(self.get_app().get_user_path('thumbnails'))
+
+        self.session = self.get_app().lookup("session", "Entity")
 
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
         self.search_manager = SearchManager(self.session)
@@ -428,8 +422,6 @@ class SqliteDb(Entity):
         set_action("cut-marked", self.cut_marked)
         set_action("paste-marked", self.paste_marked)
 
-        self.session = self.get_app().lookup("session", "Entity")
-
         must_initialize = True
         try:
             must_initialize = self.conn.execute('select 1 from catalog limit 1').fetchone() is None
@@ -442,6 +434,12 @@ class SqliteDb(Entity):
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
 
+        # open file systems
+        c = self.conn.execute('select id,path from repository')
+        for repo_key, path in c.fetchall():
+            fs = open_fs(path)
+            self.session.add_filesystem(repo_key, fs)
+
     def create_database(self, sameThread=False):
         with self.conn:
             self.conn.execute('create table catalog (id INTEGER PRIMARY KEY, name text)')
@@ -452,9 +450,8 @@ class SqliteDb(Entity):
             self.conn.execute(
                 'create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
             self.conn.execute('create table tag (file_key int, category int, kind text, type int, value)')
-            self.conn.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
+            self.conn.execute('create table set_head (id INTEGER PRIMARY KEY, name text, readonly num)')
             self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
-            self.conn.execute('create table thumbs (file_key int primary key, data blob)')
 
             # indexes
             self.conn.execute('create unique index file_idx on file(name)')
@@ -462,13 +459,13 @@ class SqliteDb(Entity):
             self.conn.execute('create index tag_idx2 on tag(kind,value)')
             self.conn.execute('create index tag_idx3 on tag(value)')
             self.conn.execute('create unique index core_tags_idx1 on core_tags(file_key)')
-            self.conn.execute('create unique index core_tags_idx2 on core_tags(path,size,file_date,ext)')
+            self.conn.execute('create index core_tags_idx2 on core_tags(path,size,file_date,ext)')
             self.conn.execute('create unique index set_detail_pos_idx on set_detail(set_head_key,position)')
             self.conn.execute('create unique index set_detail_file_idx on set_detail(set_head_key,file_key)')
 
         self.create_catalogue("default")
 
-        repos = self.get_global_config_value('repository', self.get_app().get_user_path('Pictures'))
+        repos = self.get_global_config_value('repositories', self.get_app().get_user_path('Pictures'))
         self.add_repository("default", repos)
         self.updatedb(sameThread=sameThread)
 
@@ -480,14 +477,15 @@ class SqliteDb(Entity):
         except sqlite3.IntegrityError:
             return False
 
-    def add_repository(self, catalogue, path, recursive=True):
-        try:
-            with self.conn:
-                c = self.conn.execute('insert into repository (catalog_key,path,recursive) values (?,?,?)',
-                                      (catalogue, path, 1 if recursive else 0))
-            return c.lastrowid
-        except sqlite3.IntegrityError:
-            return False
+    def add_repository(self, catalogue, path_list, recursive=True):
+        for path in path_list:
+            try:
+                with self.conn:
+                    c = self.conn.execute('insert into repository (catalog_key,path,recursive) values (?,?,?)',
+                                          (catalogue, path, 1 if recursive else 0))
+                return c.lastrowid
+            except sqlite3.IntegrityError:
+                return False
 
     def updatedb(self, sameThread=False):
         if sameThread:
@@ -503,10 +501,9 @@ class SqliteDb(Entity):
 
         rows = c.fetchall()
         self.set_progress_max_count(len(rows))
-        for row in rows:
-            repo_id = row[0]
-            to_add, to_remove = self._update_get_diff(repo_id, row[1], row[2])
-            differences.append((repo_id, to_add, to_remove))
+        for repo_id, repo_path, recursive in rows:
+            to_add, to_remove = self._update_get_diff(repo_id, repo_path, recursive)
+            differences.append((repo_id, repo_path, to_add, to_remove))
             thread_max_files += len(to_add) + len(to_remove) + 1 if len(to_add) > 0 else 0 + 1 if len(
                 to_remove) > 0 else 0
             self.tick_progress()
@@ -515,23 +512,39 @@ class SqliteDb(Entity):
             self.reset_progress("Updating files...")
             self.set_progress_max_count(thread_max_files)
 
-            for diff in differences:
-                self._update_dir(diff[0], diff[1], diff[2])
-                self.update_tags(diff[0], diff[1])
+            repo_fs, current_repo_id = None, None
+            for repo_id, repo_path, to_add, to_remove in differences:
+                if repo_id != current_repo_id:
+                    if current_repo_id is not None:
+                        repo_fs.close()
+                    current_repo_id = repo_id
+                    repo_fs = open_fs(repo_path)
+
+                self._update_dir(repo_id, repo_fs, to_add, to_remove)
+                self.update_tags(repo_id, repo_fs, to_add)
                 if self.cancel_operation:
                     break
+
+            if repo_fs is not None:
+                repo_fs.close()
 
             self.regenerate_set('*', "select id from file", caption="Creating default set...")
 
         self.stop_progress()
 
     def _update_get_diff(self, repo_id, path, recursive):
+
+        repo_fs = open_fs(path)
+
         if recursive:
-            result = [os.path.join(dp, f) for dp, dn, filenames in os.walk(path) for f in filenames if
-                      os.path.splitext(f)[1][1:] in SUPPORTED_IMAGE_FORMATS]
+
+            result = [path for path in repo_fs.walk.files(filter=['*.jpg', '*.png'])]
         else:
-            result = [join(path, f) for f in listdir(path) if
-                      isfile(join(path, f)) and f.split('.')[-1] in SUPPORTED_IMAGE_FORMATS]
+            result = [f for f in repo_fs.listdir('/') if
+                      repo_fs.getinfo(f, namespaces=['details']).is_file and f.split('.')[
+                          -1] in SUPPORTED_IMAGE_FORMATS]
+
+        repo_fs.close()
 
         c = self.conn.execute('select name from file where repo_key=?', (repo_id,))
         existing = [n['name'] for n in c.fetchall()]
@@ -540,7 +553,7 @@ class SqliteDb(Entity):
         removed_files = set(existing) - set(result)
         return new_files, removed_files
 
-    def _update_dir(self, repo_id, to_add, to_rem):
+    def _update_dir(self, repo_id, repo_fs, to_add, to_rem):
         with self.conn:
             c = self.conn.cursor()
 
@@ -557,8 +570,10 @@ class SqliteDb(Entity):
                 if self.cancel_operation:
                     return
                 query_to_add.append((repo_id, f))
+                file_info = repo_fs.getdetails(f)
+                modified_date = time.mktime(file_info.modified.timetuple())
                 query_tag_to_add.append(
-                    (repo_id, f, os.path.getsize(f), os.path.getmtime(f), os.path.splitext(f)[1][1:],
+                    (repo_id, f, file_info.size, modified_date, os.path.splitext(f)[1][1:],
                      os.path.dirname(f)))
 
                 self.tick_progress()
@@ -576,7 +591,7 @@ class SqliteDb(Entity):
             tags_to_add = []
             for f in to_add:
                 id = c.execute('select id from file where repo_key=? and name=? limit 1', (repo_id, f)).fetchone()[0]
-                lines = self.read_tags(id, f)
+                lines = self.read_tags(id, f, repo_fs)
                 if len(lines) > 0:
                     tags_to_add.extend(lines)
                 self.tick_progress()
@@ -585,17 +600,19 @@ class SqliteDb(Entity):
                 c.executemany('insert into tag values (?,?,?,?,?)', tags_to_add)
                 self.tick_progress()
 
-    def update_tags(self, repo_id, to_ignore=[]):
+    def update_tags(self, repo_id, repo_fs, to_ignore=[]):
         with self.conn:
             c = self.conn.cursor()
 
-            modified_file_ids = self._check_modified_files(repo_id, to_ignore=to_ignore)
+            modified_file_ids = self._check_modified_files(repo_id, repo_fs, to_ignore=to_ignore)
             for file_id, filename in modified_file_ids:
+                file_info = repo_fs.getdetails(filename)
+
                 c.execute('update core_tags set size=?,file_date=?,ext=?,path=? where file_key=?',
-                          (os.path.getsize(filename), os.path.getmtime(filename), os.path.splitext(filename)[1][1:],
+                          (file_info.size, file_info.modified, os.path.splitext(filename)[1][1:],
                            os.path.dirname(filename), file_id))
 
-                tags_to_add = self.read_tags(file_id, filename)
+                tags_to_add = self.read_tags(file_id, filename, repo_fs=repo_fs)
 
                 c.executemany('update tag set value=?,type=? where file_key=? and category=0 and kind=?',
                               [(tag[4], tag[3], tag[0], tag[2]) for tag in tags_to_add if tag[1] == 0])
@@ -604,7 +621,7 @@ class SqliteDb(Entity):
 
                 self.get_app().fire_event('on_file_content_change', file_id)
 
-    def _check_modified_files(self, repo_id, to_ignore=[]):
+    def _check_modified_files(self, repo_id, repo_fs, to_ignore=[]):
         result = []
 
         with self.conn:
@@ -616,16 +633,22 @@ class SqliteDb(Entity):
                 if file_id in to_ignore:
                     continue
 
-                if int(size) != os.path.getsize(filename) or not is_close(float(file_date),
-                                                                          os.path.getmtime(filename),
-                                                                          abs_tol=1e-05, rel_tol=0):
+                file_info = repo_fs.getdetails(filename)
+
+                modified_date = time.mktime(file_info.modified.timetuple())
+
+                if int(size) != file_info.size or not is_close(float(file_date),
+                                                               modified_date,
+                                                               abs_tol=1e-05, rel_tol=0):
                     result.append((file_id, filename))
 
         return result
 
-    def read_tags(self, node_id, name):
+    def read_tags(self, node_id, name, repo_fs):
         to_add = []
-        img = Image.open(name)
+
+        data = repo_fs.getbytes(name)
+        img = Image.open(io.BytesIO(data))
 
         to_add.append((node_id, 0, 'width', 1, str(img.size[0])))
         to_add.append((node_id, 0, 'height', 1, str(img.size[1])))
@@ -639,7 +662,7 @@ class SqliteDb(Entity):
                         to_add.append((node_id, 1, 'tag', 0, tag.strip()))
 
         for reader in self.get_app().lookups("TagReader"):
-            reader.read_file_tags(node_id, name, to_add)
+            reader.read_file_tags(node_id, data, to_add)
 
         return to_add
 

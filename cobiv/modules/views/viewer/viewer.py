@@ -113,10 +113,12 @@ class Viewer(View, ScrollView):
 
         image = False
         filename = self.cursor.filename
+        ext = self.cursor.get_tag(0,'ext')[0]
         if filename is None:
             image = None
         else:
-            image = Slide(source=filename, load_mode=self.fit_mode)
+            image = Slide(session=self.session, repo_key=self.cursor.repo_key, filename=filename,
+                          load_mode=self.fit_mode, ext=ext)
 
         self.clear_widgets()
         if image:

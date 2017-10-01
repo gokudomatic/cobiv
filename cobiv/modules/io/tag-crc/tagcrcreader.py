@@ -7,9 +7,7 @@ class TagCrcReader(TagReader):
 
     hasher = hashlib.md5()
 
-    def read_file_tags(self,file_id,filename,list_to_add):
+    def read_file_tags(self,file_id,data,list_to_add):
 
-        with open(filename, 'rb') as afile:
-            buf = afile.read()
-            self.hasher.update(buf)
+        self.hasher.update(data)
         list_to_add.append((file_id, 0, 'crc', 0, self.hasher.hexdigest()))

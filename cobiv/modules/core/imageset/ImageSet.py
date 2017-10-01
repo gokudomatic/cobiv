@@ -1,13 +1,13 @@
 from __future__ import division
 
-import os
+import os,io
+from kivy.core.image import Image as CoreImage
 from kivy.lang import Builder
 from kivy.properties import ObjectProperty
-from kivy.uix.image import AsyncImage
+from kivy.uix.image import Image
 from enum import Enum
 
-
-Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__),'slide.kv')))
+Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'slide.kv')))
 
 
 class SlideMode(Enum):
@@ -17,20 +17,27 @@ class SlideMode(Enum):
     FIT_HEIGHT = 3
 
 
-class Slide(AsyncImage):
+class Slide(Image):
     mode = ObjectProperty(None)
     load_mode = None
 
-    is_loaded = False
+    is_loaded = True
 
-    def __init__(self, load_mode=SlideMode.NORMAL, **kwargs):
+    def __init__(self, session=None,load_mode=SlideMode.NORMAL, **kwargs):
         super(Slide, self).__init__(**kwargs)
         self.load_mode = load_mode
-        self._coreimage.bind(on_load=self.on_image_loaded)
+        # self._coreimage.bind(on_load=self.on_image_loaded)
         self.bind(width=self.on_width)
         self.bind(height=self.on_height)
         self.bind(mode=self.on_mode)
         self.bind(texture_size=self.on_texture_size)
+
+        file_fs = session.get_filesystem(kwargs['repo_key'])
+        memory_data = file_fs.getbytes(kwargs['filename'])
+
+        im=CoreImage(io.BytesIO(memory_data),ext=kwargs['ext'])
+
+        self.texture = im.texture
 
     def on_texture_size(self, instance, value):
         if self.is_loaded:

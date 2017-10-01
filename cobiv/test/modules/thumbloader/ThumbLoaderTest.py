@@ -3,6 +3,7 @@ import unittest
 from functools import partial
 from time import sleep
 
+from fs import open_fs
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
@@ -13,6 +14,9 @@ from cobiv.modules.core.thumbloader.thumbloader import ThumbLoader
 
 class TestMainWidget(Widget):
     def execute_cmd(self, *args, **kwargs):
+        pass
+
+    def execute_cmds(self, *args, **kwargs):
         pass
 
     def show_progressbar(self, *args, **kwargs):
@@ -26,6 +30,8 @@ class TestMainWidget(Widget):
 
 
 class TestApp(App):
+    session = None
+
     def __init__(self, **kwargs):
         super(TestApp, self).__init__(**kwargs)
         self.configuration = {
@@ -48,6 +54,12 @@ class TestApp(App):
     def register_event_observer(self, name, fallback):
         pass
 
+    def lookup(self, object_name, category):
+        if category == "Entity" and object_name == "session":
+            return self.session
+        else:
+            return []
+
 
 class ThumbloaderTest(unittest.TestCase):
     def get_user_path(self, *args):
@@ -55,6 +67,7 @@ class ThumbloaderTest(unittest.TestCase):
 
     def setUp(self):
         self.session = Session()
+        self.session.add_filesystem(1, open_fs(u'osfs://images'))
 
     def tearDown(self):
         super(ThumbloaderTest, self).tearDown()
@@ -67,14 +80,15 @@ class ThumbloaderTest(unittest.TestCase):
         Clock.schedule_once(p, 0.0001)
         a.run()
 
-    def get_thumbloader(self):
+    def get_thumbloader(self, app):
+        app.session = self.session
         t = ThumbLoader()
         t.ready()
         t.restart()
         return t
 
     def _test_initialization(self, app, *args):
-        t = self.get_thumbloader()
+        t = self.get_thumbloader(app)
 
         t.stop()
         app.stop()
@@ -87,24 +101,24 @@ class ThumbloaderTest(unittest.TestCase):
         self.assertTrue(t.queue_empty)
 
     def _test_enqueue_images(self, app, *args):
-        t = self.get_thumbloader()
+        t = self.get_thumbloader(app)
 
         self.assertEqual(0, len(t.to_cache))
 
-        t.append((1, self.get_user_path('images', '0001.jpg')))
+        t.append((1, u'/0001.jpg', 1))
         self.assertEqual(1, len(t.to_cache))
         self.wait_for(t, 1)
         self.assertEqual(0, len(t.to_cache))
         self.assertEqual(1, len(os.listdir(self.get_user_path('thumbs'))))
 
-        t.append((1, self.get_user_path('images', '0001.jpg')), (2, self.get_user_path('images', '0002.jpg')),
-                 (3, self.get_user_path('images', '0003.jpg')))
+        t.append((1, u'/0001.jpg', 1), (2, u'/0002.jpg', 1),
+                 (3, u'/0003.jpg', 1))
         self.assertEqual(3, len(t.to_cache))
         self.wait_for(t, 3)
         self.assertEqual(0, len(t.to_cache))
         self.assertEqual(3, len(os.listdir(self.get_user_path('thumbs'))))
 
-        t.append((2, self.get_user_path('images', '0002.jpg')))
+        t.append((2, u'/0002.jpg', 1))
         self.assertEqual(1, len(t.to_cache))
         self.wait_for(t, 1)
         self.assertEqual(0, len(t.to_cache))
@@ -114,17 +128,17 @@ class ThumbloaderTest(unittest.TestCase):
         app.stop()
 
     def _test_remove_images(self, app, *args):
-        t = self.get_thumbloader()
+        t = self.get_thumbloader(app)
 
-        t.append((1, self.get_user_path('images', '0001.jpg')))
+        t.append((1, u'/0001.jpg', 1))
         self.wait_for(t, 1)
         self.assertEqual(1, len(os.listdir(self.get_user_path('thumbs'))))
 
         t.delete_thumbnail(1)
         self.assertEqual(0, len(os.listdir(self.get_user_path('thumbs'))))
 
-        t.append((1, self.get_user_path('images', '0001.jpg')), (2, self.get_user_path('images', '0002.jpg')),
-                 (3, self.get_user_path('images', '0003.jpg')))
+        t.append((1, u'/0001.jpg', 1), (2, u'/0002.jpg', 1),
+                 (3, u'/0003.jpg', 1))
         self.wait_for(t, 3)
         t.delete_thumbnail(2)
         self.assertEqual(2, len(os.listdir(self.get_user_path('thumbs'))))
