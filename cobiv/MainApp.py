@@ -1,6 +1,9 @@
 import os
 
 import logging
+
+from cobiv.modules.core.gestures.gesture import Gesture
+
 logging.basicConfig(level=logging.DEBUG)
 
 
@@ -37,7 +40,8 @@ class Cobiv(App):
             "Entity": Entity,
             "Hud": Hud,
             "TagReader": TagReader,
-            "Datasource": Datasource
+            "Datasource": Datasource,
+            "Gesture": Gesture
         })
 
         self.plugin_manager.locatePlugins()

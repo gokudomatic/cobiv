@@ -79,3 +79,6 @@ class Component(object):
 
     def lookup(self,name,category):
         return self.get_app().lookup(name,category)
+
+    def lookups(self,category):
+        return self.get_app().lookups(category)

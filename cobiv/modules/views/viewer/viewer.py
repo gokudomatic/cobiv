@@ -8,7 +8,7 @@ from kivy.lang import Builder
 from kivy.properties import ObjectProperty, Clock
 from kivy.uix.scrollview import ScrollView
 
-from cobiv.modules.core.imageset.ImageSet import SlideMode, Slide
+from cobiv.modules.core.imageset.slide import SlideMode, Slide
 from cobiv.modules.core.view import View
 
 Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'viewer.kv')))

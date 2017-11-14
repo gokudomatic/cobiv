@@ -44,14 +44,13 @@ class MainContainer(FloatLayout):
         set_action("set-command", self.set_command)
 
     def ready(self):
-        # self.execute_cmd("search")
-        pass
+        self.gesture_manager = App.get_running_app().lookup("gesture_manager", "Entity")
 
     def memory(self):
         import os
         import psutil
         process = psutil.Process(os.getpid())
-        print(str(process.memory_info().rss / float(2 ** 20)) + " MB")
+        self.logger.debug(str(process.memory_info().rss / float(2 ** 20)) + " MB")
 
     def switch_view(self, view_name):
         if len(self.current_view.children) > 0:
@@ -156,7 +155,7 @@ class MainContainer(FloatLayout):
             self.execute_cmd(line.strip(), recursive_iteration=recursive_iteration + 1, force_default=force_default)
 
     def execute_cmd(self, command, recursive_iteration, force_default=False):
-        if recursive_iteration>100:
+        if recursive_iteration > 100:
             return
 
         line = shlex.split(command)
@@ -171,13 +170,6 @@ class MainContainer(FloatLayout):
             new_command = alias_command + command[len(action):]
             self.execute_cmds(new_command, recursive_iteration=recursive_iteration + 1, force_default=force_default)
 
-            # action=self.aliases[alias_action][0]
-            # default_args = self.aliases[alias_action][1:]
-            # found_cmd = cmd_actions.has_key(action)
-            # if default_args is not None and len(default_args)>0:
-            #     default_args.extend(args)
-            #     args=default_args
-
         elif found_cmd:
             list_func = cmd_actions[action]
             profile_name = "default"
@@ -188,7 +180,9 @@ class MainContainer(FloatLayout):
                 try:
                     func(*args)
                 except TypeError as err:
-                    self.logger.error("The number of arguments for action "+action+" ("+profile_name+") is not right : " + str(err))
+                    self.logger.error(
+                        "The number of arguments for action " + action + " (" + profile_name + ") is not right : " + str(
+                            err))
 
     def quit(self, *args):
         if len(self.current_view.children) > 0:
@@ -252,3 +246,34 @@ class MainContainer(FloatLayout):
 
     def set_command(self, *args):
         self._toggle_cmd(":" + " ".join(args) + " ")
+
+    # Gesture methods
+    def on_touch_down(self, touch):
+        if self.collide_point(*touch.pos):
+            touch.grab(self)
+            if self.gesture_manager is not None:
+                self.gesture_manager.on_touch_down(touch)
+
+                if self.gesture_manager.get_touch_count()>=2:
+                    return True
+
+        return super(MainContainer, self).on_touch_down(touch)
+
+    def on_touch_move(self, touch):
+        if touch.grab_current is not self or self.gesture_manager.get_touch_count() == 1:
+            return super(MainContainer, self).on_touch_move(touch)
+
+        if self.gesture_manager is not None:
+            self.gesture_manager.on_touch_move(touch)
+
+        return True
+
+    def on_touch_up(self, touch):
+        if touch.grab_current is self:
+            touch.ungrab(self)
+            if self.gesture_manager is not None:
+                self.gesture_manager.on_touch_up(touch)
+                if self.gesture_manager.get_touch_count()>=1:
+                    return True
+
+        return super(MainContainer, self).on_touch_up(touch)
