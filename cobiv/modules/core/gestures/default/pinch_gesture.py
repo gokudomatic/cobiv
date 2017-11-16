@@ -4,46 +4,48 @@ from cobiv.modules.core.gestures.gesture import Gesture
 
 
 class PinchGesture(Gesture):
-
     initial_distance = None
-    center=None
+    center = None
+    initial_touches = None
 
     def finalize(self, touch, strokes):
         pass
 
     def process(self, touches, strokes):
         # print "process"
-        v=Vector(touches[1].x,touches[1].y)-Vector(touches[0].x,touches[0].y)
-        ratio=v.length()/self.initial_distance
-        # print("{}% {}".format(ratio*100,self.center))
-        #TODO send signal with ratio
+        v = Vector(touches[1].x, touches[1].y) - Vector(touches[0].x, touches[0].y)
+        ratio = v.length() / self.initial_distance
+        print("zoom {}% {}".format(ratio*100,self.center))
+        # TODO send signal with ratio
 
     def required_touch_count(self):
         return 2
 
-    def validate(self, strokes):
-        path1,path2=strokes.values()[0:2]
+    def validate(self, touches, strokes):
 
-        last_vector1=path1[-1]
-        last_vector2=path2[-1]
+        v_sum = Vector(0, 0)
+        sum_dot_base = 0
 
-        # print(last_vector1,last_vector2)
+        for t in touches:
+            v_old = Vector(self.initial_touches[t.uid][0], self.initial_touches[t.uid][1])
+            v_new = Vector(t.x, t.y)
 
-        last_distance=(last_vector1+last_vector2).length()
-        last_length1=last_vector1.length()
-        last_length2=last_vector2.length()
+            v_norm = (v_new - v_old).normalize()
+            if v_norm.length() == 0:
+                return False
 
-        result=(last_distance==0 and last_length1>0) or (last_length1*last_length2==0 and last_length1+last_length2>0)
-        if result:
+            v_base = (v_old - self.center).normalize()
+            print(v_old,v_new, v_norm, v_base,v_base.dot(v_norm))
+            sum_dot_base += v_base.dot(v_norm)
+            v_sum += v_norm
 
-            print(last_vector1,last_vector2)
-        return result
+
+        return abs(sum_dot_base) >= 1.85 and v_sum.length() < 1
 
     def initialize(self, touches):
-        print "init"
-        v1=Vector(touches[1].x,touches[1].y)
-        v0=Vector(touches[0].x,touches[0].y)
+        v = [Vector(t.x, t.y) for t in touches]
 
-        v=v1-v0
-        self.center=v0+v/2
-        self.initial_distance=float(v.length())
+        v_diff = v[1] - v[0]
+        self.center = v[0] + v_diff / 2
+        self.initial_distance = float(v_diff.length())
+        self.initial_touches = {touches[0].uid:(touches[0].x,touches[0].y),touches[1].uid:(touches[1].x,touches[1].y)}

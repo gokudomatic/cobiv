@@ -5,7 +5,7 @@ class Gesture(Component):
     def initialize(self, touches):
         pass
 
-    def validate(self, strokes):
+    def validate(self, touches, strokes):
         pass
 
     def process(self, touches, strokes):

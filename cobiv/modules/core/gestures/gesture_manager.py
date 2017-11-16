@@ -20,7 +20,7 @@ class GestureManager(Entity):
 
     stroke_error_margin = 20
     stroke_tick_time = 0.1
-    stroke_identify_timeout = 0.5
+    stroke_identify_timeout = 0.3
 
     last_touches = {}
 
@@ -57,7 +57,7 @@ class GestureManager(Entity):
             self.stroke_list = {}
             self.last_touches = {}
             for t in self.__touches:
-                print("init touch",t.uid)
+                # print("init touch",t.uid)
                 self.last_touches[t.uid] = t.pos
                 self.stroke_list[t.uid] = [Vector(0, 0)]
         else:
@@ -114,13 +114,13 @@ class GestureManager(Entity):
             self.current_strategy.process(self.__touches, self.stroke_list)
         else:
             if touch.time_update - self.first_tick > self.stroke_identify_timeout:
-                self.strategy_candidates = [c for c in self.strategy_candidates if c.validate(self.stroke_list)]
+                self.strategy_candidates = [c for c in self.strategy_candidates if c.validate(self.__touches,self.stroke_list)]
                 if len(self.strategy_candidates) == 1:
                     self.current_strategy = self.strategy_candidates[0]
                     self.current_strategy.process(self.__touches, self.stroke_list)
                 elif len(self.strategy_candidates) == 0:
-                    print("no strategy found")
-                    print(self.stroke_list)
+                    # print("no strategy found")
+                    # print(self.stroke_list)
                     pass  # TODO set path strategy
 
     def get_touch_count(self):
