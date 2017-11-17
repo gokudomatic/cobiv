@@ -1,8 +1,3 @@
-import time
-
-from copy import deepcopy
-
-import math
 from kivy.vector import Vector
 
 from cobiv.modules.core.entity import Entity
@@ -135,8 +130,6 @@ class GestureManager(Entity):
             return Vector(cmp(v.x, 0), cmp(v.y, 0))
 
     def update_last_touch(self, touch):
-        # self.__touches[touch.uid] = touch
-
         tx, ty = self.last_touches[touch.uid]
         v = Vector(touch.x - tx, touch.y - ty)
         v1 = v

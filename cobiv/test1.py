@@ -6,6 +6,7 @@ from kivy.factory import Factory
 from kivy.vector import Vector
 
 from cobiv.modules.core.gestures.default.pinch_gesture import PinchGesture
+from cobiv.modules.core.gestures.default.swipe_gesture import SwipeGesture
 from cobiv.modules.core.gestures.gesture_manager import GestureManager
 
 
@@ -62,7 +63,7 @@ class TestApp(App):
 
     def lookups(self,category):
         if category=='Gesture':
-            return [PinchGesture()]
+            return [PinchGesture(),SwipeGesture()]
         else:
             return []
 
