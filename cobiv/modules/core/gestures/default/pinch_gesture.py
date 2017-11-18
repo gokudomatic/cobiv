@@ -12,7 +12,6 @@ class PinchGesture(Gesture):
         pass
 
     def process(self, touches, strokes):
-        # print "process"
         v = Vector(touches[1].x, touches[1].y) - Vector(touches[0].x, touches[0].y)
         ratio = v.length() / self.initial_distance
         print("zoom {}% {}".format(ratio*100,self.center))

@@ -11,7 +11,6 @@ class SwipeGesture(Gesture):
         pass
 
     def process(self, touches, strokes):
-        # print "process"
         uid=touches[0].uid
         v = Vector(touches[0].x, touches[0].y)-self.initial_touches[uid]
         a = v.angle((1,0))

@@ -65,12 +65,12 @@ class GestureManager(Entity):
             self.update_last_touch(touch)
             self.stroke_list[touch.uid][-1] = self.round_vector(self.stroke_list[touch.uid][-1].normalize())
 
-        self.__touches.remove(touch)
-
         if nb_touch >= 2 and nb_touch in self.strategies:
             if self.current_strategy is not None:
                 self.current_strategy.finalize(self.__touches, self.stroke_list)
                 self.current_strategy = None
+
+        self.__touches.remove(touch)
 
     def on_touch_move(self, touch):
         if not touch.uid in self.last_touches:
@@ -109,6 +109,8 @@ class GestureManager(Entity):
             self.current_strategy.process(self.__touches, self.stroke_list)
         else:
             if touch.time_update - self.first_tick > self.stroke_identify_timeout:
+
+
                 self.strategy_candidates = [c for c in self.strategy_candidates if c.validate(self.__touches,self.stroke_list)]
                 if len(self.strategy_candidates) == 1:
                     self.current_strategy = self.strategy_candidates[0]
