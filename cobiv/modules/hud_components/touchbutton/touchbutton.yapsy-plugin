@@ -1,0 +1,8 @@
+[Core]
+Name = touchbutton
+Module = TouchButton
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Touch switcher button
