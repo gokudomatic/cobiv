@@ -1,0 +1,8 @@
+[Core]
+Name = pinch_gesture
+Module = pinch_gesture
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Pinch Gesture

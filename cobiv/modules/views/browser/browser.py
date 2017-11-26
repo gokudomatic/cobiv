@@ -157,7 +157,7 @@ class Browser(View, FloatLayout):
     def _init_sidebars(self):
         self.right_sidebar_full_size = self.get_config_value('sidebar.right.width', 200)
         right_sidebar_name = self.get_config_value('sidebar.right.class', 'SimpleSidebar')
-        sidebar_instance=Factory.get(right_sidebar_name)(session=self.session)
+        sidebar_instance=Factory.get(right_sidebar_name)()
         self.toolbars.append(sidebar_instance)
         self.right_sidebar.add_widget(sidebar_instance)
 
@@ -182,7 +182,7 @@ class Browser(View, FloatLayout):
                 kwargs={}
                 if barcfg.has_key('height'):
                     kwargs['height']=barcfg['height']
-                instance = Factory.get(barcfg.get('class'))(session=self.session,**kwargs)
+                instance = Factory.get(barcfg.get('class'))()
                 self.toolbars.append(instance)
                 if barcfg.has_key('items'):
                     for cfg_item in barcfg.get('items'):
@@ -199,8 +199,7 @@ class Browser(View, FloatLayout):
 
         self.cell_size = self.get_config_value('grid.icon_size', 120)
 
-        self.session = self.get_app().lookup("session", "Entity")
-        self.cursor = self.session.cursor
+        self.cursor = self.get_session().cursor
 
         self._init_sidebars()
         self._init_statusbars()

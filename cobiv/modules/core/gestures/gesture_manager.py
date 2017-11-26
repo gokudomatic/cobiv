@@ -25,9 +25,6 @@ class GestureManager(Entity):
     def build_yaml_config(self, config):
         return super(GestureManager, self).build_yaml_config(config)
 
-    def read_yaml_config(self, config):
-        super(GestureManager, self).read_yaml_config(config)
-
     def ready(self):
         for gesture_strategy in self.lookups('Gesture'):
             touch_count = gesture_strategy.required_touch_count()

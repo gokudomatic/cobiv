@@ -10,7 +10,7 @@ class StatusLabel(Component,Label):
     def __init__(self, **kwargs):
         super(StatusLabel, self).__init__(valign='middle',**kwargs)
         self.bind(size=self.setter('text_size'))
-        self.session = self.get_app().lookup("session", "Entity")
+        self.session = self.get_session()
         self.template_text = kwargs.get('text')
         self.refresh()
 
@@ -25,7 +25,7 @@ class StatusBar(Component, BoxLayout):
 
     def __init__(self, height=20, **kwargs):
         super(StatusBar, self).__init__(valign='middle',size_hint=(1,None),height=height,**kwargs)
-        self.session=kwargs.get('session')
+        self.session=self.get_session()
         if self.session is not None:
             self.session.cursor.bind(file_id=self.on_file_id_change)
 

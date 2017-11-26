@@ -22,7 +22,7 @@ class Sidebar(Hud, ScrollView):
 
     def __init__(self, **kwargs):
         super(Sidebar, self).__init__(**kwargs)
-        self.session=kwargs.get('session')
+        self.session=self.get_session()
         if self.session is not None:
             self.session.cursor.bind(file_id=self.on_file_id_change)
 

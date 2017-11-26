@@ -45,6 +45,8 @@ class MainContainer(FloatLayout):
 
     def ready(self):
         self.gesture_manager = App.get_running_app().lookup("gesture_manager", "Entity")
+        self.ids.touch_switcher.ready()
+
 
     def memory(self):
         import os
@@ -257,7 +259,9 @@ class MainContainer(FloatLayout):
                 if self.gesture_manager.get_touch_count()>=2:
                     return True
 
-        return super(MainContainer, self).on_touch_down(touch)
+        touch_switcher=self.ids.touch_switcher
+        if not touch_switcher.active or touch_switcher.collide_point(*touch.pos):
+            return super(MainContainer, self).on_touch_down(touch)
 
     def on_touch_move(self, touch):
         if touch.grab_current is not self or self.gesture_manager.get_touch_count() == 1:

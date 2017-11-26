@@ -91,7 +91,7 @@ class Viewer(View, ScrollView):
 
     def ready(self):
         Component.ready(self)
-        self.session = self.get_app().lookup("session", "Entity")
+        self.session = self.lookup("session", "Entity")
         self.cursor = self.session.cursor
 
     def on_switch(self):

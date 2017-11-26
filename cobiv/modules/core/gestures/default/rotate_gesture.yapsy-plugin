@@ -1,0 +1,8 @@
+[Core]
+Name = rotate_gesture
+Module = rotate_gesture
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Rotate Gesture

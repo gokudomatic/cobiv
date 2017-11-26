@@ -82,3 +82,6 @@ class Component(object):
 
     def lookups(self,category):
         return self.get_app().lookups(category)
+
+    def get_session(self):
+        return self.lookup("session", "Entity")

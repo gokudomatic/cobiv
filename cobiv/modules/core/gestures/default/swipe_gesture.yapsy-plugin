@@ -1,0 +1,8 @@
+[Core]
+Name = swipe_gesture
+Module = swipe_gesture
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Swipe Gesture

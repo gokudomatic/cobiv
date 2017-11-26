@@ -1,0 +1,8 @@
+[Core]
+Name = unimove_gesture
+Module = unimove_gesture
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Move Gesture with one non/moving finger
