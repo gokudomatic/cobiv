@@ -102,10 +102,10 @@ class Cobiv(App):
         else:
             self.observers[evt_name].append(callback)
 
-    def fire_event(self,evt_name,*args):
+    def fire_event(self,evt_name,*args,**kwargs):
         if self.observers.has_key(evt_name):
             for callback in self.observers[evt_name]:
-                callback(*args)
+                callback(*args,**kwargs)
 
     def get_user_path(self,*args):
         return os.path.join(os.path.expanduser('~'),'.cobiv',*args)

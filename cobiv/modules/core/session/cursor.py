@@ -260,8 +260,8 @@ class Cursor(EventDispatcher):
             self.implementation.bind(pos=self.on_pos_change)
             self.implementation.bind(repo_key=self.on_repo_key_change)
             self.pos = self.implementation.pos
-            self.filename = self.implementation.filename
             self.repo_key=self.implementation.repo_key
+            self.filename = self.implementation.filename
             self.file_id = self.implementation.file_id
         else:
             self.set_eol_implementation(None)

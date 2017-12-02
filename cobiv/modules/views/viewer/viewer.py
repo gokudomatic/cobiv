@@ -1,7 +1,9 @@
 import os
 
 from kivy.app import App
+from kivy.core.window import Window
 from kivy.effects.dampedscroll import DampedScrollEffect
+from kivy.vector import Vector
 
 from cobiv.modules.core.component import Component
 from kivy.lang import Builder
@@ -44,7 +46,7 @@ class Viewer(View, ScrollView):
     def __init__(self, **kwargs):
         super(Viewer, self).__init__(**kwargs)
 
-        self.effect_x = HorizontalSidebarEffect()
+        # self.effect_x = HorizontalSidebarEffect()
 
         self.set_action("scroll-up", self.scroll_up)
         self.set_action("scroll-down", self.scroll_down)
@@ -91,8 +93,9 @@ class Viewer(View, ScrollView):
 
     def ready(self):
         Component.ready(self)
-        self.session = self.lookup("session", "Entity")
+        self.session = self.get_session()
         self.cursor = self.session.cursor
+        self.get_app().register_event_observer('on_gesture_pinch', self.on_pinch)
 
     def on_switch(self):
         self.cursor.bind(filename=self.on_cursor_change)
@@ -113,7 +116,7 @@ class Viewer(View, ScrollView):
 
         image = False
         filename = self.cursor.filename
-        ext = self.cursor.get_tag(0,'ext')[0]
+        ext = self.cursor.get_tag(0, 'ext')[0]
         if filename is None:
             image = None
         else:
@@ -172,19 +175,33 @@ class Viewer(View, ScrollView):
         self.update_from_scroll()
 
     def zoom_in(self):
-        self._set_fit_mode(SlideMode.NORMAL)
-        self._set_zoom(0.05)
+        self._set_zoom(1 + 0.05)
 
     def zoom_out(self):
-        self._set_fit_mode(SlideMode.NORMAL)
-        self._set_zoom(-0.05)
+        self._set_zoom(1 - 0.05)
 
     def zoom_1(self):
         self._set_fit_mode(SlideMode.NORMAL)
         self.children[0].zoom = 1
 
-    def _set_zoom(self, factor):
-        self.children[0].zoom += factor
+    def _set_zoom(self, factor, center=None):
+        print("---------------------------------------------")
+
+        self._set_fit_mode(SlideMode.NORMAL)
+
+        image = self.children[0]
+
+        if center is None:
+            center = (Window.width / 2, Window.height / 2)
+
+        sv0=Vector((image.width-Window.width)*self.scroll_x,(image.height-Window.height)*self.scroll_y)
+        cv = Vector(image.to_widget(*center))
+
+        sv1 = sv0 + cv * (factor - 1)
+        image.zoom *= factor
+
+        print("zoom = "+str(image.zoom))
+        self.scroll_x, self.scroll_y = self.convert_distance_to_scroll(sv1.x,sv1.y)
 
     def fit_width(self):
         self._set_fit_mode(SlideMode.FIT_WIDTH)
@@ -214,3 +231,13 @@ class Viewer(View, ScrollView):
         if self.cursor.remove():
             self.load_slide()
             # TODO when rm and go previous, nothing happens
+
+    def _get_image(self):
+        return self.children[0]
+
+    def on_pinch(self, amount, center):
+        # print("zoom {}% {}".format(amount * 100, center))
+
+        fac = 0.005
+        self._set_zoom(fac * amount - fac + 1, center)
+        # print("zoomed to {}".format(self._get_image().zoom))
