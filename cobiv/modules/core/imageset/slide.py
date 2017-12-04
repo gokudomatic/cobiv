@@ -55,7 +55,9 @@ class Slide(Image):
         elif value == SlideMode.FIT_SCREEN:
             self.size_hint = (1, 1)
         else:
+            zoom_factor=min(self.width / self.texture_size[0],self.height / self.texture_size[1])
             self.size_hint = (None, None)
+            self.zoom=zoom_factor
 
         if value != SlideMode.NORMAL:
             self.size = self.texture_size

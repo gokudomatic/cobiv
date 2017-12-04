@@ -175,10 +175,14 @@ class Viewer(View, ScrollView):
         self.update_from_scroll()
 
     def zoom_in(self):
+        print("zoom before : {}".format(self.children[0].zoom))
         self._set_zoom(1 + 0.05)
+        print("zoom after : {}".format(self.children[0].zoom))
 
     def zoom_out(self):
+        print("zoom before : {}".format(self.children[0].zoom))
         self._set_zoom(1 - 0.05)
+        print("zoom after : {}".format(self.children[0].zoom))
 
     def zoom_1(self):
         self._set_fit_mode(SlideMode.NORMAL)
@@ -236,8 +240,6 @@ class Viewer(View, ScrollView):
         return self.children[0]
 
     def on_pinch(self, amount, center):
-        # print("zoom {}% {}".format(amount * 100, center))
 
         fac = 0.005
         self._set_zoom(fac * amount - fac + 1, center)
-        # print("zoomed to {}".format(self._get_image().zoom))
