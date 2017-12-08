@@ -8,14 +8,13 @@ class SwipeGesture(Gesture):
     initial_touches = None
 
     def finalize(self, touch, strokes):
-        pass
+        self.get_app().fire_event("on_stop_gesture_swipe")
 
     def process(self, touches, strokes):
         uid=touches[0].uid
         v = Vector(touches[0].x, touches[0].y)-self.initial_touches[uid]
         a = v.angle((1,0))
-        print("distance {} ; angle {} ; origine {}".format(v.length(),a, self.initial_touches[uid]))
-        # TODO send signal with ratio
+        self.get_app().fire_event("on_gesture_swipe",v,self.initial_touches[uid])
 
     def required_touch_count(self):
         return 2

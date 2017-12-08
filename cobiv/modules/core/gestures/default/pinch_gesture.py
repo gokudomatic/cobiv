@@ -9,7 +9,7 @@ class PinchGesture(Gesture):
     initial_touches = None
 
     def finalize(self, touch, strokes):
-        pass
+        self.get_app().fire_event("on_stop_gesture_pinch")
 
     def process(self, touches, strokes):
         v = Vector(touches[1].x, touches[1].y) - Vector(touches[0].x, touches[0].y)

@@ -69,9 +69,11 @@ class ThumbLoader(Entity):
                         thumb_filename = self.get_fullpath_from_file_id(file_id)
                         if not os.path.exists(thumb_filename):
                             self.create_thumbnail_data(repo_key, filename, self.cell_size, thumb_filename)
+                            time.sleep(0.5)
                     except IndexError:
                         self.queue_empty = True
-                    time.sleep(0.5)
+                        time.sleep(2.0)
+
 
         except KeyboardInterrupt:
             pass

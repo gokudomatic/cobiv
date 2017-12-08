@@ -43,6 +43,10 @@ class Viewer(View, ScrollView):
     session = None
     cursor = None
 
+    swipe_event = None
+    swipe_frequency = 0
+    swipe_direction = 0
+
     def __init__(self, **kwargs):
         super(Viewer, self).__init__(**kwargs)
 
@@ -95,7 +99,11 @@ class Viewer(View, ScrollView):
         Component.ready(self)
         self.session = self.get_session()
         self.cursor = self.session.cursor
-        self.get_app().register_event_observer('on_gesture_pinch', self.on_pinch)
+        app=self.get_app()
+        app.register_event_observer('on_gesture_pinch', self.on_pinch)
+        app.register_event_observer('on_gesture_swipe', self.on_swipe)
+        app.register_event_observer('on_stop_gesture_swipe', self.on_stop_swipe)
+
 
     def on_switch(self):
         self.cursor.bind(filename=self.on_cursor_change)
@@ -189,8 +197,6 @@ class Viewer(View, ScrollView):
         self.children[0].zoom = 1
 
     def _set_zoom(self, factor, center=None):
-        print("---------------------------------------------")
-
         self._set_fit_mode(SlideMode.NORMAL)
 
         image = self.children[0]
@@ -243,3 +249,33 @@ class Viewer(View, ScrollView):
 
         fac = 0.005
         self._set_zoom(fac * amount - fac + 1, center)
+
+    def on_swipe(self,vector,origin):
+        v=vector.normalize()
+        if abs(v.y)<0.5:
+            frequency=vector.length()
+
+            if self.swipe_event is None or abs(self.swipe_frequency-frequency)>100:
+                print("changed swipe frequency to {}".format(frequency))
+                if self.swipe_event is not None:
+                    self.swipe_event.cancel()
+                self.swipe_event = Clock.schedule_interval(self.swipe_callback, 100/frequency)
+                self.swipe_frequency=frequency
+                self.swipe_direction=cmp(v.x,0)
+        elif self.swipe_event is not None:
+            self.on_stop_swipe()
+        else:
+            self.swipe_callback(0)
+
+    def on_stop_swipe(self):
+        if self.swipe_event is not None:
+            self.swipe_event.cancel()
+            self.swipe_frequency=0
+            self.swipe_event=None
+            self.swipe_callback(0)
+
+    def swipe_callback(self,dt):
+        if self.swipe_direction<0:
+            self.load_next()
+        elif self.swipe_direction>0:
+            self.load_previous()
