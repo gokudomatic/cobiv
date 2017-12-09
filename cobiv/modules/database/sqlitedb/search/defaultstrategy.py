@@ -33,7 +33,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
         return True
 
     def process(self, lists, subqueries):
-        if not lists.has_key('default'):
+        if not 'default' in lists:
             return
 
         to_include, to_exclude = lists['default']
@@ -52,7 +52,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
 
     def prepare(self, is_excluding, lists, kind, fn, values):
 
-        if not lists.has_key('default'):
+        if not 'default' in lists:
             lists['default'] = ({}, {})
 
         to_include, to_exclude = lists['default']
@@ -60,8 +60,8 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
         self.prepare_function(to_exclude if is_excluding else to_include, fn, kind, values)
 
     def prepare_function(self, category_list, fn, kind, values):
-        if self.operator_functions.has_key(fn):
-            if not category_list.has_key(kind):
+        if fn in self.operator_functions:
+            if not kind in category_list:
                 category_list[kind] = {}
             self.operator_functions[fn][0](category_list, fn, kind, values)
 
@@ -69,7 +69,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
         return self.operator_functions[fn][2](self.operator_functions[fn][1], kind, values, is_except)
 
     def prepare_in(self, crit_list, fn, kind, values):
-        if not crit_list[kind].has_key(fn):
+        if not fn in crit_list[kind]:
             crit_list[kind][fn] = []
         crit_list[kind][fn].append(values)
 
@@ -90,7 +90,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
         return result
 
     def prepare_any(self, crit_list, fn, kind, values):
-        if not crit_list[kind].has_key(fn):
+        if not fn in  crit_list[kind]:
             crit_list[kind][fn] = None
 
     def parse_any(self, kind, values):
@@ -98,7 +98,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
 
     def prepare_greater_than(self, crit_list, fn, kind, values):
         candidate = min([float(i) for i in values])
-        if not crit_list[kind].has_key(fn):
+        if not fn in crit_list[kind]:
             crit_list[kind][fn] = candidate
         else:
             crit_list[kind][fn] = max(candidate, crit_list[kind][fn])
@@ -108,7 +108,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
 
     def prepare_lower_than(self, crit_list, fn, kind, values):
         candidate = max([float(i) for i in values])
-        if not crit_list[kind].has_key(fn):
+        if not fn in crit_list[kind]:
             crit_list[kind][fn] = candidate
         else:
             crit_list[kind][fn] = min(candidate, crit_list[kind][fn])
@@ -128,7 +128,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
             it = iter(values)
             subquery = ''
             for val_from in it:
-                val_to = it.next()
+                val_to = next(it)
                 subquery += self.add_query(subquery, ' or ',
                                            'cast(value as float)>=%s and cast(value as float)<=%s' % (
                                                val_from, val_to))

@@ -81,15 +81,15 @@ class MainContainer(FloatLayout):
         # If we hit escape, release the keyboard
 
         # if escape, close term
-        if keycode[0] == 27L and self.cmd_visible:
+        if keycode[0] == 27 and self.cmd_visible:
             self._set_cmd_visible(False)
         elif not self.cmd_visible:
-            if keycode[0] == 46L and modcode == 1:
+            if keycode[0] == 46 and modcode == 1:
                 self._toggle_cmd(":")
             elif keycode[0] == 304:
                 pass
             elif cmd_hotkeys.has_key(keycode[0]) and not self.is_enter_command:
-                if keycode[0] == 13L:
+                if keycode[0] == 13:
                     self.logger.info("enter pressed")
                 view_name = self.get_view_name()
                 command = get_hotkey_command(keycode[0], modcode, view_name)
@@ -100,7 +100,7 @@ class MainContainer(FloatLayout):
                     if command:
                         self.execute_cmds(command)
             else:
-                if keycode[0] != 13L:
+                if keycode[0] != 13:
                     self.logger.info("code : " + str(keycode) + " " + str(modifiers))
                 pass
 
@@ -228,7 +228,7 @@ class MainContainer(FloatLayout):
     def read_yaml_main_config(self, config):
         if config.has_key('main'):
             for hotkey_config in config['main'].get('hotkeys', []):
-                set_hotkey(long(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0))
+                set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0))
 
         if config.has_key('aliases'):
             aliases = config['aliases']

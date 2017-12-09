@@ -43,7 +43,7 @@ class TestApp(App):
         return TestMainWidget()
 
     def get_config_value(self, key, defaultValue=""):
-        if self.configuration.has_key(key):
+        if key in self.configuration:
             return self.configuration[key]
         else:
             return defaultValue

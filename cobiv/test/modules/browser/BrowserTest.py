@@ -91,7 +91,7 @@ class TestApp(App):
         return TestMainWidget(size_hint=(1, 1), cols=1)
 
     def get_config_value(self, key, default=""):
-        if self.configuration.has_key(key):
+        if key in self.configuration:
             return self.configuration[key]
         else:
             return default
@@ -149,9 +149,9 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(0, len(b.image_queue))
 
         self.assertEqual(len(b.grid.children), 1)
-        self.assertItemsEqual((360, 360), Window.size)
-        self.assertItemsEqual((1, 1), b.size_hint)
-        self.assertItemsEqual((360, 360), b.size)
+        self.assertCountEqual((360, 360), Window.size)
+        self.assertCountEqual((1, 1), b.size_hint)
+        self.assertCountEqual((360, 360), b.size)
 
         app.stop()
 
@@ -538,7 +538,7 @@ class BrowserTest(unittest.TestCase):
 
         self.assertEqual(4, cursor.get_marked_count())
         marked = [e.position for e in b.grid.children if e.is_marked()]
-        self.assertItemsEqual([3, 5, 7, 9], marked)
+        self.assertCountEqual([3, 5, 7, 9], marked)
 
         b.select_last()
         sleep(0.1)
@@ -546,7 +546,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
 
         marked = [e.position for e in b.grid.children if e.is_marked()]
-        self.assertItemsEqual([], marked)
+        self.assertCountEqual([], marked)
 
         b.select_first()
         sleep(0.1)
@@ -554,7 +554,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
 
         marked = [e.position for e in b.grid.children if e.is_marked()]
-        self.assertItemsEqual([3, 5, 7, 9], marked)
+        self.assertCountEqual([3, 5, 7, 9], marked)
 
         b.select_custom(5)
         b.mark_current()
@@ -565,7 +565,7 @@ class BrowserTest(unittest.TestCase):
             Clock.tick()
 
         marked = [e.position for e in b.grid.children if e.is_marked()]
-        self.assertItemsEqual([], marked)
+        self.assertCountEqual([], marked)
 
         # test load more
         for i in range(10):
@@ -573,7 +573,7 @@ class BrowserTest(unittest.TestCase):
             Clock.tick()
 
         marked = [e.position for e in b.grid.children if e.is_marked()]
-        self.assertItemsEqual([3, 7, 9], marked)
+        self.assertCountEqual([3, 7, 9], marked)
 
         cursor.mark_all()
         b.refresh_mark()
@@ -656,7 +656,7 @@ class BrowserTest(unittest.TestCase):
             marked = [e.position for e in b.grid.children if e.is_marked()]
             self.assertEqual(0, len(marked))
             filenames = get_filenames(b.page_cursor, len(expected))
-            self.assertItemsEqual(expected, filenames)
+            self.assertCountEqual(expected, filenames)
 
         # test direct cut
         # # one
@@ -763,7 +763,7 @@ class BrowserTest(unittest.TestCase):
             self.assertEqual(0, len(marked))
             filenames = get_filenames(b.page_cursor, len(expected))
 
-            self.assertItemsEqual(expected, filenames)
+            self.assertCountEqual(expected, filenames)
 
         def cut_first(qty):
             self.proceed_search(db)
@@ -1018,7 +1018,7 @@ class BrowserTest(unittest.TestCase):
             self.assertEqual(0, len(marked))
             filenames = get_filenames(b.page_cursor, len(expected))
 
-            self.assertItemsEqual(expected, filenames)
+            self.assertCountEqual(expected, filenames)
 
         def mark_one(init=True):
             if init:
@@ -1050,7 +1050,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         self.assertEqual(4, cursor.pos)
         test_page(["/%04d.jpg" % (i + 1,) for i in range(27)])
-        self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
+        self.assertCountEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         mark_row()
         self.assertEqual(8, cursor.pos)
@@ -1065,7 +1065,7 @@ class BrowserTest(unittest.TestCase):
 
         self.assertEqual(6, cursor.pos)
         test_page(["/%04d.jpg" % (i + 1,) for i in range(27)])
-        self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
+        self.assertCountEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         mark_page()
         self.assertEqual(26, cursor.pos)
@@ -1091,7 +1091,7 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(0, b.page_cursor.pos)
 
         test_page(["/%04d.jpg" % (i + 1,) for i in range(27)])
-        self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
+        self.assertCountEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         # test different cut and paste
         mark_one()
@@ -1105,7 +1105,7 @@ class BrowserTest(unittest.TestCase):
 
         self.assertEqual(2, cursor.pos)
         test_page(["/%04d.jpg" % (i + 1,) for i in [0, 1, 3, 2] + range(4, 27)])
-        self.assertItemsEqual(range(27), [i.position for i in b.grid.children])
+        self.assertCountEqual(range(27), [i.position for i in b.grid.children])
 
         mark_row()
         b.cut_marked()
@@ -1158,7 +1158,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         self.assertEqual(4, cursor.pos)
         test_page(["/%04d.jpg" % (i + 1,) for i in range(4) + range(5, 28)])
-        self.assertItemsEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
+        self.assertCountEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         # test cut and paste all
         self.proceed_search(db)
@@ -1176,7 +1176,7 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(0, cursor.pos)
 
         test_page(["/%04d.jpg" % (i + 1,) for i in range(27)])
-        self.assertItemsEqual(range(27), [i.position for i in b.grid.children])
+        self.assertCountEqual(range(27), [i.position for i in b.grid.children])
 
         app.stop()
 
@@ -1203,7 +1203,7 @@ class BrowserTest(unittest.TestCase):
             self.assertEqual(0, len(marked))
             filenames = get_filenames(b.page_cursor, len(expected))
 
-            self.assertItemsEqual(expected, filenames)
+            self.assertCountEqual(expected, filenames)
 
         def mark_one(init=True):
             if init:
@@ -1247,7 +1247,7 @@ class BrowserTest(unittest.TestCase):
         self.assertTrue(cursor.is_eol())
         test_page(["/%04d.jpg" % (i + 1,) for i in range(75, 100)])
         self.assertEqual(26, len(b.grid.children))
-        self.assertItemsEqual(range(72, 97), [c.position for c in b.grid.children if not isinstance(c, EOLItem)])
+        self.assertCountEqual(range(72, 97), [c.position for c in b.grid.children if not isinstance(c, EOLItem)])
 
         # test paste
         b.paste_marked()
@@ -1259,7 +1259,7 @@ class BrowserTest(unittest.TestCase):
         self.assertFalse(cursor.is_eol())
         test_page(["/%04d.jpg" % (i + 1,) for i in range(78, 100) + range(6, 9)])
         self.assertEqual(26, len(b.grid.children))
-        self.assertItemsEqual(range(75, 100), [c.position for c in b.grid.children if not isinstance(c, EOLItem)])
+        self.assertCountEqual(range(75, 100), [c.position for c in b.grid.children if not isinstance(c, EOLItem)])
 
         app.stop()
 

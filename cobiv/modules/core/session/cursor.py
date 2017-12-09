@@ -90,8 +90,9 @@ class CursorInterface(EventDispatcher):
     def get_clipboard_size(self):
         return 0
 
-    def sort(self,*fields):
+    def sort(self, *fields):
         pass
+
 
 class EOLCursor(CursorInterface):
     last_cursor = ObjectProperty(None)
@@ -240,7 +241,7 @@ class Cursor(EventDispatcher):
 
         if self.implementation is not None:
             self.implementation.unbind(filename=self.on_filename_change, file_id=self.on_file_id_change,
-                                       pos=self.on_pos_change,repo_key=self.on_repo_key_change)
+                                       pos=self.on_pos_change, repo_key=self.on_repo_key_change)
         self.implementation = instance
         if instance == self.eol_implementation:
             self.filename = None
@@ -255,12 +256,10 @@ class Cursor(EventDispatcher):
                 self.set_eol_implementation(c)
             else:
                 self.set_eol_implementation(None)
-            self.implementation.bind(filename=self.on_filename_change)
-            self.implementation.bind(file_id=self.on_file_id_change)
-            self.implementation.bind(pos=self.on_pos_change)
-            self.implementation.bind(repo_key=self.on_repo_key_change)
+            self.implementation.bind(filename=self.on_filename_change, file_id=self.on_file_id_change,
+                                     pos=self.on_pos_change, repo_key=self.on_repo_key_change)
             self.pos = self.implementation.pos
-            self.repo_key=self.implementation.repo_key
+            self.repo_key = self.implementation.repo_key
             self.filename = self.implementation.filename
             self.file_id = self.implementation.file_id
         else:
@@ -285,7 +284,7 @@ class Cursor(EventDispatcher):
     def on_filename_change(self, instance, value):
         self.filename = value
 
-    def on_repo_key_change(self, instance ,value):
+    def on_repo_key_change(self, instance, value):
         self.repo_key = value
 
     def on_file_id_change(self, instance, value):
@@ -341,31 +340,36 @@ class Cursor(EventDispatcher):
         if not force and self.pos is not None and idx == self.pos:
             return True
         else:
-            self.tags=None
+            self.tags = None
             c = self.implementation.go(idx)
             if c is None and not self.is_eol() and idx < 0:
                 c = self.implementation.go_first()
+                return True
             elif c is None and self.is_eol() and idx > self.pos:
                 return True
             elif c is None and self.is_eol():
+                self.pos=0
                 self.implementation.pos = 0
                 return True
-            self._set_new_impl(c)
-            return True
+            else:
+                if c is None and self.eol_implementation.pos > 0 and idx == 0:
+                    self.eol_implementation.pos = 0
+                self._set_new_impl(c)
+                return True
 
     def get_tags(self):
         if self.implementation is None:
             return []
 
         if self.tags is None:
-            self.tags = [{},{}]
+            self.tags = [{}, {}]
             for cat, kind, value in self.implementation.get_tags():
                 if kind not in self.tags[int(cat)]:
-                    self.tags[int(cat)][kind]=[]
+                    self.tags[int(cat)][kind] = []
                 self.tags[int(cat)][kind].append(value)
         return self.tags
 
-    def get_tag(self,category,kind):
+    def get_tag(self, category, kind):
         if self.implementation is None:
             return []
 
@@ -376,7 +380,6 @@ class Cursor(EventDispatcher):
             return self.tags[category][kind]
         else:
             return []
-
 
     def mark(self, value=None):
         self.implementation.mark(value)
@@ -436,7 +439,7 @@ class Cursor(EventDispatcher):
         if self.implementation is not None:
             if self.implementation.get_marked_count() > 0:
                 self.implementation.cut_marked()
-                self.go(self.pos, force=True)
+                self.go(min(self.pos,len(self)), force=True)
                 if self.is_eol():
                     self.implementation.update_pos()
                 self.mark_all(False)
@@ -458,12 +461,12 @@ class Cursor(EventDispatcher):
     def add_tag(self, *args):
         if self.implementation is not None:
             self.implementation.add_tag(*args)
-            self.tags=None
+            self.tags = None
 
     def remove_tag(self, *args):
         if self.implementation is not None:
             self.implementation.remove_tag(*args)
-            self.tags=None
+            self.tags = None
 
     def get_clipboard_size(self):
         if self.implementation is not None:
@@ -471,6 +474,6 @@ class Cursor(EventDispatcher):
         else:
             return 0
 
-    def sort(self,*fields):
+    def sort(self, *fields):
         if self.implementation is not None:
             self.implementation.sort(*fields)

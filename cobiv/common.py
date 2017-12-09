@@ -3,16 +3,16 @@ cmd_hotkeys = {}
 
 
 def set_action(name, fn, profile="default"):
-    if cmd_actions.has_key(name):
+    if name in cmd_actions:
         cmd_actions[name][profile] = fn
     else:
         cmd_actions[name] = {profile: fn}
 
 
 def set_hotkey(key, command, modifier=0, profile="default"):
-    if cmd_hotkeys.has_key(key):
+    if key in cmd_hotkeys:
         hotkey = cmd_hotkeys[key]
-        if hotkey.has_key(profile):
+        if profile in hotkey:
             hotkey[profile][modifier] = command
         else:
             hotkey[profile] = {modifier: command}
@@ -22,9 +22,9 @@ def set_hotkey(key, command, modifier=0, profile="default"):
 
 def get_hotkey_command(key, modifier=0, profile="default"):
     hotkeys_profiles = cmd_hotkeys[key]
-    if hotkeys_profiles.has_key(profile):
+    if profile in hotkeys_profiles:
         hotkeys = hotkeys_profiles[profile]
-        if hotkeys.has_key(modifier):
+        if modifier in hotkeys:
             return hotkeys[modifier]
 
     return False

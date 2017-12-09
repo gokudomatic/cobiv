@@ -28,7 +28,7 @@ class TestApp(App):
         return TestMainWidget()
 
     def get_config_value(self, key):
-        if self.configuration.has_key(key):
+        if key in self.configuration:
             return self.configuration[key]
         else:
             return ""
@@ -366,39 +366,39 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def _test_get_next_ids(self, app, *args):
         c = self.search()
-        self.assertItemsEqual([], c.get_next_ids(5))
+        self.assertCountEqual([], c.get_next_ids(5))
 
         self.add_files(1)
         c = self.search()
-        self.assertItemsEqual([], c.get_next_ids(5))
+        self.assertCountEqual([], c.get_next_ids(5))
         rows = [(r['file_key'], r['position'], r['name']) for r in c.get_next_ids(5, self_included=True)]
-        self.assertItemsEqual([(1, 0, 'f0.png')], rows)
+        self.assertCountEqual([(1, 0, 'f0.png')], rows)
 
         self.add_files(15)
         c = self.search()
 
         c.go(8)
         rows = [(r['file_key'], r['position'], r['name']) for r in c.get_next_ids(3)]
-        self.assertItemsEqual([(10, 9, 'f9.png'), (11, 10, 'f10.png'), (12, 11, 'f11.png')], rows)
+        self.assertCountEqual([(10, 9, 'f9.png'), (11, 10, 'f10.png'), (12, 11, 'f11.png')], rows)
         rows = [(r['file_key'], r['position'], r['name']) for r in c.get_next_ids(3, self_included=True)]
-        self.assertItemsEqual([(9, 8, 'f8.png'), (10, 9, 'f9.png'), (11, 10, 'f10.png')], rows)
+        self.assertCountEqual([(9, 8, 'f8.png'), (10, 9, 'f9.png'), (11, 10, 'f10.png')], rows)
 
         app.stop()
 
     def _test_get_previous_ids(self, app, *args):
         c = self.search()
-        self.assertItemsEqual([], c.get_previous_ids(5))
+        self.assertCountEqual([], c.get_previous_ids(5))
 
         self.add_files(1)
         c = self.search()
-        self.assertItemsEqual([], c.get_previous_ids(5))
+        self.assertCountEqual([], c.get_previous_ids(5))
 
         self.add_files(15)
         c = self.search()
 
         c.go(8)
         rows = [(r['file_key'], r['position'], r['name']) for r in c.get_previous_ids(3)]
-        self.assertItemsEqual([(8, 7, 'f7.png'), (7, 6, 'f6.png'), (6, 5, 'f5.png')], rows)
+        self.assertCountEqual([(8, 7, 'f7.png'), (7, 6, 'f6.png'), (6, 5, 'f5.png')], rows)
 
         app.stop()
 
@@ -503,15 +503,15 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def _test_get_all_marked(self, app, *args):
         c = self.search()
-        self.assertItemsEqual([], c.get_all_marked())
+        self.assertCountEqual([], c.get_all_marked())
         c.mark()
-        self.assertItemsEqual([], c.get_all_marked())
+        self.assertCountEqual([], c.get_all_marked())
 
         self.add_files(1)
         c = self.search()
-        self.assertItemsEqual([], c.get_all_marked())
+        self.assertCountEqual([], c.get_all_marked())
         c.mark()
-        self.assertItemsEqual([1], c.get_all_marked())
+        self.assertCountEqual([1], c.get_all_marked())
 
         self.add_files(10)
         c = self.search()
@@ -519,7 +519,7 @@ class SQLiteCursorTest(unittest.TestCase):
         c.mark()
         c.go_next()
         c.mark()
-        self.assertItemsEqual([6, 7], c.get_all_marked())
+        self.assertCountEqual([6, 7], c.get_all_marked())
 
         app.stop()
 
@@ -647,21 +647,21 @@ class SQLiteCursorTest(unittest.TestCase):
             return [(r[0], r[1]) for r in c.get_position_mapping(id_list)]
 
         c = self.search()
-        self.assertItemsEqual([], get_map([]))
-        self.assertItemsEqual([], get_map([1]))
+        self.assertCountEqual([], get_map([]))
+        self.assertCountEqual([], get_map([1]))
 
         self.add_files(1)
         c = self.search()
-        self.assertItemsEqual([], get_map([]))
-        self.assertItemsEqual([], get_map([0]))
-        self.assertItemsEqual([(1, 0)], get_map([1]))
+        self.assertCountEqual([], get_map([]))
+        self.assertCountEqual([], get_map([0]))
+        self.assertCountEqual([(1, 0)], get_map([1]))
 
         self.add_files(5)
         c = self.search()
         c.go_last()
-        self.assertItemsEqual([], get_map([]))
-        self.assertItemsEqual([], get_map([0]))
-        self.assertItemsEqual([(1, 0), (3, 2), (5, 4)], get_map([1, 3, 5]))
+        self.assertCountEqual([], get_map([]))
+        self.assertCountEqual([], get_map([0]))
+        self.assertCountEqual([(1, 0), (3, 2), (5, 4)], get_map([1, 3, 5]))
 
         app.stop()
 
@@ -853,26 +853,26 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def _test_tags(self, app, *args):
         c = self.search()
-        self.assertItemsEqual(c.get_tags(), [])
+        self.assertCountEqual(c.get_tags(), [])
         c.add_tag("one")
-        self.assertItemsEqual(c.get_tags(), [])
+        self.assertCountEqual(c.get_tags(), [])
 
         self.add_files(1)
         c = self.search()
-        self.assertItemsEqual(c.get_tags(), [])
+        self.assertCountEqual(c.get_tags(), [])
 
         c.add_tag("one")
-        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "one")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one")])
         c.add_tag("two")
-        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two")])
         c.remove_tag("one")
-        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "two")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "two")])
         c.add_tag("three")
-        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "two"), (1, 'tag', "three")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "two"), (1, 'tag', "three")])
         c.remove_tag("three", "two")
-        self.assertItemsEqual(c.get_tags(), [])
+        self.assertCountEqual(c.get_tags(), [])
         c.add_tag("one", "two")
-        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two")])
 
         self.add_files(3)
         c = self.search()
@@ -881,10 +881,10 @@ class SQLiteCursorTest(unittest.TestCase):
         c.go_previous()
         c.add_tag("1", "2")
         c.go_first()
-        self.assertItemsEqual(c.get_tags(), [])
+        self.assertCountEqual(c.get_tags(), [])
         c.go_next()
         c.go_next()
-        self.assertItemsEqual(c.get_tags(), [(1, 'tag', "a")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "a")])
 
         app.stop()
 
@@ -897,19 +897,19 @@ class SQLiteCursorTest(unittest.TestCase):
             c.go_next()
 
         c.go_first()
-        self.assertItemsEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z")])
+        self.assertCountEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z")])
 
         c.sort("abc")
         c.go_first()
-        self.assertItemsEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
+        self.assertCountEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
 
         c.sort("#idx")
         c.go_first()
-        self.assertItemsEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z")])
+        self.assertCountEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z")])
 
         c.sort("-#idx")
         c.go_first()
-        self.assertItemsEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
+        self.assertCountEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
 
         c.sort("file_date")
 

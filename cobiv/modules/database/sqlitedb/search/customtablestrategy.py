@@ -34,14 +34,14 @@ class CustomTableStrategy(DefaultSearchStrategy):
         }
 
     def prepare(self, is_excluding, lists, kind, fn, values):
-        if not lists.has_key(self.tablename):
+        if not self.tablename in lists:
             lists[self.tablename] = ({}, {})
 
         to_include, to_exclude = lists[self.tablename]
         self.prepare_function(to_exclude if is_excluding else to_include, fn, kind, values)
 
     def process(self, lists, subqueries):
-        if not lists.has_key(self.tablename):
+        if not self.tablename in lists:
             return
 
         to_include, to_exclude = lists[self.tablename]
@@ -68,7 +68,7 @@ class CustomTableStrategy(DefaultSearchStrategy):
         return kind in self.fields
 
     def prepare_in(self, crit_list, fn, kind, values):
-        if not crit_list[kind].has_key(fn):
+        if not fn in crit_list[kind]:
             crit_list[kind][fn] = []
         crit_list[kind][fn].append(values)
 
@@ -102,7 +102,7 @@ class CustomTableStrategy(DefaultSearchStrategy):
             it = iter(values)
             subquery = ''
             for val_from in it:
-                val_to = it.next()
+                val_to = next(it)
                 subquery += self.add_query(subquery, ' or ',
                                            'cast(%s as float) between %s and %s' % (kind, val_from, val_to))
 

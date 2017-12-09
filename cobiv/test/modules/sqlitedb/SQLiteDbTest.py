@@ -42,7 +42,7 @@ class TestApp(App):
         return TestMainWidget()
 
     def get_config_value(self, key, defaultValue=""):
-        if self.configuration.has_key(key):
+        if key in self.configuration:
             return self.configuration[key]
         else:
             return defaultValue
@@ -213,7 +213,7 @@ class SQLiteDbTest(unittest.TestCase):
         test_id = db.conn.execute('select id from file where name="/test.jpg"').fetchone()[0]
 
         # test when nothing changed
-        self.assertItemsEqual([], db._check_modified_files(repo_id=1, repo_fs=fs))
+        self.assertCountEqual([], db._check_modified_files(repo_id=1, repo_fs=fs))
         db.update_tags(repo_id=1, repo_fs=fs)
 
         db.search_tag()
@@ -224,7 +224,7 @@ class SQLiteDbTest(unittest.TestCase):
 
         # test when file content changed
         shutil.copy(self.get_user_path('images', '0001.jpg'), new_filename)
-        self.assertItemsEqual([(test_id, '/test.jpg')], db._check_modified_files(repo_id=1, repo_fs=fs))
+        self.assertCountEqual([(test_id, '/test.jpg')], db._check_modified_files(repo_id=1, repo_fs=fs))
         db.update_tags(repo_id=1, repo_fs=fs)
         c.reload()
         self.assertEqual(os.path.getsize(new_filename), c.get_tags()[0]['size'][0])

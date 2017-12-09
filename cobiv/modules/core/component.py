@@ -1,5 +1,5 @@
-from kivy.app import App
 
+from kivy.app import App
 from cobiv.common import set_action, set_hotkey
 
 
@@ -43,7 +43,7 @@ class Component(object):
     def read_yaml_config(self, config):
         if config.has_key(self.get_name()):
             for hotkey_config in config[self.get_name()].get('hotkeys', []):
-                set_hotkey(long(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0),
+                set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0),
                            self.get_name())
 
     def start_progress(self, caption=None):

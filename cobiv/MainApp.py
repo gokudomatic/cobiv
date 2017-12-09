@@ -2,6 +2,7 @@ import os
 
 import logging
 
+from cobiv.MainContainer import MainContainer
 from cobiv.modules.core.gestures.gesture import Gesture
 
 logging.basicConfig(level=logging.DEBUG)
@@ -13,7 +14,6 @@ from kivy.app import App
 from kivy.lang import Builder
 from yapsy.PluginManager import PluginManager
 
-from MainContainer import MainContainer
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.hud import Hud
 from cobiv.modules.core.view import View

@@ -261,7 +261,7 @@ class Viewer(View, ScrollView):
                     self.swipe_event.cancel()
                 self.swipe_event = Clock.schedule_interval(self.swipe_callback, 100/frequency)
                 self.swipe_frequency=frequency
-                self.swipe_direction=cmp(v.x,0)
+                self.swipe_direction=(v.x > 0)
         elif self.swipe_event is not None:
             self.on_stop_swipe()
         else:
@@ -275,7 +275,7 @@ class Viewer(View, ScrollView):
             self.swipe_callback(0)
 
     def swipe_callback(self,dt):
-        if self.swipe_direction<0:
-            self.load_next()
-        elif self.swipe_direction>0:
+        if self.swipe_direction:
             self.load_previous()
+        else:
+            self.load_next()

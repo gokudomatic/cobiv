@@ -314,7 +314,7 @@ class Browser(View, FloatLayout):
         if not os.path.exists(filename):
             self.thumb_loader.append((file_id, image_full_path, repo_key))
         name = self.thumb_loader.get_filename_caption(image_full_path)
-        img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ration=True)
+        img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ratio=True)
         thumb = Thumb(image=img, cell_size=self.thumb_loader.cell_size, caption=name, selected=False)
         return thumb
 

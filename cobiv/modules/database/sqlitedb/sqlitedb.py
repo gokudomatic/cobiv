@@ -655,7 +655,7 @@ class SqliteDb(Entity):
         to_add.append((node_id, 0, 'format', 0, img.format))
 
         if img.info:
-            for i, v in img.info.iteritems():
+            for i, v in img.info.items():
                 if i == "tags":
                     tag_list = v.split(",")
                     for tag in tag_list:

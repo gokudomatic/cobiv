@@ -121,12 +121,16 @@ class GestureManager(Entity):
         return len(self.__touches)
 
     def round_vector(self, v):
+
+        def sign(x):
+            return (x > 0) - (x < 0)
+
         if abs(v.y) <= 0.38:
-            return Vector(cmp(v.x, 0), 0)
+            return Vector(sign(v.x), 0)
         elif abs(v.x) <= 0.38:
-            return Vector(0, cmp(v.y, 0))
+            return Vector(0, sign(v.y))
         else:
-            return Vector(cmp(v.x, 0), cmp(v.y, 0))
+            return Vector(sign(v.x), sign(v.y))
 
     def update_last_touch(self, touch):
         tx, ty = self.last_touches[touch.uid]
