@@ -1104,7 +1104,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
 
         self.assertEqual(2, cursor.pos)
-        test_page(["/%04d.jpg" % (i + 1,) for i in [0, 1, 3, 2] + range(4, 27)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in [0, 1, 3, 2] + list(range(4, 27))])
         self.assertCountEqual(range(27), [i.position for i in b.grid.children])
 
         mark_row()
@@ -1123,7 +1123,7 @@ class BrowserTest(unittest.TestCase):
         self.assertEqual(27, len(b.grid.children))
         self.assertEqual(b.page_cursor.file_id, b.grid.children[-1].file_id)
         self.assertEqual("/%04d.jpg" % (39 + 1,), b.page_cursor.filename)
-        test_page(["/%04d.jpg" % (i + 1,) for i in range(39, 53) + range(6, 9) + range(53, 63)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in list(range(39, 53)) + list(range(6, 9)) + list(range(53, 63))])
 
         mark_page()
         b.cut_marked()
@@ -1157,7 +1157,7 @@ class BrowserTest(unittest.TestCase):
         Clock.tick()
         Clock.tick()
         self.assertEqual(4, cursor.pos)
-        test_page(["/%04d.jpg" % (i + 1,) for i in range(4) + range(5, 28)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in list(range(4)) + list(range(5, 28))])
         self.assertCountEqual(range(27), [i.position for i in b.grid.children if not isinstance(i, EOLItem)])
 
         # test cut and paste all
@@ -1257,7 +1257,7 @@ class BrowserTest(unittest.TestCase):
 
         self.assertTrue(96, cursor.pos)
         self.assertFalse(cursor.is_eol())
-        test_page(["/%04d.jpg" % (i + 1,) for i in range(78, 100) + range(6, 9)])
+        test_page(["/%04d.jpg" % (i + 1,) for i in list(range(78, 100)) + list(range(6, 9))])
         self.assertEqual(26, len(b.grid.children))
         self.assertCountEqual(range(75, 100), [c.position for c in b.grid.children if not isinstance(c, EOLItem)])
 

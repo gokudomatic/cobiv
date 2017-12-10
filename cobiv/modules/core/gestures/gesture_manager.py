@@ -29,7 +29,7 @@ class GestureManager(Entity):
         for gesture_strategy in self.lookups('Gesture'):
             touch_count = gesture_strategy.required_touch_count()
 
-            if not self.strategies.has_key(touch_count):
+            if not touch_count in self.strategies:
                 self.strategies[touch_count] = []
             self.strategies[touch_count].append(gesture_strategy)
 

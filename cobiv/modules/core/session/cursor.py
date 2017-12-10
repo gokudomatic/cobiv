@@ -376,7 +376,7 @@ class Cursor(EventDispatcher):
         if self.tags is None:
             self.get_tags()
 
-        if self.tags[category].has_key(kind):
+        if kind in self.tags[category]:
             return self.tags[category][kind]
         else:
             return []

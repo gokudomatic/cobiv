@@ -88,7 +88,7 @@ class MainContainer(FloatLayout):
                 self._toggle_cmd(":")
             elif keycode[0] == 304:
                 pass
-            elif cmd_hotkeys.has_key(keycode[0]) and not self.is_enter_command:
+            elif keycode[0] in cmd_hotkeys and not self.is_enter_command:
                 if keycode[0] == 13:
                     self.logger.info("enter pressed")
                 view_name = self.get_view_name()
@@ -164,8 +164,8 @@ class MainContainer(FloatLayout):
         action = line[0]
         args = line[1:]
 
-        found_cmd = cmd_actions.has_key(action)
-        if not found_cmd and self.aliases.has_key(action):
+        found_cmd = action in cmd_actions
+        if not found_cmd and action in self.aliases:
             alias_action = action
             alias_command = self.aliases[alias_action]
 
@@ -175,9 +175,9 @@ class MainContainer(FloatLayout):
         elif found_cmd:
             list_func = cmd_actions[action]
             profile_name = "default"
-            if not force_default and list_func.has_key(self.get_view_name()):
+            if not force_default and self.get_view_name() in list_func:
                 profile_name = self.get_view_name()
-            if list_func.has_key(profile_name):
+            if profile_name in list_func:
                 func = list_func[profile_name]
                 try:
                     func(*args)
@@ -226,11 +226,11 @@ class MainContainer(FloatLayout):
         self.notification_hud_layout.notify(message, error=is_error)
 
     def read_yaml_main_config(self, config):
-        if config.has_key('main'):
+        if 'main' in config:
             for hotkey_config in config['main'].get('hotkeys', []):
                 set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0))
 
-        if config.has_key('aliases'):
+        if 'aliases' in config:
             aliases = config['aliases']
             for alias in aliases:
                 self.aliases[alias] = aliases[alias]

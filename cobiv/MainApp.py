@@ -97,13 +97,13 @@ class Cobiv(App):
         return [plugin.plugin_object for plugin in self.plugin_manager.getPluginsOfCategory(category)]
 
     def register_event_observer(self,evt_name,callback):
-        if not self.observers.has_key(evt_name):
+        if not evt_name in self.observers:
             self.observers[evt_name]=[callback]
         else:
             self.observers[evt_name].append(callback)
 
     def fire_event(self,evt_name,*args,**kwargs):
-        if self.observers.has_key(evt_name):
+        if evt_name in self.observers:
             for callback in self.observers[evt_name]:
                 callback(*args,**kwargs)
 
@@ -114,7 +114,7 @@ class Cobiv(App):
         keys=key.split('.')
         cfg=self.root.configuration
         for k in keys:
-            if cfg.has_key(k):
+            if k in cfg:
                 cfg=cfg.get(k)
             else:
                 return default

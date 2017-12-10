@@ -23,8 +23,9 @@ class StatusLabel(Component,Label):
 
 class StatusBar(Component, BoxLayout):
 
-    def __init__(self, height=20, **kwargs):
-        super(StatusBar, self).__init__(valign='middle',size_hint=(1,None),height=height,**kwargs)
+    def __init__(self, **kwargs):
+        height=kwargs.pop('height',20)
+        super().__init__(size_hint=(1,None),height=height,**kwargs)
         self.session=self.get_session()
         if self.session is not None:
             self.session.cursor.bind(file_id=self.on_file_id_change)

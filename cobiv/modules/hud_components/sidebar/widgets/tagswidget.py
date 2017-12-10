@@ -8,9 +8,8 @@ class TagsWidget(LabelWidget, Component):
     limit = -1
 
     def __init__(self, **kwargs):
+        self.limit=kwargs.pop('limit',-1)
         super(TagsWidget, self).__init__(**kwargs)
-        if kwargs.has_key('limit'):
-            self.limit = kwargs['limit']
 
     def refresh(self):
         tags = self.session.cursor.get_tags()

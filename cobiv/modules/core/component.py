@@ -41,7 +41,7 @@ class Component(object):
         return config
 
     def read_yaml_config(self, config):
-        if config.has_key(self.get_name()):
+        if self.get_name() in config:
             for hotkey_config in config[self.get_name()].get('hotkeys', []):
                 set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0),
                            self.get_name())

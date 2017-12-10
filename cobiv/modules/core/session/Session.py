@@ -23,7 +23,7 @@ class CoreVariables:
     def get_simple_field(self, category, field_name, formatter=None):
         if self.session.cursor.file_id is None:
             return "N/A"
-        if not self.session.cursor.get_tags()[category].has_key(field_name):
+        if not field_name in self.session.cursor.get_tags()[category]:
             return "N/A"
 
         values = self.session.cursor.get_tags()[category][field_name]

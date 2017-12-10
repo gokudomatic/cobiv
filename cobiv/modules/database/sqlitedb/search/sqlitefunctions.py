@@ -25,7 +25,7 @@ class SqliteFunctions(object):
     def get_current_file_tag(self, category, field_name):
         if self.session.cursor.file_id is None:
             return None
-        if not self.session.cursor.get_tags()[category].has_key(field_name):
+        if not field_name in self.session.cursor.get_tags()[category]:
             return None
 
         values = self.session.cursor.get_tags()[category][field_name]

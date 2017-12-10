@@ -180,11 +180,11 @@ class Browser(View, FloatLayout):
         if statusbar_cfg is not None:
             for barcfg in statusbar_cfg:
                 kwargs={}
-                if barcfg.has_key('height'):
+                if 'height' in barcfg:
                     kwargs['height']=barcfg['height']
                 instance = Factory.get(barcfg.get('class'))()
                 self.toolbars.append(instance)
-                if barcfg.has_key('items'):
+                if 'items' in barcfg:
                     for cfg_item in barcfg.get('items'):
                         instance.add_label(**cfg_item)
 
@@ -408,7 +408,7 @@ class Browser(View, FloatLayout):
 
         nb_cols = self.grid.cols
 
-        linenr = pos / nb_cols
+        linenr = pos // nb_cols
         colnr = pos % nb_cols
         new_pos = colnr + (linenr + diff) * nb_cols
 
@@ -694,7 +694,7 @@ class Browser(View, FloatLayout):
                 self.cursor.go(min(sql_size, self.cursor.pos))
                 self.load_set()
             else:
-                if page_cursor_pos < 0 or page_cursor_pos is None:
+                if page_cursor_pos is None or page_cursor_pos < 0:
                     self.page_cursor.go(self.grid.children[-1].position, force=True)
                 elif page_cursor_pos != self.page_cursor.pos:
                     # it moved upfront.
@@ -709,7 +709,7 @@ class Browser(View, FloatLayout):
                         self.grid.remove_widget(self.grid.children[-1])
                 if cursor_pos is None and not cursor_is_eol:
                     self.cursor.reload()
-                elif cursor_pos < 0 and not cursor_is_eol:
+                elif cursor_pos is not None and cursor_pos < 0 and not cursor_is_eol:
                     self.cursor.reload()
 
                 if item_before_eol is not None:
