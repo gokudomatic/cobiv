@@ -26,8 +26,10 @@ class UnimoveGesture(Gesture):
 
     def validate(self, touches, strokes):
 
-        uid0=strokes.keys()[0]
-        uid1=strokes.keys()[1]
+        keys=list(strokes)
+
+        uid0=keys[0]
+        uid1=keys[1]
 
         stroke0=strokes[uid0][-1]
         stroke1=strokes[uid1][-1]
