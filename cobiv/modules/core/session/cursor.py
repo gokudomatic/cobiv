@@ -383,7 +383,7 @@ class Cursor(EventDispatcher):
 
     def mark(self, value=None):
         self.implementation.mark(value)
-        self.get_app().root.execute_cmd("refresh-marked")
+        self.get_app().root.execute_cmds("refresh-marked")
 
     def get_mark(self):
         return self.implementation.get_mark()
