@@ -1,0 +1,8 @@
+[Core]
+Name = sqliteSetManager
+Module = SqliteSetManager
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = A sqlite set manager

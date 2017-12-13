@@ -5,4 +5,4 @@ Module = SqliteDb
 [Documentation]
 Author = Edwin Cox
 Version = 0.1
-Description = A NoSQL nodegraph database to manage images and tags in cobiv
+Description = A Sqlite database to manage images and tags in cobiv

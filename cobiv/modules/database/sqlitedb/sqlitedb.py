@@ -34,7 +34,6 @@ class SqliteCursor(CursorInterface):
     core_tags = ["path", "size", "file_date", "ext"]
     logger = logging.getLogger(__name__)
 
-    set_head_key = None
     con = None
     """ SQLite connection instance """
     current_set = True
@@ -49,13 +48,11 @@ class SqliteCursor(CursorInterface):
     def init_row(self, row):
         if row is None:
             self.pos = None
-            self.set_head_key = None
             self.filename = ''
             self.file_id = None
             self.repo_key = None
         else:
             self.pos = row['position']
-            self.set_head_key = row['set_head_key']
             row1 = self.con.execute('select name, repo_key from file where id=?', (row['file_key'],)).fetchone()
             self.filename = row1['name'] if row is not None else None
             self.file_id = row['file_key']
@@ -69,7 +66,6 @@ class SqliteCursor(CursorInterface):
         """
         new_cursor = SqliteCursor(backend=self.con, current=self.current_set, search_manager=self.search_manager)
         new_cursor.pos = self.pos
-        new_cursor.set_head_key = self.set_head_key
         new_cursor.filename = self.filename
         new_cursor.file_id = self.file_id
         new_cursor.repo_key = self.repo_key
@@ -93,8 +89,7 @@ class SqliteCursor(CursorInterface):
     def go_last(self):
         if self.pos is None:
             return None
-        last_pos_row = self.con.execute('select max(position) from current_set where set_head_key=?',
-                                        (self.set_head_key,)).fetchone()
+        last_pos_row = self.con.execute('select max(position) from current_set').fetchone()
         if last_pos_row is not None:
             return self.go(last_pos_row[0])
         else:
@@ -103,8 +98,8 @@ class SqliteCursor(CursorInterface):
     def get(self, idx):
         if self.pos is None:
             return None
-        row = self.con.execute('select rowid,* from current_set where set_head_key=? and position=?',
-                               (self.set_head_key, idx)).fetchone()
+        row = self.con.execute('select rowid,* from current_set where position=?',
+                               (idx,)).fetchone()
         return row
 
     def get_next_ids(self, amount, self_included=False):
@@ -114,8 +109,8 @@ class SqliteCursor(CursorInterface):
         start_pos = self.pos - (1 if self_included else 0)
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name,f.repo_key from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position>? and c.position<=? order by position',
-            (self.set_head_key, start_pos, start_pos + amount)).fetchall()
+            'select c.file_key,c.position,f.name,f.repo_key from current_set c, file f where f.id=c.file_key and c.position>=0 and c.position>? and c.position<=? order by position',
+            (start_pos, start_pos + amount)).fetchall()
         return rows
 
     def get_previous_ids(self, amount):
@@ -123,8 +118,8 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name,f.repo_key from current_set c, file f where f.id=c.file_key and c.set_head_key=? and c.position>=0 and c.position<? and c.position>=? order by position desc',
-            (self.set_head_key, self.pos, self.pos - amount)).fetchall()
+            'select c.file_key,c.position,f.name,f.repo_key from current_set c, file f where f.id=c.file_key and c.position>=0 and c.position<? and c.position>=? order by position desc',
+            (self.pos, self.pos - amount)).fetchall()
         return rows
 
     def go(self, idx):
@@ -175,8 +170,8 @@ class SqliteCursor(CursorInterface):
         with self.con:
             self.con.execute('delete from current_set where file_key=?', (self.file_id,))
             self.con.execute('delete from marked where file_key=?', (self.file_id,))
-            self.con.execute('update current_set set position=position-1 where set_head_key=? and position>?',
-                             (self.set_head_key, self.pos))
+            self.con.execute('update current_set set position=position-1 where position>?',
+                             (self.pos,))
 
         self.init_row(next)
 
@@ -197,16 +192,16 @@ class SqliteCursor(CursorInterface):
         pos = max(0, min(pos, len(self) - 1))
 
         if pos < self.pos:
-            query = 'update current_set set position=position+1 where set_head_key=? and position<? and position>=?'
+            query = 'update current_set set position=position+1 where position<? and position>=?'
         else:
-            query = 'update current_set set position=position-1 where set_head_key=? and position>? and position<=?'
+            query = 'update current_set set position=position-1 where position>? and position<=?'
 
         with self.con:
-            self.con.execute('update current_set set position=-1 where set_head_key=? and position=?',
-                             (self.set_head_key, self.pos))
-            self.con.execute(query, (self.set_head_key, self.pos, pos))
-            self.con.execute('update current_set set position=? where set_head_key=? and position=-1',
-                             (pos, self.set_head_key))
+            self.con.execute('update current_set set position=-1 where position=?',
+                             (self.pos,))
+            self.con.execute(query, (self.pos, pos))
+            self.con.execute('update current_set set position=? where position=-1',
+                             (pos,))
 
         self.pos = pos
 
@@ -215,9 +210,9 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select file_key,position from current_set where set_head_key=? and file_key in (%s)' % ','.join(
+            'select file_key,position from current_set where file_key in (%s)' % ','.join(
                 '?' * len(file_id_list)),
-            (self.set_head_key,) + tuple(file_id_list)).fetchall()
+            tuple(file_id_list)).fetchall()
 
         return rows
 
@@ -406,6 +401,8 @@ class SqliteDb(Entity):
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
         self.search_manager = SearchManager(self.session)
 
+        self.set_manager = self.lookup('sqliteSetManager', 'Entity')
+
         # add actions
         set_action("search", self.search_tag, "viewer")
         set_action("search", self.search_tag, "browser")
@@ -528,7 +525,7 @@ class SqliteDb(Entity):
             if repo_fs is not None:
                 repo_fs.close()
 
-            self.regenerate_set('*', "select id from file", caption="Creating default set...")
+            self.set_manager.regenerate_default()
 
         self.stop_progress()
 
@@ -666,56 +663,13 @@ class SqliteDb(Entity):
 
         return to_add
 
-    def regenerate_set(self, set_name, query, caption=None):
-
-        is_current = set_name == "_current"
-
-        with self.conn:
-            c = self.conn.cursor()
-
-            if is_current:
-                c.execute('drop table if exists current_set') \
-                    .execute(
-                    'create temporary table current_set as select * from set_detail where 1=2') \
-                    .execute('create index cs_index1 on current_set(file_key)')
-                head_key = 0
-            else:
-                row = c.execute('select id from set_head where name=?', (set_name,)).fetchone()
-                if row is not None:
-                    head_key = row[0]
-                    c.execute('delete from set_detail where set_head_key=?', (head_key,))
-                else:
-                    c.execute('insert into set_head (name, readonly) values (?,?)', (set_name, '0'))
-                    head_key = c.lastrowid
-
-            resultset = c.execute(query).fetchall()
-            self.set_progress_max_count(len(resultset) + 1)
-            self.reset_progress(caption)
-            lines = []
-            thread_count = 0
-            for row in resultset:
-                lines.append((head_key, thread_count, row['id']))
-                self.tick_progress()
-                thread_count += 1
-
-            query = 'insert into %s (set_head_key, position, file_key) values (?,?,?)' % (
-                'current_set' if is_current else 'set_detail')
-            c.executemany(query, lines)
-            self.tick_progress()
-
-    def copy_set_to_current(self, set_name):
-        with self.conn:
-            c = self.conn.execute('drop table if exists current_set').execute(
-                'create temporary table current_set as select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? order by d.position',
-                set_name).execute('create index cs_index1 on current_set(file_key)')
-
     def search_tag(self, *args):
         if len(args) == 0:
-            self.copy_set_to_current('*')
+            self.set_manager.load('*')
         else:
             query = self.search_manager.generate_search_query(*args)
             self.logger.debug(query)
-            self.regenerate_set(CURRENT_SET_NAME, query)
+            self.set_manager.query_to_current_set(query)
 
         row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
         self.session.cursor.set_implementation(
