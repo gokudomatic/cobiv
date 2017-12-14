@@ -9,20 +9,20 @@ class SqliteSetManager(SetManager):
     def remove(self, id):
         with self.conn:
             c = self.conn.execute(
-                'delete d from set_detail d inner join set_head h on h.id=d.set_head_key where h.name=?', (id,))
+                'delete from set_detail where set_head_key = (select id from set_head where name=?)', (id,))
             c.execute('delete from set_head where name=?', (id,))
 
     def save(self, id):
         with self.conn:
             c = self.conn.execute(
-                'delete d from set_detail d inner join set_head h on h.id=d.set_head_key where h.name=?', (id,))
+                'delete from set_detail where set_head_key = (select id from set_head where name=?)', (id,))
             c.execute(
-                'insert into set_head (name,readonly) values (?,?) where not exists(select 1 from set_head where name=?)',
+                'insert into set_head (name,readonly) select ?,? where not exists(select 1 from set_head where name=?)',
                 (id, '0', id))
             row = c.execute('select id from set_head where name=?', (id,)).fetchone()
             key = row[0]
             c.execute(
-                'insert into set_detail (set_head_key,position,file_key) select ?,c.position,c.file_key from current_set',
+                'insert into set_detail (set_head_key,position,file_key) select ?,c.position,c.file_key from current_set c',
                 (key,))
 
     def rename(self, id, new_id):
@@ -34,21 +34,22 @@ class SqliteSetManager(SetManager):
             c = self.conn.execute('drop table if exists current_set')
             c.execute(
                 'create temporary table current_set as select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? order by d.position',
-                id)
+                (id,))
             c.execute('create index cs_index1 on current_set(file_key)')
 
     def add_to_current(self, id):
         with self.conn:
             self.conn.execute(
-                'insert into current_set c select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? and not exists(select 1 from current_set c1 where c1.file_key=d.file_key)',
+                'insert into current_set select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? and not exists(select 1 from current_set c1 where c1.file_key=d.file_key)',
                 (id,)
             )
 
     def remove_from_current(self, id):
         with self.conn:
             self.conn.execute(
-                'delete c from current_set c,set_detail d, set_head h where d.file_key=c.file_key and d.set_head_key=h.id and h.name=?',
+                'delete from current_set where file_key in (select file_key from set_detail d, set_head h where d.set_head_key=h.id and h.name=?)',
                 (id,))
+
 
     def get_list(self):
         with self.conn:
