@@ -372,10 +372,10 @@ class SqliteDb(Entity):
 
     def init_test_db(self, session):
         self.session = session
-        self.conn = sqlite3.connect(':memory:', check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
-        self.conn.execute('PRAGMA temp_store = MEMORY')
-        self.conn.execute('PRAGMA locking_mode = EXCLUSIVE')
+        self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
+
+        self.set_manager = self.lookup('sqliteSetManager', 'Entity')
+
         self.create_database(sameThread=True)
         with self.conn:
             self.conn.execute('create temporary table marked (file_key int)')
@@ -671,7 +671,7 @@ class SqliteDb(Entity):
             self.logger.debug(query)
             self.set_manager.query_to_current_set(query)
 
-        row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
+        row = self.conn.execute('select rowid, * from current_set where position=0 order by position limit 1').fetchone()
         self.session.cursor.set_implementation(
             None if row is None else SqliteCursor(row=row, backend=self.conn, search_manager=self.search_manager))
 
@@ -702,13 +702,12 @@ class SqliteDb(Entity):
         self.execute_cmd("refresh-marked")
 
     def reenumerate_current_set_positions(self):
-        self.session.cursor.reenumerate_current_set_positions()
+        self.set_manager.reenumerate()
 
     def cut_marked(self):
         self.session.cursor.cut_marked()
 
     def paste_marked(self, new_pos):
         self.session.cursor.paste_marked()
-
 
 Factory.register('Cursor', module=SqliteCursor)

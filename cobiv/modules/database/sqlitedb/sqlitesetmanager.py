@@ -43,13 +43,23 @@ class SqliteSetManager(SetManager):
                 'insert into current_set select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? and not exists(select 1 from current_set c1 where c1.file_key=d.file_key)',
                 (id,)
             )
+        self.reenumerate()
 
     def remove_from_current(self, id):
         with self.conn:
             self.conn.execute(
                 'delete from current_set where file_key in (select file_key from set_detail d, set_head h where d.set_head_key=h.id and h.name=?)',
                 (id,))
+        self.reenumerate()
 
+    def reenumerate(self):
+        with self.conn:
+            self.conn.execute(
+                'create temporary table renum as select rowid fkey from current_set where position>=0 order by position')
+            self.conn.execute('create unique index renum_idx on renum(fkey)')  # improve performance
+            self.conn.execute(
+                'update current_set set position=(select r.rowid-1 from renum r where r.fkey=current_set.rowid) where exists (select * from renum where renum.fkey=current_set.rowid)')
+            self.conn.execute('drop table renum')
 
     def get_list(self):
         with self.conn:
@@ -70,19 +80,24 @@ class SqliteSetManager(SetManager):
 
             c.execute("create temporary table map_filekey_pos as select id from file")
             c.execute(
-                "insert into set_detail (set_head_key,position,file_key) select ?,rowid,id from map_filekey_pos",
+                "insert into set_detail (set_head_key,position,file_key) select ?,rowid-1,id from map_filekey_pos",
                 (head_key,))
             c.execute("drop table map_filekey_pos")
 
     def query_to_current_set(self, query):
+        c = self.conn.cursor()
+
+        c.execute("create temporary table map_filekey_pos as " + query)
+
+        c.execute('drop table if exists current_set')
+        c.execute(
+            'create temporary table current_set as select 0 as set_head_key,rowid-1 as position,id as file_key from map_filekey_pos')
+        c.execute('create index cs_index1 on current_set(file_key)')
+
+        c.execute("drop table map_filekey_pos")
+
+    def test(self):
         with self.conn:
             c = self.conn.cursor()
-
-            c.execute("create temporary table map_filekey_pos as " + query)
-
             c.execute('drop table if exists current_set')
-            c.execute(
-                'create temporary table current_set as select 0 as set_head_key,rowid as position,id as file_key from map_filekey_pos')
-            c.execute('create index cs_index1 on current_set(file_key)')
-
-            c.execute("drop table map_filekey_pos")
+            c.execute("create temporary table current_set as select id from file where rowid between 50 and 149")

@@ -1,5 +1,8 @@
 import logging
 
+from modules.database.datasources.sqlite.sqliteds import Sqliteds
+from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
+
 logging.basicConfig(level=logging.DEBUG)
 
 import os
@@ -37,6 +40,7 @@ class TestApp(App):
             'repositories': ['osfs://images'],
             'thumbnails.path': self.get_user_path('thumbs')
         }
+        self.ds=Sqliteds()
 
     def build(self):
         return TestMainWidget()
@@ -56,6 +60,11 @@ class TestApp(App):
     def lookups(self, category):
         return []
 
+    def lookup(self,name,category):
+        if name=='sqliteSetManager':
+            return SqliteSetManager()
+        elif name=='sqlite_ds':
+            return self.ds
 
 class SQLiteDbTest(unittest.TestCase):
     def get_user_path(self, *args):

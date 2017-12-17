@@ -15,6 +15,8 @@ from cobiv.modules.database.sqlitedb.sqlitedb import SqliteDb
 from cobiv.modules.views.browser.browser import Browser
 from cobiv.modules.views.browser.eolitem import EOLItem
 from cobiv.modules.hud_components.sidebar.sidebar import Sidebar
+from modules.database.datasources.sqlite.sqliteds import Sqliteds
+from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
 
 Window.size = (360, 360)
 
@@ -28,8 +30,8 @@ class TestMainWidget(GridLayout):
         else:
             pass
 
-    def execute_cmds(self,*args,**kwargs):
-        return self.execute_cmd(*args,**kwargs)
+    def execute_cmds(self, *args, **kwargs):
+        return self.execute_cmd(*args, **kwargs)
 
     def show_progressbar(self, *args, **kwargs):
         pass
@@ -86,6 +88,7 @@ class TestApp(App):
             'repositories': ['osfs://images'],
             'thumbnails.path': self.get_user_path('thumbs')
         }
+        self.ds = Sqliteds()
 
     def build(self):
         return TestMainWidget(size_hint=(1, 1), cols=1)
@@ -104,6 +107,10 @@ class TestApp(App):
             return self.session
         elif category == "Entity" and object_name == "thumbloader":
             return MockThumbloader()
+        elif object_name == "sqlite_ds":
+            return self.ds
+        elif object_name == 'sqliteSetManager':
+            return SqliteSetManager()
         else:
             return None
 

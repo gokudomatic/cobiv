@@ -113,6 +113,8 @@ class SQLiteCursorTest(unittest.TestCase):
             self.assertNotEqual(0, c.execute('select count(*) from set_head').fetchone()[0])
             self.assertNotEqual(0, c.execute('select count(*) from set_detail').fetchone()[0])
 
+            self.assertEqual(0,c.execute('select position from set_detail order by position').fetchone()[0])
+
         app.stop()
 
     def _test_query_to_current_set(self, app, *args):
@@ -236,7 +238,6 @@ class SQLiteCursorTest(unittest.TestCase):
         mgr.regenerate_default()
 
         with self.conn:
-            c = self.conn.cursor()
 
             mgr.query_to_current_set("select id from file where rowid between 100 and 300")
             mgr.save('test1')
@@ -245,15 +246,15 @@ class SQLiteCursorTest(unittest.TestCase):
             mgr.query_to_current_set("select id from file")
 
             mgr.query_to_current_set("select id from file where rowid between 50 and 55")
-            self.assertEqual(6, c.execute('select count(*) from current_set').fetchone()[0])
+            self.assertEqual(6, self.conn.execute('select count(*) from current_set').fetchone()[0])
             mgr.add_to_current('test1')
-            self.assertEqual(207, c.execute('select count(*) from current_set').fetchone()[0])
+            self.assertEqual(207, self.conn.execute('select count(*) from current_set').fetchone()[0])
+            self.assertEqual(206, self.conn.execute('select position from current_set order by position desc').fetchone()[0])
 
             mgr.query_to_current_set("select id from file where rowid between 50 and 149")
-            self.assertEqual(100, c.execute('select count(*) from current_set').fetchone()[0])
+            self.assertEqual(100, self.conn.execute('select count(*) from current_set').fetchone()[0])
             mgr.add_to_current('test1')
-            self.assertEqual(251, c.execute('select count(*) from current_set').fetchone()[0])
-
+            self.assertEqual(251, self.conn.execute('select count(*) from current_set').fetchone()[0])
 
         app.stop()
 
@@ -261,24 +262,32 @@ class SQLiteCursorTest(unittest.TestCase):
         mgr = SqliteSetManager()
         mgr.regenerate_default()
 
-        with self.conn:
-            c = self.conn.cursor()
 
-            mgr.query_to_current_set("select id from file where rowid between 100 and 300")
-            mgr.save('test1')
-            mgr.query_to_current_set("select id from file where rowid between 444 and 555")
-            mgr.save('test2')
-            mgr.query_to_current_set("select id from file")
+        mgr.query_to_current_set("select id from file where rowid between 100 and 300")
+        mgr.save('test1')
+        mgr.query_to_current_set("select id from file where rowid between 444 and 555")
+        mgr.save('test2')
 
-            mgr.query_to_current_set("select id from file where rowid between 50 and 55")
-            self.assertEqual(6, c.execute('select count(*) from current_set').fetchone()[0])
-            mgr.remove_from_current('test1')
-            self.assertEqual(6, c.execute('select count(*) from current_set').fetchone()[0])
+        mgr.query_to_current_set("select id from file where rowid between 250 and 350")
+        mgr.remove_from_current('test1')
+        self.assertEqual(50, self.conn.execute('select count(*) from current_set').fetchone()[0])
+        self.assertEqual(49, self.conn.execute('select position from current_set order by position desc').fetchone()[0])
 
-            mgr.query_to_current_set("select id from file where rowid between 50 and 149")
-            self.assertEqual(100, c.execute('select count(*) from current_set').fetchone()[0])
-            mgr.remove_from_current('test1')
-            self.assertEqual(50, c.execute('select count(*) from current_set').fetchone()[0])
+
+        mgr.query_to_current_set("select id from file where rowid between 50 and 55")
+        self.assertEqual(6, self.conn.execute('select count(*) from current_set').fetchone()[0])
+        mgr.remove_from_current('test1')
+        self.assertEqual(6, self.conn.execute('select count(*) from current_set').fetchone()[0])
+
+        mgr.query_to_current_set("select id from file where rowid between 50 and 149")
+        self.assertEqual(100, self.conn.execute('select count(*) from current_set').fetchone()[0])
+        self.assertEqual(99, self.conn.execute('select position from current_set order by position desc').fetchone()[0])
+        mgr.remove_from_current('test1')
+        self.assertEqual(50, self.conn.execute('select count(*) from current_set').fetchone()[0])
+        self.assertEqual(49, self.conn.execute('select position from current_set order by position desc').fetchone()[0])
+
+
+
 
         app.stop()
 

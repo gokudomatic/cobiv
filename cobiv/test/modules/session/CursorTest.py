@@ -12,6 +12,9 @@ class TestMainWidget(Widget):
     def execute_cmd(self, *args):
         pass
 
+    def execute_cmds(self, *args):
+        pass
+
 
 class TestApp(App):
     def build(self):
