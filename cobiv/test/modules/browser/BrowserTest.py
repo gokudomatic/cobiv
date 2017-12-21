@@ -17,6 +17,7 @@ from cobiv.modules.views.browser.eolitem import EOLItem
 from cobiv.modules.hud_components.sidebar.sidebar import Sidebar
 from modules.database.datasources.sqlite.sqliteds import Sqliteds
 from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
+from test.AbstractApp import AbstractApp
 
 Window.size = (360, 360)
 
@@ -78,7 +79,7 @@ class MockThumbloader(Entity):
         pass
 
 
-class TestApp(App):
+class TestApp(AbstractApp):
     session = None
 
     def __init__(self, **kwargs):
@@ -93,15 +94,6 @@ class TestApp(App):
     def build(self):
         return TestMainWidget(size_hint=(1, 1), cols=1)
 
-    def get_config_value(self, key, default=""):
-        if key in self.configuration:
-            return self.configuration[key]
-        else:
-            return default
-
-    def get_user_path(self, *args):
-        return os.path.join(os.path.dirname(os.path.abspath(__file__)), *args)
-
     def lookup(self, object_name, category):
         if category == "Entity" and object_name == "session":
             return self.session
@@ -113,9 +105,6 @@ class TestApp(App):
             return SqliteSetManager()
         else:
             return None
-
-    def lookups(self, category):
-        return []
 
 
 class BrowserTest(unittest.TestCase):

@@ -2,6 +2,7 @@ import logging
 
 from modules.database.datasources.sqlite.sqliteds import Sqliteds
 from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
+from test.AbstractApp import AbstractApp
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -32,7 +33,7 @@ class TestMainWidget(Widget):
         pass
 
 
-class TestApp(App):
+class TestApp(AbstractApp):
 
     def __init__(self, **kwargs):
         super(TestApp, self).__init__(**kwargs)
@@ -42,43 +43,15 @@ class TestApp(App):
             'thumbnails.path': self.get_user_path('thumbs')
         }
         self.ds=Sqliteds()
-        self.observers={}
 
     def build(self):
         return TestMainWidget()
-
-    def get_config_value(self, key, defaultValue=""):
-        if key in self.configuration:
-            return self.configuration[key]
-        else:
-            return defaultValue
-
-    def get_user_path(self, *args):
-        return os.path.join(os.path.dirname(os.path.abspath(__file__)), *args)
-
-    def fire_event(self, evt_name, *args, **kwargs):
-        if evt_name in self.observers:
-            for callback in self.observers[evt_name]:
-                callback(*args,**kwargs)
-
-    def clear_observers(self):
-        self.observers={}
-
-    def lookups(self, category):
-        return []
 
     def lookup(self,name,category):
         if name=='sqliteSetManager':
             return SqliteSetManager()
         elif name=='sqlite_ds':
             return self.ds
-
-    def register_event_observer(self,evt_name,callback):
-        if not evt_name in self.observers:
-            self.observers[evt_name]=[callback]
-        else:
-            self.observers[evt_name].append(callback)
-
 
 class SQLiteDbTest(unittest.TestCase):
     def get_user_path(self, *args):
