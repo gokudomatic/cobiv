@@ -90,6 +90,8 @@ class TestApp(App):
     def lookup(self, name, category):
         return self.datasource
 
+    def fire_event(self,*args,**kwargs):
+        pass
 
 class SQLiteCursorTest(unittest.TestCase):
 
@@ -102,10 +104,14 @@ class SQLiteCursorTest(unittest.TestCase):
         with self.conn:
             self.conn.execute('delete from set_head').execute('delete from set_detail')
 
-    def _test_initialization(self, app, *args):
+    def _create_set_mgr(self):
         mgr = SqliteSetManager()
-
+        mgr.ready()
         mgr.regenerate_default()
+        return mgr
+
+    def _test_initialization(self, app, *args):
+        mgr = self._create_set_mgr()
 
         with self.conn:
             c = self.conn.cursor()
@@ -118,8 +124,7 @@ class SQLiteCursorTest(unittest.TestCase):
         app.stop()
 
     def _test_query_to_current_set(self, app, *args):
-        mgr = SqliteSetManager()
-        mgr.regenerate_default()
+        mgr = self._create_set_mgr()
 
         with self.conn:
             mgr.query_to_current_set("select id from file")
@@ -131,8 +136,7 @@ class SQLiteCursorTest(unittest.TestCase):
         app.stop()
 
     def _test_save(self, app, *args):
-        mgr = SqliteSetManager()
-        mgr.regenerate_default()
+        mgr = self._create_set_mgr()
 
         with self.conn:
             mgr.query_to_current_set("select id from file")
@@ -164,8 +168,7 @@ class SQLiteCursorTest(unittest.TestCase):
         app.stop()
 
     def _test_load(self, app, *args):
-        mgr = SqliteSetManager()
-        mgr.regenerate_default()
+        mgr = self._create_set_mgr()
 
         with self.conn:
             c = self.conn.cursor()
@@ -194,8 +197,7 @@ class SQLiteCursorTest(unittest.TestCase):
         app.stop()
 
     def _test_rename(self, app, *args):
-        mgr = SqliteSetManager()
-        mgr.regenerate_default()
+        mgr = self._create_set_mgr()
 
         with self.conn:
             c = self.conn.cursor()
@@ -214,8 +216,7 @@ class SQLiteCursorTest(unittest.TestCase):
         app.stop()
 
     def _test_remove(self, app, *args):
-        mgr = SqliteSetManager()
-        mgr.regenerate_default()
+        mgr = self._create_set_mgr()
 
         with self.conn:
             c = self.conn.cursor()
@@ -234,8 +235,7 @@ class SQLiteCursorTest(unittest.TestCase):
         app.stop()
 
     def _test_add_to_current(self, app, *args):
-        mgr = SqliteSetManager()
-        mgr.regenerate_default()
+        mgr = self._create_set_mgr()
 
         with self.conn:
 
@@ -259,8 +259,7 @@ class SQLiteCursorTest(unittest.TestCase):
         app.stop()
 
     def _test_remove_from_current(self, app, *args):
-        mgr = SqliteSetManager()
-        mgr.regenerate_default()
+        mgr = self._create_set_mgr()
 
 
         mgr.query_to_current_set("select id from file where rowid between 100 and 300")
@@ -292,8 +291,7 @@ class SQLiteCursorTest(unittest.TestCase):
         app.stop()
 
     def _test_get_list(self, app, *args):
-        mgr = SqliteSetManager()
-        mgr.regenerate_default()
+        mgr = self._create_set_mgr()
 
         with self.conn:
             c = self.conn.cursor()

@@ -1,10 +1,19 @@
+from common import set_action
 from modules.core.sets.setmanager import SetManager
 
 
 class SqliteSetManager(SetManager):
-    def __init__(self) -> None:
-        super().__init__()
+
+    def ready(self):
+        super().ready()
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
+
+        set_action("add_set", self.save)
+        set_action("rm_set", self.remove)
+        set_action("mv_set", self.rename)
+        set_action("ren_set", self.rename)
+        set_action("append_set", self.add_to_current)
+        set_action("substract_set", self.remove_from_current)
 
     def remove(self, id):
         with self.conn:
@@ -37,6 +46,8 @@ class SqliteSetManager(SetManager):
                 (id,))
             c.execute('create index cs_index1 on current_set(file_key)')
 
+        self.get_app().fire_event("on_current_set_change")
+
     def add_to_current(self, id):
         with self.conn:
             self.conn.execute(
@@ -45,12 +56,16 @@ class SqliteSetManager(SetManager):
             )
         self.reenumerate()
 
+        self.get_app().fire_event("on_current_set_change")
+
     def remove_from_current(self, id):
         with self.conn:
             self.conn.execute(
                 'delete from current_set where file_key in (select file_key from set_detail d, set_head h where d.set_head_key=h.id and h.name=?)',
                 (id,))
         self.reenumerate()
+
+        self.get_app().fire_event("on_current_set_change")
 
     def reenumerate(self):
         with self.conn:
@@ -87,6 +102,8 @@ class SqliteSetManager(SetManager):
     def query_to_current_set(self, query):
         c = self.conn.cursor()
 
+        print(self.conn)
+
         c.execute("create temporary table map_filekey_pos as " + query)
 
         c.execute('drop table if exists current_set')
@@ -95,6 +112,8 @@ class SqliteSetManager(SetManager):
         c.execute('create index cs_index1 on current_set(file_key)')
 
         c.execute("drop table map_filekey_pos")
+
+        self.get_app().fire_event("on_current_set_change")
 
     def test(self):
         with self.conn:

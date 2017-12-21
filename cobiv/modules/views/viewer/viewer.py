@@ -50,8 +50,6 @@ class Viewer(View, ScrollView):
     def __init__(self, **kwargs):
         super(Viewer, self).__init__(**kwargs)
 
-        # self.effect_x = HorizontalSidebarEffect()
-
         self.set_action("scroll-up", self.scroll_up)
         self.set_action("scroll-down", self.scroll_down)
         self.set_action("scroll-left", self.scroll_left)

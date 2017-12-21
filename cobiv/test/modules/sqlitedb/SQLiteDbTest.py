@@ -33,6 +33,7 @@ class TestMainWidget(Widget):
 
 
 class TestApp(App):
+
     def __init__(self, **kwargs):
         super(TestApp, self).__init__(**kwargs)
         self.configuration = {
@@ -41,6 +42,7 @@ class TestApp(App):
             'thumbnails.path': self.get_user_path('thumbs')
         }
         self.ds=Sqliteds()
+        self.observers={}
 
     def build(self):
         return TestMainWidget()
@@ -54,8 +56,13 @@ class TestApp(App):
     def get_user_path(self, *args):
         return os.path.join(os.path.dirname(os.path.abspath(__file__)), *args)
 
-    def fire_event(self, *args):
-        pass
+    def fire_event(self, evt_name, *args, **kwargs):
+        if evt_name in self.observers:
+            for callback in self.observers[evt_name]:
+                callback(*args,**kwargs)
+
+    def clear_observers(self):
+        self.observers={}
 
     def lookups(self, category):
         return []
@@ -65,6 +72,13 @@ class TestApp(App):
             return SqliteSetManager()
         elif name=='sqlite_ds':
             return self.ds
+
+    def register_event_observer(self,evt_name,callback):
+        if not evt_name in self.observers:
+            self.observers[evt_name]=[callback]
+        else:
+            self.observers[evt_name].append(callback)
+
 
 class SQLiteDbTest(unittest.TestCase):
     def get_user_path(self, *args):
@@ -81,6 +95,7 @@ class SQLiteDbTest(unittest.TestCase):
         f_path = self.get_user_path('images', 'test.jpg')
         if os.path.exists(f_path):
             os.remove(f_path)
+
         super(SQLiteDbTest, self).tearDown()
 
     def init_db(self):
@@ -152,6 +167,7 @@ class SQLiteDbTest(unittest.TestCase):
         app.stop()
 
     def _test_search_all(self, app, *args):
+
         db = SqliteDb()
         db.init_test_db(self.session)
         db.session = self.session
