@@ -68,6 +68,8 @@ class ThumbloaderTest(unittest.TestCase):
     def setUp(self):
         self.session = Session()
         self.session.add_filesystem(1, open_fs(u'osfs://images'))
+        path = self.get_user_path('thumbs')
+        [os.remove(os.path.join(path, f)) for f in os.listdir(path)]
 
     def tearDown(self):
         super(ThumbloaderTest, self).tearDown()
@@ -104,6 +106,7 @@ class ThumbloaderTest(unittest.TestCase):
         t = self.get_thumbloader(app)
 
         self.assertEqual(0, len(t.to_cache))
+        self.assertEqual(0, len(os.listdir(self.get_user_path('thumbs'))))
 
         t.append((1, u'/0001.jpg', 1))
         self.assertEqual(1, len(t.to_cache))
@@ -120,7 +123,7 @@ class ThumbloaderTest(unittest.TestCase):
 
         t.append((2, u'/0002.jpg', 1))
         self.assertEqual(1, len(t.to_cache))
-        self.wait_for(t, 1)
+        self.wait_for(t, 2)
         self.assertEqual(0, len(t.to_cache))
         self.assertEqual(3, len(os.listdir(self.get_user_path('thumbs'))))
 
@@ -139,7 +142,7 @@ class ThumbloaderTest(unittest.TestCase):
 
         t.append((1, u'/0001.jpg', 1), (2, u'/0002.jpg', 1),
                  (3, u'/0003.jpg', 1))
-        self.wait_for(t, 3)
+        self.wait_for(t, 4)
         t.delete_thumbnail(2)
         self.assertEqual(2, len(os.listdir(self.get_user_path('thumbs'))))
         t.delete_thumbnail(1, 2)
