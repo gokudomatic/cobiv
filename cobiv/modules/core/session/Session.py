@@ -66,10 +66,10 @@ class CoreVariables:
 
 class Session(Entity):
     cursor = None
-
     fields = {}
-
     active_fs = {}
+    cmd_actions = {}
+    cmd_hotkeys = {}
 
     def __init__(self):
         self.cursor = Cursor()
@@ -91,3 +91,30 @@ class Session(Entity):
 
     def add_filesystem(self, key, filesystem):
         self.active_fs[key] = filesystem
+
+    def set_action(self, name, fn, profile="default"):
+        if name in self.cmd_actions:
+            self.cmd_actions[name][profile] = fn
+        else:
+            self.cmd_actions[name] = {profile: fn}
+
+
+    def set_hotkey(self, key, command, modifier=0, profile="default"):
+        if key in self.cmd_hotkeys:
+            hotkey = self.cmd_hotkeys[key]
+            if profile in hotkey:
+                hotkey[profile][modifier] = command
+            else:
+                hotkey[profile] = {modifier: command}
+        else:
+            self.cmd_hotkeys[key] = {profile: {modifier: command}}
+
+
+    def get_hotkey_command(self, key, modifier=0, profile="default"):
+        hotkeys_profiles = self.cmd_hotkeys[key]
+        if profile in hotkeys_profiles:
+            hotkeys = hotkeys_profiles[profile]
+            if modifier in hotkeys:
+                return hotkeys[modifier]
+
+        return False

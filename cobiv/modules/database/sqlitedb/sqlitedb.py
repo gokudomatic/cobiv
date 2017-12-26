@@ -9,7 +9,6 @@ from PIL import Image
 from kivy.app import App
 from kivy.factory import Factory
 
-from cobiv.common import set_action
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import CursorInterface
 from cobiv.modules.database.sqlitedb.search.searchmanager import SearchManager, TEMP_SORT_TABLE, TEMP_PRESORT_TABLE
@@ -403,28 +402,28 @@ class SqliteDb(Entity):
         if not os.path.exists(self.get_app().get_user_path('thumbnails')):
             os.makedirs(self.get_app().get_user_path('thumbnails'))
 
-        self.session = self.get_app().lookup("session", "Entity")
+        self.session = self.get_session()
 
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
         self.search_manager = SearchManager(self.session)
 
-        self.set_manager = self.lookup('sqliteSetManager', 'Entity')
+        self.set_manager = self.lookup('sqliteSetManager', 'SetManager')
 
         # add actions
-        set_action("search", self.search_tag, "viewer")
-        set_action("search", self.search_tag, "browser")
-        set_action("add-tag", self.add_tag, "viewer")
-        set_action("add-tag", self.add_tag, "browser")
-        set_action("rm-tag", self.remove_tag, "viewer")
-        set_action("rm-tag", self.remove_tag, "browser")
-        set_action("ls-tag", self.list_tags, "viewer")
-        set_action("ls-tag", self.list_tags, "browser")
-        set_action("updatedb", self.updatedb)
-        set_action("mark-all", self.mark_all)
-        set_action("mark-invert", self.invert_marked)
-        set_action("rnc", self.reenumerate_current_set_positions)
-        set_action("cut-marked", self.cut_marked)
-        set_action("paste-marked", self.paste_marked)
+        self.session.set_action("search", self.search_tag, "viewer")
+        self.session.set_action("search", self.search_tag, "browser")
+        self.session.set_action("add-tag", self.add_tag, "viewer")
+        self.session.set_action("add-tag", self.add_tag, "browser")
+        self.session.set_action("rm-tag", self.remove_tag, "viewer")
+        self.session.set_action("rm-tag", self.remove_tag, "browser")
+        self.session.set_action("ls-tag", self.list_tags, "viewer")
+        self.session.set_action("ls-tag", self.list_tags, "browser")
+        self.session.set_action("updatedb", self.updatedb)
+        self.session.set_action("mark-all", self.mark_all)
+        self.session.set_action("mark-invert", self.invert_marked)
+        self.session.set_action("rnc", self.reenumerate_current_set_positions)
+        self.session.set_action("cut-marked", self.cut_marked)
+        self.session.set_action("paste-marked", self.paste_marked)
 
         must_initialize = True
         try:

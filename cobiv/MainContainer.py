@@ -7,14 +7,12 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
 from kivy.clock import Clock, mainthread
 
-from cobiv.common import *
-
 this = sys.modules[__name__]
 
 
 class MainContainer(FloatLayout):
     logger = logging.getLogger(__name__)
-
+    session = None
     cmd_input = ObjectProperty(None)
     current_view = ObjectProperty(None)
     hud_layout = ObjectProperty(None)
@@ -36,16 +34,18 @@ class MainContainer(FloatLayout):
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self._set_cmd_visible(False)
 
-        set_action("q", self.quit)
-        set_action("fullscreen", self.toggle_fullscreen)
-        set_action("switch-view", self.switch_view)
-        set_action("hello", self.hello)
-        set_action("memory", self.memory)
-        set_action("set-command", self.set_command)
-
     def ready(self):
+        self.session=App.get_running_app().lookup("session", "Entity")
+        print("session found : {}".format(self.session))
         self.gesture_manager = App.get_running_app().lookup("gesture_manager", "Entity")
         self.ids.touch_switcher.ready()
+
+        self.session.set_action("q", self.quit)
+        self.session.set_action("fullscreen", self.toggle_fullscreen)
+        self.session.set_action("switch-view", self.switch_view)
+        self.session.set_action("hello", self.hello)
+        self.session.set_action("memory", self.memory)
+        self.session.set_action("set-command", self.set_command)
 
 
     def memory(self):
@@ -88,15 +88,15 @@ class MainContainer(FloatLayout):
                 self._toggle_cmd(":")
             elif keycode[0] == 304:
                 pass
-            elif keycode[0] in cmd_hotkeys and not self.is_enter_command:
+            elif keycode[0] in self.session.cmd_hotkeys and not self.is_enter_command:
                 if keycode[0] == 13:
                     self.logger.info("enter pressed")
                 view_name = self.get_view_name()
-                command = get_hotkey_command(keycode[0], modcode, view_name)
+                command = self.session.get_hotkey_command(keycode[0], modcode, view_name)
                 if command:
                     self.execute_cmds(command)
                 else:
-                    command = get_hotkey_command(keycode[0], modcode)
+                    command = self.session.get_hotkey_command(keycode[0], modcode)
                     if command:
                         self.execute_cmds(command)
             else:
@@ -164,7 +164,7 @@ class MainContainer(FloatLayout):
         action = line[0]
         args = line[1:]
 
-        found_cmd = action in cmd_actions
+        found_cmd = action in self.session.cmd_actions
         if not found_cmd and action in self.aliases:
             alias_action = action
             alias_command = self.aliases[alias_action]
@@ -173,7 +173,7 @@ class MainContainer(FloatLayout):
             self.execute_cmds(new_command, recursive_iteration=recursive_iteration + 1, force_default=force_default)
 
         elif found_cmd:
-            list_func = cmd_actions[action]
+            list_func = self.session.cmd_actions[action]
             profile_name = "default"
             if not force_default and self.get_view_name() in list_func:
                 profile_name = self.get_view_name()
@@ -226,9 +226,10 @@ class MainContainer(FloatLayout):
         self.notification_hud_layout.notify(message, error=is_error)
 
     def read_yaml_main_config(self, config):
+        session = App.get_running_app().lookup("session", "Entity")
         if 'main' in config:
             for hotkey_config in config['main'].get('hotkeys', []):
-                set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0))
+                session.set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0))
 
         if 'aliases' in config:
             aliases = config['aliases']

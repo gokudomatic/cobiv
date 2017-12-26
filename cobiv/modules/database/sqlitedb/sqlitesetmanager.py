@@ -1,4 +1,3 @@
-from common import set_action
 from modules.core.sets.setmanager import SetManager
 
 
@@ -8,12 +7,13 @@ class SqliteSetManager(SetManager):
         super().ready()
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
 
-        set_action("add_set", self.save)
-        set_action("rm_set", self.remove)
-        set_action("mv_set", self.rename)
-        set_action("ren_set", self.rename)
-        set_action("append_set", self.add_to_current)
-        set_action("substract_set", self.remove_from_current)
+        session=self.get_session()
+        session.set_action("set-add", self.save)
+        session.set_action("set-load", self.load)
+        session.set_action("set-rm", self.remove)
+        session.set_action("set-mv", self.rename)
+        session.set_action("set-append", self.add_to_current)
+        session.set_action("set-substract", self.remove_from_current)
 
     def remove(self, id):
         with self.conn:
@@ -22,6 +22,7 @@ class SqliteSetManager(SetManager):
             c.execute('delete from set_head where name=?', (id,))
 
     def save(self, id):
+        print("adding set {}".format(id))
         with self.conn:
             c = self.conn.execute(
                 'delete from set_detail where set_head_key = (select id from set_head where name=?)', (id,))
@@ -101,8 +102,6 @@ class SqliteSetManager(SetManager):
 
     def query_to_current_set(self, query):
         c = self.conn.cursor()
-
-        print(self.conn)
 
         c.execute("create temporary table map_filekey_pos as " + query)
 

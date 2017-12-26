@@ -1,6 +1,4 @@
-
 from kivy.app import App
-from cobiv.common import set_action, set_hotkey
 
 
 class Component(object):
@@ -8,10 +6,10 @@ class Component(object):
     _progress_count = 0
 
     def set_action(self, name, fn):
-        set_action(name, fn, self.get_name())
+        self.get_session().set_action(name, fn, self.get_name())
 
     def set_hotkey(self, key, command, modifier=0):
-        set_hotkey(key, command, modifier, self.get_name())
+        self.get_session().set_hotkey(key, command, modifier, self.get_name())
 
     def get_name(self=None):
         return ""
@@ -43,7 +41,7 @@ class Component(object):
     def read_yaml_config(self, config):
         if self.get_name() in config:
             for hotkey_config in config[self.get_name()].get('hotkeys', []):
-                set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0),
+                self.get_session().set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0),
                            self.get_name())
 
     def start_progress(self, caption=None):

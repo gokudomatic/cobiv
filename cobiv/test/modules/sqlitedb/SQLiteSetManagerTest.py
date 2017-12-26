@@ -143,14 +143,20 @@ class SQLiteCursorTest(unittest.TestCase):
             mgr.save('test1')
 
             c = self.conn.cursor()
+            self.assertEqual(2, c.execute(
+                'select count(*) from set_head').fetchone()[0])
             count1 = \
                 c.execute(
                     'select count(*) from set_detail d inner join set_head h on d.set_head_key=h.id where h.name=?',
                     ('test1',)).fetchone()[0]
             self.assertNotEqual(0, count1)
             mgr.query_to_current_set("select id from file where rowid between 100 and 500")
+            self.assertEqual(2, c.execute(
+                'select count(*) from set_head').fetchone()[0])
 
             mgr.save('test2')
+            self.assertEqual(3, c.execute(
+                'select count(*) from set_head').fetchone()[0])
             self.assertEqual(401, c.execute(
                 'select count(*) from set_detail d inner join set_head h on d.set_head_key=h.id where h.name=?',
                 ('test2',)).fetchone()[0])
@@ -161,6 +167,8 @@ class SQLiteCursorTest(unittest.TestCase):
 
             mgr.query_to_current_set("select id from file where rowid between 7 and 8")
             mgr.save('test1')
+            self.assertEqual(3, c.execute(
+                'select count(*) from set_head').fetchone()[0])
             self.assertEqual(2, c.execute(
                 'select count(*) from set_detail d inner join set_head h on d.set_head_key=h.id where h.name=?',
                 ('test1',)).fetchone()[0])

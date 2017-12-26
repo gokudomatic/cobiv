@@ -4,6 +4,7 @@ import logging
 
 from cobiv.MainContainer import MainContainer
 from cobiv.modules.core.gestures.gesture import Gesture
+from modules.core.sets.setmanager import SetManager
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -41,11 +42,15 @@ class Cobiv(App):
             "Hud": Hud,
             "TagReader": TagReader,
             "Datasource": Datasource,
+            "SetManager": SetManager,
             "Gesture": Gesture
         })
 
         self.plugin_manager.locatePlugins()
         self.plugin_manager.loadPlugins()
+
+        for plugin in self.plugin_manager.getAllPlugins():
+            print("Plugin found : {} {} {}".format(plugin.plugin_object,plugin.name,plugin.categories))
 
         config_path=os.path.join(os.path.expanduser('~'),'.cobiv')
         if not os.path.exists(config_path):
@@ -75,10 +80,12 @@ class Cobiv(App):
 
         self.build_yaml_config()
 
+        print("----------------------------------------------")
+
         for plugin in self.plugin_manager.getAllPlugins():
             plugin.plugin_object.ready()
-            print("plugin ready : "+str(plugin.plugin_object))
-            self.logger.debug("plugin ready : "+str(plugin.plugin_object))
+            print("plugin ready : "+str(plugin.name))
+            self.logger.debug("plugin ready : "+str(plugin.name))
 
         self.root.switch_view(self.get_config_value('startview','help'))
 
