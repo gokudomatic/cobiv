@@ -22,7 +22,7 @@ class SearchManager(object):
         self.functions = SqliteFunctions(self.session)
 
         self.strategies = []
-        self.strategies.append(CustomTableStrategy(tablename="core_tags",fields=['path', 'size', 'file_date', 'ext']))
+        self.strategies.append(CustomTableStrategy(tablename="core_tags", fields=['path', 'size', 'file_date', 'ext']))
         self.strategies.append(DefaultSearchStrategy())
 
     def render_text(self, original_text):

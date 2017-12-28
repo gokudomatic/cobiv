@@ -33,8 +33,8 @@ class EOLItem(Label):
     def __init__(self, **kwargs):
         super(EOLItem, self).__init__(**kwargs)
 
-    def set_selected(self,value):
-        self.selected=value
+    def set_selected(self, value):
+        self.selected = value
 
     def is_selected(self):
         return self.selected
@@ -44,7 +44,7 @@ class EOLItem(Label):
             self.container.select_EOL()
             return True
 
-    def set_marked(self,value):
+    def set_marked(self, value):
         pass
 
     def is_marked(self):

@@ -371,7 +371,7 @@ class SqliteDb(Entity):
 
     def init_test_db(self, session):
 
-        self.get_app().register_event_observer('on_current_set_change',self.on_current_set_change)
+        self.get_app().register_event_observer('on_current_set_change', self.on_current_set_change)
 
         self.session = session
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
@@ -397,7 +397,7 @@ class SqliteDb(Entity):
 
     def ready(self):
 
-        self.get_app().register_event_observer('on_current_set_change',self.on_current_set_change)
+        self.get_app().register_event_observer('on_current_set_change', self.on_current_set_change)
 
         if not os.path.exists(self.get_app().get_user_path('thumbnails')):
             os.makedirs(self.get_app().get_user_path('thumbnails'))
@@ -680,7 +680,8 @@ class SqliteDb(Entity):
 
     def on_current_set_change(self):
         print("on current set change")
-        row = self.conn.execute('select rowid, * from current_set where position=0 order by position limit 1').fetchone()
+        row = self.conn.execute(
+            'select rowid, * from current_set where position=0 order by position limit 1').fetchone()
         self.session.cursor.set_implementation(
             None if row is None else SqliteCursor(row=row, backend=self.conn, search_manager=self.search_manager))
 
@@ -718,5 +719,6 @@ class SqliteDb(Entity):
 
     def paste_marked(self, new_pos):
         self.session.cursor.paste_marked()
+
 
 Factory.register('Cursor', module=SqliteCursor)

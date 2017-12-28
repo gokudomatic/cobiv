@@ -1,7 +1,5 @@
 from datetime import datetime
-
 from cobiv.libs.templite import Templite
-
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import Cursor
 
@@ -16,7 +14,7 @@ class CoreVariables:
         session.fields['file_date'] = self.get_file_date
         session.fields['filename'] = lambda: self.session.cursor.filename
         session.fields['currentset_position'] = lambda: (
-        self.session.cursor.pos + 1) if self.session.cursor.pos is not None else "0"
+                self.session.cursor.pos + 1) if self.session.cursor.pos is not None else "0"
         session.fields['currentset_count'] = lambda: len(
             self.session.cursor) if self.session.cursor.pos is not None else "0"
 
@@ -98,7 +96,6 @@ class Session(Entity):
         else:
             self.cmd_actions[name] = {profile: fn}
 
-
     def set_hotkey(self, key, command, modifier=0, profile="default"):
         if key in self.cmd_hotkeys:
             hotkey = self.cmd_hotkeys[key]
@@ -108,7 +105,6 @@ class Session(Entity):
                 hotkey[profile] = {modifier: command}
         else:
             self.cmd_hotkeys[key] = {profile: {modifier: command}}
-
 
     def get_hotkey_command(self, key, modifier=0, profile="default"):
         hotkeys_profiles = self.cmd_hotkeys[key]

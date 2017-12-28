@@ -14,8 +14,8 @@ class RotateGesture(Gesture):
     def process(self, touches, strokes):
         v = Vector(touches[1].x, touches[1].y) - Vector(touches[0].x, touches[0].y)
         angle = self.initial_vector.angle(v)
-        print("angle {}".format(angle))
-        # TODO send signal with ratio
+        uid = touches[0].uid
+        self.get_app().fire_event("on_gesture_rotate", angle, self.initial_touches[uid])
 
     def required_touch_count(self):
         return 2

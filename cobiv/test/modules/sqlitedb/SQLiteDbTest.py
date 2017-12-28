@@ -15,7 +15,7 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
-from cobiv.modules.core.session.Session import Session
+from cobiv.modules.core.session.session import Session
 from cobiv.modules.database.sqlitedb.sqlitedb import SqliteDb
 
 

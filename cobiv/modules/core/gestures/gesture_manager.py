@@ -37,7 +37,7 @@ class GestureManager(Entity):
         self.__touches.append(touch)
 
         nb_touch = len(self.__touches)
-        if nb_touch >= 2: # and nb_touch in self.strategies:
+        if nb_touch >= 2:  # and nb_touch in self.strategies:
             self.strategy_candidates = []
             if nb_touch in self.strategies:
                 for strategy in self.strategies[nb_touch]:
@@ -54,7 +54,6 @@ class GestureManager(Entity):
                 self.stroke_list[t.uid] = [Vector(0, 0)]
         else:
             self.last_touches = {}
-
 
     def on_touch_up(self, touch):
         nb_touch = len(self.__touches)
@@ -82,7 +81,7 @@ class GestureManager(Entity):
 
         self.process_or_validate_strategies(touch)
 
-    def add_stroke(self,touch):
+    def add_stroke(self, touch):
         do_new_stroke = False
         for t in self.__touches:
             self.last_touches[t.uid] = t.pos
@@ -101,25 +100,22 @@ class GestureManager(Entity):
 
         self.last_tick = touch.time_update
 
-    def process_or_validate_strategies(self,touch):
+    def process_or_validate_strategies(self, touch):
         if self.current_strategy is not None:
             self.current_strategy.process(self.__touches, self.stroke_list)
         else:
             if touch.time_update - self.first_tick > self.stroke_identify_timeout:
 
-
-                self.strategy_candidates = [c for c in self.strategy_candidates if c.validate(self.__touches,self.stroke_list)]
+                self.strategy_candidates = [c for c in self.strategy_candidates if
+                                            c.validate(self.__touches, self.stroke_list)]
                 if len(self.strategy_candidates) == 1:
                     self.current_strategy = self.strategy_candidates[0]
                     self.current_strategy.process(self.__touches, self.stroke_list)
-                elif len(self.strategy_candidates) == 0:
-                    # print("no strategy found")
-                    # print(self.stroke_list)
-                    pass  # TODO set path strategy
 
     def get_touch_count(self):
         return len(self.__touches)
 
+    @staticmethod
     def round_vector(self, v):
 
         def sign(x):
@@ -141,5 +137,3 @@ class GestureManager(Entity):
 
         if v.length() > 0:
             self.stroke_list[touch.uid][-1] = self.round_vector(v.normalize())
-
-            # print(touch.uid,v1,"->",v)

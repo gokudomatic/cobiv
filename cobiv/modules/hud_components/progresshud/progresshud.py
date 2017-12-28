@@ -5,13 +5,12 @@ from kivy.uix.anchorlayout import AnchorLayout
 
 from cobiv.modules.core.hud import Hud
 
-Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__),'progresshud.kv')))
+Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'progresshud.kv')))
 
 
-class ProgressHud(Hud,AnchorLayout):
+class ProgressHud(Hud, AnchorLayout):
+    value = NumericProperty(0)
+    caption = StringProperty("")
 
-    value=NumericProperty(0)
-    caption=StringProperty("")
-
-    def __init__(self,**kwargs):
-         super(ProgressHud,self).__init__(**kwargs)
+    def __init__(self, **kwargs):
+        super(ProgressHud, self).__init__(**kwargs)

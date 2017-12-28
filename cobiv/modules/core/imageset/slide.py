@@ -1,6 +1,6 @@
 from __future__ import division
 
-import os,io
+import os, io
 from kivy.core.image import Image as CoreImage
 from kivy.lang import Builder
 from kivy.properties import ObjectProperty
@@ -23,10 +23,10 @@ class Slide(Image):
 
     is_loaded = True
 
-    def __init__(self, session=None,load_mode=SlideMode.NORMAL, **kwargs):
-        filename=kwargs.pop('filename')
-        ext=kwargs.pop('ext')
-        repo_key=kwargs.pop('repo_key')
+    def __init__(self, session=None, load_mode=SlideMode.NORMAL, **kwargs):
+        filename = kwargs.pop('filename')
+        ext = kwargs.pop('ext')
+        repo_key = kwargs.pop('repo_key')
         super(Slide, self).__init__(**kwargs)
         self.load_mode = load_mode
         self.bind(width=self.on_width)
@@ -37,7 +37,7 @@ class Slide(Image):
         file_fs = session.get_filesystem(repo_key)
         memory_data = file_fs.getbytes(filename)
 
-        im=CoreImage(io.BytesIO(memory_data),ext=ext)
+        im = CoreImage(io.BytesIO(memory_data), ext=ext)
 
         self.texture = im.texture
 
@@ -57,9 +57,9 @@ class Slide(Image):
         elif value == SlideMode.FIT_SCREEN:
             self.size_hint = (1, 1)
         else:
-            zoom_factor=min(self.width / self.texture_size[0],self.height / self.texture_size[1])
+            zoom_factor = min(self.width / self.texture_size[0], self.height / self.texture_size[1])
             self.size_hint = (None, None)
-            self.zoom=zoom_factor
+            self.zoom = zoom_factor
 
         if value != SlideMode.NORMAL:
             self.size = self.texture_size

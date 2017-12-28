@@ -1,5 +1,5 @@
 import logging
-import io,os
+import io, os
 import sys
 import threading
 import time
@@ -102,8 +102,8 @@ class ThumbLoader(Entity):
     def create_thumbnail_data(self, repo_key, filename, size, destination):
         self.logger.debug("creating thumbnail for " + filename)
 
-        file_fs=self.session.get_filesystem(repo_key)
-        data=file_fs.getbytes(filename)
+        file_fs = self.session.get_filesystem(repo_key)
+        data = file_fs.getbytes(filename)
         img = Image.open(io.BytesIO(data))
         try:
             img.load()

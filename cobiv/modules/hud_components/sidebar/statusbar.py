@@ -6,9 +6,9 @@ from kivy.uix.label import Label
 from cobiv.modules.core.component import Component
 
 
-class StatusLabel(Component,Label):
+class StatusLabel(Component, Label):
     def __init__(self, **kwargs):
-        super(StatusLabel, self).__init__(valign='middle',**kwargs)
+        super(StatusLabel, self).__init__(valign='middle', **kwargs)
         self.bind(size=self.setter('text_size'))
         self.session = self.get_session()
         self.template_text = kwargs.get('text')
@@ -18,15 +18,15 @@ class StatusLabel(Component,Label):
         if self.session is not None:
             self.text = self.session.fill_text_fields(self.template_text)
         else:
-            self.text=self.template_text
+            self.text = self.template_text
 
 
 class StatusBar(Component, BoxLayout):
 
     def __init__(self, **kwargs):
-        height=kwargs.pop('height',20)
-        super().__init__(size_hint=(1,None),height=height,**kwargs)
-        self.session=self.get_session()
+        height = kwargs.pop('height', 20)
+        super().__init__(size_hint=(1, None), height=height, **kwargs)
+        self.session = self.get_session()
         if self.session is not None:
             self.session.cursor.bind(file_id=self.on_file_id_change)
 

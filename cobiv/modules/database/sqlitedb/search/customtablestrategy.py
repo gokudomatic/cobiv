@@ -7,7 +7,7 @@ class CustomTableStrategy(DefaultSearchStrategy):
     """Common search strategy for custom tables. Given a custom table with a least a file key column, the strategy maps
     automatically all the specified fields of the table to be sortable and searchable"""
 
-    def __init__(self,tablename,fields,file_key="file_key"):
+    def __init__(self, tablename, fields, file_key="file_key"):
         """Constructor
 
         :param tablename: Name of the SQL table
@@ -16,9 +16,9 @@ class CustomTableStrategy(DefaultSearchStrategy):
         """
         super(CustomTableStrategy, self).__init__()
 
-        self.tablename=tablename
-        self.file_key_name=file_key
-        self.fields=fields
+        self.tablename = tablename
+        self.file_key_name = file_key
+        self.fields = fields
 
         self.operator_functions = {
             'in': [self.prepare_in, self.parse_in, self.join_query_core_tags],
@@ -140,4 +140,3 @@ class CustomTableStrategy(DefaultSearchStrategy):
 
     def get_sort_field(self, kind, order, is_number):
         return kind
-

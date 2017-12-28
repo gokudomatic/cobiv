@@ -348,7 +348,7 @@ class Cursor(EventDispatcher):
             elif c is None and self.is_eol() and idx > self.pos:
                 return True
             elif c is None and self.is_eol():
-                self.pos=0
+                self.pos = 0
                 self.implementation.pos = 0
                 return True
             else:
@@ -439,7 +439,7 @@ class Cursor(EventDispatcher):
         if self.implementation is not None:
             if self.implementation.get_marked_count() > 0:
                 self.implementation.cut_marked()
-                self.go(min(self.pos,len(self)), force=True)
+                self.go(min(self.pos, len(self)), force=True)
                 if self.is_eol():
                     self.implementation.update_pos()
                 self.mark_all(False)

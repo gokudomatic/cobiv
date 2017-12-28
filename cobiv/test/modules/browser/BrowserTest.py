@@ -10,7 +10,7 @@ from kivy.core.window import Window
 from kivy.uix.gridlayout import GridLayout
 
 from cobiv.modules.core.entity import Entity
-from cobiv.modules.core.session.Session import Session
+from cobiv.modules.core.session.session import Session
 from cobiv.modules.database.sqlitedb.sqlitedb import SqliteDb
 from cobiv.modules.views.browser.browser import Browser
 from cobiv.modules.views.browser.eolitem import EOLItem

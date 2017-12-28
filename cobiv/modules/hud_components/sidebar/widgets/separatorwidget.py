@@ -16,5 +16,6 @@ Builder.load_string('''
     height: dp(1)
 ''')
 
-class SeparatorWidget(Component,Widget):
+
+class SeparatorWidget(Component, Widget):
     pass

@@ -46,14 +46,14 @@ class TouchButton(Component, Widget):
     def ready(self):
         self.rad_small = self.get_config_value('gestures.switcher.inactive_size', 50)
         self.rad_large = self.get_config_value('gestures.switcher.active_size', 150)
-        self.visible=self.get_config_value('gestures.switcher.visible', True)
+        self.visible = self.get_config_value('gestures.switcher.visible', True)
         # if self.get_config_value('gestures.switcher.visible', True):
         #     self.pos = self.get_config_value('gestures.switcher.pos', {"x": 0.5, "y": 1})
         #     print(self.pos)
         # else:
         #     self.pos = {"x": -1000, "y": -1000}
 
-    def on_toggle_visible(self,instance,value):
+    def on_toggle_visible(self, instance, value):
         if value:
             self.pos_hint = self.get_config_value('gestures.switcher.pos', {"x": 0.5, "y": 1})
         else:

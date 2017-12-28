@@ -3,7 +3,6 @@ import datetime, time
 
 
 class SqliteFunctions(object):
-
     fields = {}
 
     def __init__(self, session, **kwargs):
@@ -59,4 +58,3 @@ class SqliteFunctions(object):
         elif kind == 'Y':
             diff = relativedelta(years=value)
         return time.mktime((datetime.datetime.fromtimestamp(ts) + diff).timetuple())
-

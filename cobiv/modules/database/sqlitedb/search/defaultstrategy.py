@@ -90,7 +90,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
         return result
 
     def prepare_any(self, crit_list, fn, kind, values):
-        if not fn in  crit_list[kind]:
+        if not fn in crit_list[kind]:
             crit_list[kind][fn] = None
 
     def parse_any(self, kind, values):
@@ -181,7 +181,7 @@ class DefaultSearchStrategy(AbstractSearchStrategy):
         comparator = 'min' if order else 'max'
 
         return '(select %s(%s) from tag where file_key=current_set.file_key and kind="%s") as %s' % (
-        comparator, 'CAST(value as float)' if is_number else 'value', kind,kind)
+            comparator, 'CAST(value as float)' if is_number else 'value', kind, kind)
 
     def get_sort_query(self, kind, order, is_number):
         return ('CAST(%s as float)' if is_number else '%s') % kind + ' desc' * order
