@@ -1,0 +1,8 @@
+[Core]
+Name = action_status_label
+Module = ActionStatusLabel
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Status label for current operation (like zoom or page number)

@@ -2,6 +2,7 @@ import shlex, logging
 
 import sys
 from kivy.app import App
+from kivy.factory import Factory
 from kivy.properties import ObjectProperty
 from kivy.uix.floatlayout import FloatLayout
 from kivy.core.window import Window
@@ -195,7 +196,7 @@ class MainContainer(FloatLayout):
         Window.toggle_fullscreen()
 
     def hello(self, *args):
-        self.notify("Hi " + (args[0] if len(args) > 0 else "there") + "!", is_error=True)
+        self.notify("Hi " + (args[0] if len(args) > 0 else "there") + "!", is_error=False)
 
     @mainthread
     def show_progressbar(self):
@@ -223,7 +224,15 @@ class MainContainer(FloatLayout):
 
     @mainthread
     def notify(self, message, is_error=False):
-        self.notification_hud_layout.notify(message, error=is_error)
+        self.notification_hud_layout.notify(text=message, error=is_error)
+
+    @mainthread
+    def show_status(self,key=None, renderer=None, **kwargs):
+        if renderer is None:
+            render_class=Factory.NotificationLabel
+        else:
+            render_class=Factory.get(renderer)
+        self.notification_hud_layout.notify(key,render_class,**kwargs)
 
     def read_yaml_main_config(self, config):
         session = App.get_running_app().lookup("session", "Entity")

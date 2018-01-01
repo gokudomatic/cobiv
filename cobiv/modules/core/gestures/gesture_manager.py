@@ -115,7 +115,6 @@ class GestureManager(Entity):
     def get_touch_count(self):
         return len(self.__touches)
 
-    @staticmethod
     def round_vector(self, v):
 
         def sign(x):

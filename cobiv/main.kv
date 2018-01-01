@@ -1,5 +1,5 @@
 #:kivy 1.9.1
-#:import HUD cobiv.hud
+#:import BaseHUD cobiv.hudmanager
 #:import win kivy.core.window
 
 
@@ -29,11 +29,11 @@
         on_focus: root.on_cmd_focus(args[0],args[1])
         on_text_validate: root.on_enter_cmd(self.text)
 
-    HUD:
+    BaseHUD:
         id: hud
         visible: True
 
-    HUD:
+    BaseHUD:
         id: hud_modal
         AnchorLayout:
             anchor_x: "center"

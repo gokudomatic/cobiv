@@ -41,8 +41,9 @@ class Component(object):
     def read_yaml_config(self, config):
         if self.get_name() in config:
             for hotkey_config in config[self.get_name()].get('hotkeys', []):
-                self.get_session().set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0),
-                           self.get_name())
+                self.get_session().set_hotkey(int(hotkey_config['key']), hotkey_config['binding'],
+                                              hotkey_config.get('modifiers', 0),
+                                              self.get_name())
 
     def start_progress(self, caption=None):
         self.get_app().root.show_progressbar()
@@ -72,13 +73,16 @@ class Component(object):
     def notify(self, message, is_error=False):
         self.get_app().root.notify(message, is_error=is_error)
 
-    def execute_cmd(self,cmd, force_default=False):
-        self.get_app().root.execute_cmds(cmd,force_default=force_default)
+    def show_status(self,key=None, renderer=None,  **kwargs):
+        self.get_app().root.show_status(key, renderer, **kwargs)
 
-    def lookup(self,name,category):
-        return self.get_app().lookup(name,category)
+    def execute_cmd(self, cmd, force_default=False):
+        self.get_app().root.execute_cmds(cmd, force_default=force_default)
 
-    def lookups(self,category):
+    def lookup(self, name, category):
+        return self.get_app().lookup(name, category)
+
+    def lookups(self, category):
         return self.get_app().lookups(category)
 
     def get_session(self):

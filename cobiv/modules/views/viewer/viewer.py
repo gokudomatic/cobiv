@@ -97,11 +97,10 @@ class Viewer(View, ScrollView):
         Component.ready(self)
         self.session = self.get_session()
         self.cursor = self.session.cursor
-        app=self.get_app()
+        app = self.get_app()
         app.register_event_observer('on_gesture_pinch', self.on_pinch)
         app.register_event_observer('on_gesture_swipe', self.on_swipe)
         app.register_event_observer('on_stop_gesture_swipe', self.on_stop_swipe)
-
 
     def on_switch(self):
         self.cursor.bind(filename=self.on_cursor_change)
@@ -202,14 +201,15 @@ class Viewer(View, ScrollView):
         if center is None:
             center = (Window.width / 2, Window.height / 2)
 
-        sv0=Vector((image.width-Window.width)*self.scroll_x,(image.height-Window.height)*self.scroll_y)
+        sv0 = Vector((image.width - Window.width) * self.scroll_x, (image.height - Window.height) * self.scroll_y)
         cv = Vector(image.to_widget(*center))
 
         sv1 = sv0 + cv * (factor - 1)
         image.zoom *= factor
 
-        print("zoom = "+str(image.zoom))
-        self.scroll_x, self.scroll_y = self.convert_distance_to_scroll(sv1.x,sv1.y)
+        self.show_status(key="viewer_zoom", renderer="ActionStatusLabel", text="{:.2f}%".format(image.zoom*100),
+                         pos_hint={'center_x': 0.5, 'center_y': 0.5})
+        self.scroll_x, self.scroll_y = self.convert_distance_to_scroll(sv1.x, sv1.y)
 
     def fit_width(self):
         self._set_fit_mode(SlideMode.FIT_WIDTH)
@@ -248,18 +248,18 @@ class Viewer(View, ScrollView):
         fac = 0.005
         self._set_zoom(fac * amount - fac + 1, center)
 
-    def on_swipe(self,vector,origin):
-        v=vector.normalize()
-        if abs(v.y)<0.5:
-            frequency=vector.length()
+    def on_swipe(self, vector, origin):
+        v = vector.normalize()
+        if abs(v.y) < 0.5:
+            frequency = vector.length()
 
-            if self.swipe_event is None or abs(self.swipe_frequency-frequency)>100:
+            if self.swipe_event is None or abs(self.swipe_frequency - frequency) > 100:
                 print("changed swipe frequency to {}".format(frequency))
                 if self.swipe_event is not None:
                     self.swipe_event.cancel()
-                self.swipe_event = Clock.schedule_interval(self.swipe_callback, 100/frequency)
-                self.swipe_frequency=frequency
-                self.swipe_direction=(v.x > 0)
+                self.swipe_event = Clock.schedule_interval(self.swipe_callback, 100 / frequency)
+                self.swipe_frequency = frequency
+                self.swipe_direction = (v.x > 0)
         elif self.swipe_event is not None:
             self.on_stop_swipe()
         else:
@@ -268,11 +268,11 @@ class Viewer(View, ScrollView):
     def on_stop_swipe(self):
         if self.swipe_event is not None:
             self.swipe_event.cancel()
-            self.swipe_frequency=0
-            self.swipe_event=None
+            self.swipe_frequency = 0
+            self.swipe_event = None
             self.swipe_callback(0)
 
-    def swipe_callback(self,dt):
+    def swipe_callback(self, dt):
         if self.swipe_direction:
             self.load_previous()
         else:
