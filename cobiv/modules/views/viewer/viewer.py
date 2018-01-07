@@ -121,7 +121,7 @@ class Viewer(View, ScrollView):
 
         image = False
         filename = self.cursor.filename
-        ext = self.cursor.get_tag(0, 'ext')[0]
+        ext = self.cursor.get_tag(0, 'ext',0)
         if filename is None:
             image = None
         else:
@@ -131,6 +131,11 @@ class Viewer(View, ScrollView):
         self.clear_widgets()
         if image:
             self.add_widget(image)
+
+        self.show_status(key="viewer_load", renderer="ActionStatusMeter",
+                         value=self.session.fields['currentset_position'](),
+                         max_value=self.session.fields['currentset_count'](),
+                         pos_hint={'center_x': 0.5, 'center_y': 0.5}, size_hint=(0.5,None))
 
     def load_next(self):
         if not self.cursor.go_next():
@@ -207,7 +212,7 @@ class Viewer(View, ScrollView):
         sv1 = sv0 + cv * (factor - 1)
         image.zoom *= factor
 
-        self.show_status(key="viewer_zoom", renderer="ActionStatusLabel", text="{:.2f}%".format(image.zoom*100),
+        self.show_status(key="viewer_zoom", renderer="ActionStatusLabel", text="{:.2f}%".format(image.zoom * 100),
                          pos_hint={'center_x': 0.5, 'center_y': 0.5})
         self.scroll_x, self.scroll_y = self.convert_distance_to_scroll(sv1.x, sv1.y)
 
@@ -254,7 +259,6 @@ class Viewer(View, ScrollView):
             frequency = vector.length()
 
             if self.swipe_event is None or abs(self.swipe_frequency - frequency) > 100:
-                print("changed swipe frequency to {}".format(frequency))
                 if self.swipe_event is not None:
                     self.swipe_event.cancel()
                 self.swipe_event = Clock.schedule_interval(self.swipe_callback, 100 / frequency)

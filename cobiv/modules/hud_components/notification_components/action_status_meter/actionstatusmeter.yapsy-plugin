@@ -1,0 +1,8 @@
+[Core]
+Name = action_status_meter
+Module = ActionStatusMeter
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = Status meter for current operation (like zoom or page number)

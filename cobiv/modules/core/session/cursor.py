@@ -369,7 +369,11 @@ class Cursor(EventDispatcher):
                 self.tags[int(cat)][kind].append(value)
         return self.tags
 
-    def get_tag(self, category, kind):
+    def get_tag(self,category,kind,index):
+        results=self.get_tag_list(category=category,kind=kind)
+        return results[index] if len(results)>index else None
+
+    def get_tag_list(self, category, kind):
         if self.implementation is None:
             return []
 
