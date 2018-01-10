@@ -1,5 +1,7 @@
 import logging
 
+from kivy.app import App
+
 from modules.database.datasources.sqlite.sqliteds import Sqliteds
 from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
 from test.AbstractApp import AbstractApp
@@ -11,7 +13,6 @@ import shutil
 import unittest
 from functools import partial
 
-from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
@@ -35,6 +36,8 @@ class TestMainWidget(Widget):
 
 class TestApp(AbstractApp):
 
+    session=None
+
     def __init__(self, **kwargs):
         super(TestApp, self).__init__(**kwargs)
         self.configuration = {
@@ -52,6 +55,8 @@ class TestApp(AbstractApp):
             return SqliteSetManager()
         elif name=='sqlite_ds':
             return self.ds
+        elif name=='session':
+            return self.session
 
 class SQLiteDbTest(unittest.TestCase):
     def get_user_path(self, *args):
@@ -72,6 +77,7 @@ class SQLiteDbTest(unittest.TestCase):
         super(SQLiteDbTest, self).tearDown()
 
     def init_db(self):
+        App.get_running_app().session = self.session
         db = SqliteDb()
         db.init_test_db(self.session)
         db.session = self.session
@@ -79,8 +85,7 @@ class SQLiteDbTest(unittest.TestCase):
         return db
 
     def init_db_with_tags(self):
-        db = SqliteDb()
-        db.init_test_db(self.session)
+        db = self.init_db()
 
         db.search_tag()
         c = self.session.cursor
@@ -94,9 +99,7 @@ class SQLiteDbTest(unittest.TestCase):
         return db
 
     def init_db_with_categorized_tags(self):
-        db = SqliteDb()
-        db.init_test_db(self.session)
-        db.session = self.session
+        db=self.init_db()
 
         db.search_tag()
         c = self.session.cursor
@@ -113,9 +116,7 @@ class SQLiteDbTest(unittest.TestCase):
         return db
 
     def init_db_with_numeric_date_tags(self):
-        db = SqliteDb()
-        db.init_test_db(self.session)
-        db.session = self.session
+        db = self.init_db()
 
         db.search_tag()
         c = self.session.cursor
@@ -132,8 +133,7 @@ class SQLiteDbTest(unittest.TestCase):
         return db
 
     def _test_initialization(self, app, *args):
-        db = SqliteDb()
-        db.init_test_db(self.session)
+        db=self.init_db()
 
         db.close_db()
 
@@ -141,9 +141,7 @@ class SQLiteDbTest(unittest.TestCase):
 
     def _test_search_all(self, app, *args):
 
-        db = SqliteDb()
-        db.init_test_db(self.session)
-        db.session = self.session
+        db = self.init_db()
 
         db.search_tag()
         c = self.session.cursor

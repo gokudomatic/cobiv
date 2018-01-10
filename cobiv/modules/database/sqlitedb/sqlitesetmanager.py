@@ -7,7 +7,7 @@ class SqliteSetManager(SetManager):
         super().ready()
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
 
-        session = self.get_session()
+        session=self.get_session()
         session.set_action("set-add", self.save)
         session.set_action("set-load", self.load)
         session.set_action("set-rm", self.remove)

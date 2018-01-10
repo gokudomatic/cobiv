@@ -368,6 +368,9 @@ class SqliteDb(Entity):
 
     cancel_operation = False
     session = None
+    conn = None
+    search_manager = None
+    set_manager = None
 
     def init_test_db(self, session):
 
@@ -445,26 +448,10 @@ class SqliteDb(Entity):
 
     def create_database(self, sameThread=False):
         with self.conn:
-            self.conn.execute('create table catalog (id INTEGER PRIMARY KEY, name text)')
-            self.conn.execute(
-                'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
-            self.conn.execute(
-                'create table file (id INTEGER PRIMARY KEY, repo_key int, name text)')
-            self.conn.execute(
-                'create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
-            self.conn.execute('create table tag (file_key int, category int, kind text, type int, value)')
-            self.conn.execute('create table set_head (id INTEGER PRIMARY KEY, name text, readonly num)')
-            self.conn.execute('create table set_detail (set_head_key int, position int, file_key int)')
-
-            # indexes
-            self.conn.execute('create unique index file_idx on file(name)')
-            self.conn.execute('create index tag_idx1 on tag(file_key)')
-            self.conn.execute('create index tag_idx2 on tag(kind,value)')
-            self.conn.execute('create index tag_idx3 on tag(value)')
-            self.conn.execute('create unique index core_tags_idx1 on core_tags(file_key)')
-            self.conn.execute('create index core_tags_idx2 on core_tags(path,size,file_date,ext)')
-            self.conn.execute('create unique index set_detail_pos_idx on set_detail(set_head_key,position)')
-            self.conn.execute('create unique index set_detail_file_idx on set_detail(set_head_key,file_key)')
+            fd = open(os.path.abspath(os.path.dirname(__file__)) + '/../../../resources/sql/sqlite_db.sql')
+            script = fd.read()
+            self.conn.executescript(script)
+            fd.close()
 
         self.create_catalogue("default")
 
@@ -676,10 +663,8 @@ class SqliteDb(Entity):
             query = self.search_manager.generate_search_query(*args)
             self.logger.debug(query)
             self.set_manager.query_to_current_set(query)
-        # self.on_current_set_change() # TODO remove
 
     def on_current_set_change(self):
-        print("on current set change")
         row = self.conn.execute(
             'select rowid, * from current_set where position=0 order by position limit 1').fetchone()
         self.session.cursor.set_implementation(

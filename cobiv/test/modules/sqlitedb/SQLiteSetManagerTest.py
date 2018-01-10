@@ -1,5 +1,6 @@
 import logging
 
+from modules.core.session.session import Session
 from modules.database.datasources.datasource import Datasource
 from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
 
@@ -28,27 +29,9 @@ class TestDatasource(Datasource):
         c = conn.execute('PRAGMA temp_store = MEMORY')
         c.execute('PRAGMA locking_mode = EXCLUSIVE')
 
-        c.execute('create table catalog (id INTEGER PRIMARY KEY, name text)')
-        c.execute(
-            'create table repository (id INTEGER PRIMARY KEY, catalog_key int, path text, recursive num)')
-        c.execute(
-            'create table file (id INTEGER PRIMARY KEY, repo_key int, name text)')
-        c.execute(
-            'create table core_tags (file_key int, path text, size int, file_date datetime, ext text)')
-        c.execute('create table tag (file_key int, category int, kind text, type int, value)')
-        c.execute('create table set_head (id INTEGER PRIMARY KEY,  name text, readonly num)')
-        c.execute('create table set_detail (set_head_key int, position int, file_key int)')
-        c.execute('create table thumbs (file_key int primary key, data blob)')
-
-        # indexes
-        c.execute('create unique index file_idx on file(name)')
-        c.execute('create index tag_idx1 on tag(file_key)')
-        c.execute('create index tag_idx2 on tag(category,kind,value)')
-        c.execute('create index tag_idx3 on tag(value)')
-        c.execute('create unique index core_tags_idx1 on core_tags(file_key)')
-        c.execute('create unique index core_tags_idx2 on core_tags(path,size,file_date,ext)')
-        c.execute('create unique index set_detail_pos_idx on set_detail(set_head_key,position)')
-        c.execute('create unique index set_detail_file_idx on set_detail(set_head_key,file_key)')
+        fd = open('../../../resources/sql/sqlite_db.sql')
+        c.executescript(fd.read())
+        fd.close()
 
         c.execute("insert into catalog (name) values(?) ", ("default",))
         c.execute('insert into repository (catalog_key,path,recursive) values (?,?,?)',
@@ -78,6 +61,7 @@ class TestApp(App):
     }
 
     def build(self):
+        self.session=Session()
         self.datasource = ds
         return TestMainWidget()
 
@@ -88,7 +72,10 @@ class TestApp(App):
             return default
 
     def lookup(self, name, category):
-        return self.datasource
+        if name=="session":
+            return self.session
+        else:
+            return self.datasource
 
     def fire_event(self,*args,**kwargs):
         pass
