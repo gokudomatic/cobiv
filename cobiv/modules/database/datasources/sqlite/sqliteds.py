@@ -11,11 +11,11 @@ class Sqliteds(Datasource):
         url = self.get_config_value('url', ':memory:')
         conn = sqlite3.connect(url, check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA cache_spill = off')
-        conn.execute('PRAGMA temp_store = MEMORY')
-        conn.execute('PRAGMA synchronous = NORMAL')
-        conn.execute('PRAGMA journal_mode = wal')
-        conn.execute('PRAGMA locking_mode = EXCLUSIVE')
+        c=conn.execute('PRAGMA cache_spill = off')
+        c.execute('PRAGMA temp_store = MEMORY')
+        c.execute('PRAGMA synchronous = NORMAL')
+        c.execute('PRAGMA journal_mode = wal')
+        c.execute('PRAGMA locking_mode = EXCLUSIVE')
         return conn
 
     def get_name(self):

@@ -102,7 +102,7 @@ By default:
         final_subquery = ""
         for is_excluding, subquery in subqueries:
             if is_excluding and len(final_subquery) == 0:
-                final_subquery = 'select id from file'
+                final_subquery = 'select id from file where searchable=1'
 
             if not is_excluding:
                 if len(final_subquery) > 0:
@@ -112,7 +112,7 @@ By default:
                 final_subquery += " except " + subquery
 
         self.logger.debug(final_subquery)
-        query = 'select f.id,f.name from file f where f.id in (' + final_subquery + ')'
+        query = 'select f.id,f.name from file f where f.searchable=1 and f.id in ({})'.format(final_subquery)
         return query
 
     def generate_sort_query(self, fields):

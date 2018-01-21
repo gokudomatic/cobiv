@@ -22,7 +22,6 @@ class SqliteSetManager(SetManager):
             c.execute('delete from set_head where name=?', (id,))
 
     def save(self, id):
-        print("adding set {}".format(id))
         with self.conn:
             c = self.conn.execute(
                 'delete from set_detail where set_head_key = (select id from set_head where name=?)', (id,))

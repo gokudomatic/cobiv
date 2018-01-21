@@ -559,7 +559,7 @@ class SqliteDb(Entity):
             for f in to_add:
                 if self.cancel_operation:
                     return
-                query_to_add.append((repo_id, f))
+                query_to_add.append((repo_id, f,1,"file"))
                 file_info = repo_fs.getdetails(f)
                 modified_date = time.mktime(file_info.modified.timetuple())
                 query_tag_to_add.append(
@@ -568,7 +568,7 @@ class SqliteDb(Entity):
 
                 self.tick_progress()
 
-            c.executemany('insert into file(repo_key, name) values(?,?)', query_to_add)
+            c.executemany('insert into file(repo_key, name,searchable,file_type) values(?,?,?,?)', query_to_add)
 
             c.execute('create temporary table t1(repo int,file text,size int,cdate float,ext text, path text)')
 
