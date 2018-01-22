@@ -7,7 +7,7 @@ class SqliteSetManager(SetManager):
         super().ready()
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
 
-        session=self.get_session()
+        session = self.get_session()
         session.set_action("set-add", self.save)
         session.set_action("set-load", self.load)
         session.set_action("set-rm", self.remove)
@@ -33,6 +33,15 @@ class SqliteSetManager(SetManager):
             c.execute(
                 'insert into set_detail (set_head_key,position,file_key) select ?,c.position,c.file_key from current_set c',
                 (key,))
+
+    def add_to_set(self, set_head_name, file_id):
+        with self.conn:
+            row = self.conn.execute('select id from set_head where name=?', set_head_name).fetchone()
+            if row is not None:
+                head_key = row[0]
+                self.conn.execute(
+                    'insert into set_detail (set_head_key,position,file_key) values select ?,max(position),? from set_detail where set_head_key=?',
+                    (head_key, file_id, head_key))
 
     def rename(self, id, new_id):
         with self.conn:
