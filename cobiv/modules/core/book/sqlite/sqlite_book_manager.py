@@ -22,6 +22,7 @@ class SqliteBookManager(BookManager):
                 (last_id,))
 
             self.set_manager.add_to_set('*', last_id)
+            return last_id
 
     def delete_book(self, book_id):
         with self.conn:

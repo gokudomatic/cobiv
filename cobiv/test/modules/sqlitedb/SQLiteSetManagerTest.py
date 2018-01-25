@@ -280,9 +280,6 @@ class SQLiteCursorTest(unittest.TestCase):
         self.assertEqual(50, self.conn.execute('select count(*) from current_set').fetchone()[0])
         self.assertEqual(49, self.conn.execute('select position from current_set order by position desc').fetchone()[0])
 
-
-
-
         app.stop()
 
     def _test_get_list(self, app, *args):
@@ -297,6 +294,22 @@ class SQLiteCursorTest(unittest.TestCase):
             mgr.save('test2')
 
             self.assertCountEqual(['testa','test2'], mgr.get_list())
+
+        app.stop()
+
+    def _test_add_to_set(self, app, *args):
+        mgr = self._create_set_mgr()
+
+        with self.conn:
+            c = self.conn.cursor()
+
+            mgr.query_to_current_set("select id from file where rowid <= 300")
+            mgr.save('testa')
+
+            mgr.add_to_set('testa',444)
+
+            self.assertEqual(301, self.conn.execute('select count(*) from set_detail,set_head where set_head_key=set_head.id and set_head.name="testa"').fetchone()[0])
+
 
         app.stop()
 
@@ -332,6 +345,9 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def test_get_list(self):
         self.call_test(self._test_get_list)
+
+    def test_add_to_set(self):
+        self.call_test(self._test_add_to_set)
 
 
 if __name__ == "__main__":

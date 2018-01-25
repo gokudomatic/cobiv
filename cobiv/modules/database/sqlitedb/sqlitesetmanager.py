@@ -36,11 +36,11 @@ class SqliteSetManager(SetManager):
 
     def add_to_set(self, set_head_name, file_id):
         with self.conn:
-            row = self.conn.execute('select id from set_head where name=?', set_head_name).fetchone()
+            row = self.conn.execute('select id from set_head where name=?', (set_head_name,)).fetchone()
             if row is not None:
                 head_key = row[0]
                 self.conn.execute(
-                    'insert into set_detail (set_head_key,position,file_key) values select ?,max(position),? from set_detail where set_head_key=?',
+                    'insert into set_detail (set_head_key,position,file_key) select ?,max(position)+1 as position,? from set_detail where set_head_key=?',
                     (head_key, file_id, head_key))
 
     def rename(self, id, new_id):
