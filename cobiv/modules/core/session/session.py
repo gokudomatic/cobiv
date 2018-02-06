@@ -43,8 +43,10 @@ class CoreVariables:
     def get_image_size(self):
         if self.session.cursor.file_id is not None:
             tags = self.session.cursor.get_tags()
-            width = tags[0]['width'][0]
-            height = tags[0]['height'][0]
+            width,height=None,None
+            if tags[0]['file_type'][0]=='file':
+                width = tags[0]['width'][0]
+                height = tags[0]['height'][0]
             if width is not None and height is not None:
                 return str(width) + " x " + str(height)
         return "N/A"
@@ -68,6 +70,7 @@ class Session(Entity):
     active_fs = {}
     cmd_actions = {}
     cmd_hotkeys = {}
+    mimetype_actions = {}
 
     def __init__(self):
         self.cursor = Cursor()
@@ -114,3 +117,13 @@ class Session(Entity):
                 return hotkeys[modifier]
 
         return False
+
+    def register_mimetype_action(self,mimetype,action,fn):
+        self.mimetype_actions.setdefault(mimetype,{})[action]=fn
+
+    def get_mimetype_action(self,mimetype,action,default=None):
+        if mimetype in self.mimetype_actions:
+            if action in self.mimetype_actions[mimetype]:
+                return self.mimetype_actions[mimetype][action]
+            else:
+                return default

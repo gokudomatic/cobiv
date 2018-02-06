@@ -5,8 +5,10 @@ class Component(object):
     _progress_max_count = 100
     _progress_count = 0
 
-    def set_action(self, name, fn):
-        self.get_session().set_action(name, fn, self.get_name())
+    def set_action(self, name, fn, profile=None):
+        if profile is None:
+            profile=self.get_name()
+        self.get_session().set_action(name, fn, profile)
 
     def set_hotkey(self, key, command, modifier=0):
         self.get_session().set_hotkey(key, command, modifier, self.get_name())

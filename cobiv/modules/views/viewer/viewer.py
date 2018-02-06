@@ -3,6 +3,7 @@ import os
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.effects.dampedscroll import DampedScrollEffect
+from kivy.factory import Factory
 from kivy.vector import Vector
 
 from cobiv.modules.core.component import Component
@@ -119,14 +120,18 @@ class Viewer(View, ScrollView):
         if self.cursor.implementation is None:
             return
 
-        image = False
-        filename = self.cursor.filename
-        ext = self.cursor.get_tag(0, 'ext',0)
-        if filename is None:
+        file_type = self.cursor.get_tag(0, 'file_type', 0)
+        if self.cursor.filename is None:
             image = None
         else:
-            image = Slide(session=self.session, repo_key=self.cursor.repo_key, filename=filename,
-                          load_mode=self.fit_mode, ext=ext)
+            default_slide_classname = 'Slide'
+            if file_type == 'book':
+                default_slide_classname = 'BookSlide'
+            slide_classname = self.get_config_value(key='slide.classmap.' + file_type,
+                                                    default=default_slide_classname)
+
+            image_class = Factory.get(slide_classname)
+            image = image_class(session=self.session, load_mode=self.fit_mode, cursor=self.cursor)
 
         self.clear_widgets()
         if image:
@@ -135,7 +140,7 @@ class Viewer(View, ScrollView):
         self.show_status(key="viewer_load", renderer="ActionStatusMeter",
                          value=self.session.fields['currentset_position'](),
                          max_value=self.session.fields['currentset_count'](),
-                         pos_hint={'center_x': 0.5, 'center_y': 0.5}, size_hint=(0.5,None))
+                         pos_hint={'center_x': 0.5, 'center_y': 0.5}, size_hint=(0.5, None))
 
     def load_next(self):
         if not self.cursor.go_next():

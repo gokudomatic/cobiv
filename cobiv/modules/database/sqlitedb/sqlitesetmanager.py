@@ -1,4 +1,4 @@
-from modules.core.sets.setmanager import SetManager
+from cobiv.modules.core.sets.setmanager import SetManager
 
 
 class SqliteSetManager(SetManager):

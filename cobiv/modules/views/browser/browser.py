@@ -14,7 +14,6 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.core.view import View
-from cobiv.modules.views.browser.ThumbnailImage import ThumbnailImage
 from cobiv.modules.views.browser.eolitem import EOLItem
 from cobiv.modules.views.browser.item import Item, Thumb
 
@@ -91,7 +90,7 @@ class Browser(View, FloatLayout):
     def __init__(self, **kwargs):
         super(Browser, self).__init__(**kwargs)
 
-        self.toolbars=[]
+        self.toolbars = []
 
         self.image_queue = deque()
         self.pending_actions = deque()
@@ -117,6 +116,7 @@ class Browser(View, FloatLayout):
         self.set_action("paste-marked", self.paste_marked)
         self.set_action("tg_sidebar", self.toggle_side_bar)
         self.set_action("sort", self.sort)
+        self.set_action("open",self.open_current_file)
 
     def get_name(self=None):
         return "browser"
@@ -157,7 +157,7 @@ class Browser(View, FloatLayout):
     def _init_sidebars(self):
         self.right_sidebar_full_size = self.get_config_value('sidebar.right.width', 200)
         right_sidebar_name = self.get_config_value('sidebar.right.class', 'SimpleSidebar')
-        sidebar_instance=Factory.get(right_sidebar_name)()
+        sidebar_instance = Factory.get(right_sidebar_name)()
         self.toolbars.append(sidebar_instance)
         self.right_sidebar.add_widget(sidebar_instance)
 
@@ -179,9 +179,9 @@ class Browser(View, FloatLayout):
         statusbar_cfg = self.get_config_value('statusbar')
         if statusbar_cfg is not None:
             for barcfg in statusbar_cfg:
-                kwargs={}
+                kwargs = {}
                 if 'height' in barcfg:
-                    kwargs['height']=barcfg['height']
+                    kwargs['height'] = barcfg['height']
                 instance = Factory.get(barcfg.get('class'))()
                 self.toolbars.append(instance)
                 if 'items' in barcfg:
@@ -294,27 +294,32 @@ class Browser(View, FloatLayout):
 
         self.image_queue.clear()
         idx = 0
-        for id_file, position, filename, repo_key in list_ids:
+        for id_file, position, filename, repo_key, file_type in list_ids:
             if idx < max_count:
-                self.thumb_loader.append((id_file, filename, repo_key))
+                self.thumb_loader.append((id_file, filename, repo_key, file_type))
                 thumb_filename = os.path.join(self.thumb_loader.thumb_path, str(id_file) + '.png')
-                self.image_queue.append((thumb_filename, id_file, position, filename, repo_key))
+                self.image_queue.append((thumb_filename, id_file, position, filename, repo_key, file_type))
             else:
-                self.thumb_loader.append((id_file, filename, repo_key))
+                self.thumb_loader.append((id_file, filename, repo_key, file_type))
 
             idx += 1
 
         if len(list_ids) < max_count:
-            self.image_queue.append((None, None, "eol", None, None))
+            self.image_queue.append((None, None, "eol", None, None, None))
         if idx > 0:
             self.reset_progress()
             self.do_next_action()
 
-    def get_image(self, file_id, filename, image_full_path, repo_key):
+    def get_image(self, file_id, filename, image_full_path, repo_key, file_type):
         if not os.path.exists(filename):
-            self.thumb_loader.append((file_id, image_full_path, repo_key))
+            self.thumb_loader.append((file_id, image_full_path, repo_key,file_type))
         name = self.thumb_loader.get_filename_caption(image_full_path)
-        img = ThumbnailImage(source=filename, mipmap=True, allow_stretch=True, keep_ratio=True)
+        default_thumb_classname='ThumbnailImage'
+        if file_type =='book':
+            default_thumb_classname='BookBrowserThumbnail'
+        thumb_classname = self.get_config_value(key='thumbnail.classmap.' + file_type, default=default_thumb_classname)
+
+        img = Factory.get(thumb_classname)(source=filename)
         thumb = Thumb(image=img, cell_size=self.thumb_loader.cell_size, caption=name, selected=False)
         return thumb
 
@@ -324,14 +329,14 @@ class Browser(View, FloatLayout):
             marked_list = self.page_cursor.get_all_marked()
 
             for i in range(queue_len):
-                thumb_filename, file_id, pos, image_filename, repo_key = self.image_queue.popleft()
+                thumb_filename, file_id, pos, image_filename, repo_key, file_type = self.image_queue.popleft()
 
                 if pos == "eol":
                     e = EOLItem(cell_size=self.cell_size, container=self)
                     self.grid.add_widget(e)
                 else:
 
-                    thumb = self.get_image(file_id, thumb_filename, image_filename, repo_key)
+                    thumb = self.get_image(file_id, thumb_filename, image_filename, repo_key, file_type)
 
                     item = Item(thumb=thumb, container=self,
                                 cell_size=self.cell_size, file_id=file_id, position=pos, duration=0)
@@ -501,16 +506,16 @@ class Browser(View, FloatLayout):
                 list_id = c.get_previous_ids(to_cache)
 
             idx = 0
-            for id_file, position, filename, repo_key in list_id:
+            for id_file, position, filename, repo_key, file_type in list_id:
                 if idx < to_load:
                     thumb_filename = os.path.join(self.thumb_loader.thumb_path, str(id_file) + '.png')
-                    self.image_queue.append((thumb_filename, id_file, position, filename,repo_key))
+                    self.image_queue.append((thumb_filename, id_file, position, filename, repo_key, file_type))
                 else:
-                    self.thumb_loader.append((id_file, filename,repo_key))
+                    self.thumb_loader.append((id_file, filename, repo_key, file_type))
                 idx += 1
 
             if do_add_eol:
-                self.image_queue.append((None, None, "eol", None, None))
+                self.image_queue.append((None, None, "eol", None, None, None))
 
         if len(self.image_queue) > 0:
             self.pending_actions.append(self._load_process)
@@ -755,7 +760,14 @@ class Browser(View, FloatLayout):
         self.right_sidebar_size = self.right_sidebar_full_size if visibility else 0
         self.on_size_change(None, 0)
 
-    def sort(self,*args):
-        if self.cursor is not None and len(args)>0:
+    def sort(self, *args):
+        if self.cursor is not None and len(args) > 0:
             self.cursor.sort(*args)
             self.load_set()
+
+    def open_current_file(self):
+        if self.cursor.file_id is not None:
+            mimetype = self.cursor.get_tag(0, 'file_type', 0)
+            fn=self.session.get_mimetype_action(mimetype,'open')
+            if fn is not None:
+                fn(self.cursor.file_id)

@@ -64,12 +64,15 @@ class ThumbLoader(Entity):
             while self.thread_alive:
                 if not self.queue_empty:
                     try:
-                        file_id, filename, repo_key = self.to_cache.popleft()
+                        file_id, filename, repo_key, file_type = self.to_cache.popleft()
 
-                        thumb_filename = self.get_fullpath_from_file_id(file_id)
-                        if not os.path.exists(thumb_filename):
-                            self.create_thumbnail_data(repo_key, filename, self.cell_size, thumb_filename)
-                            time.sleep(0.5)
+                        if file_type=='book':
+                            pass
+                        else:
+                            thumb_filename = self.get_fullpath_from_file_id(file_id)
+                            if not os.path.exists(thumb_filename):
+                                self.create_thumbnail_data(repo_key, filename, self.cell_size, thumb_filename)
+                                time.sleep(0.5)
                     except IndexError:
                         self.queue_empty = True
                         time.sleep(2.0)

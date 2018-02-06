@@ -1,9 +1,11 @@
 from __future__ import division
 
 import os, io
+
+import sys
 from kivy.core.image import Image as CoreImage
 from kivy.lang import Builder
-from kivy.properties import ObjectProperty
+from kivy.properties import ObjectProperty, StringProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.image import Image
 from enum import Enum
@@ -17,24 +19,31 @@ Builder.load_string('''
     BoxLayout:
         orientation: 'horizontal'
         Image:
-            id: thumb
+            source: root.image_path
         Label:
-            id: title
             font_size: self.height - dp(15)
+            text: root.title
     Label:
-        id: description
+        text: root.description
 ''')
 
 
 class BookSlide(BoxLayout):
+    title = StringProperty("")
+    image_path = StringProperty(None)
+    description = StringProperty("")
 
-    def __init__(self, filename=None, ext=None, repo_key=None, session=None, **kwargs):
+    def __init__(self, session=None, cursor=None, load_mode=None, **kwargs):
         super(BookSlide, self).__init__(**kwargs)
 
-        file_fs = session.get_filesystem(repo_key)
-        memory_data = file_fs.getbytes(filename)
+        self.session = session
+        self.title=cursor.filename
+        self.image_path=os.path.join(os.path.dirname(sys.argv[0]), "resources", "icons", "book.png")
 
-        im = CoreImage(io.BytesIO(memory_data), ext=ext)
+        self.load_content()
+
+    def load_content(self):
+        book_mgr=self.session.lookup()
 
     def reset_zoom(self):
         pass

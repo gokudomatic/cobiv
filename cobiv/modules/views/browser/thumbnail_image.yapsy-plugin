@@ -1,0 +1,8 @@
+[Core]
+Name = thumbnail_image
+Module = thumbnail_image
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = A thumbail object for images

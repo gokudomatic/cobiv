@@ -1,4 +1,5 @@
-from modules.core.book.book_manager import BookManager
+from cobiv.modules.core.book.book_manager import BookManager
+from cobiv.modules.core.entity import Entity
 
 
 class SqliteBookManager(BookManager):
@@ -11,6 +12,11 @@ class SqliteBookManager(BookManager):
 
         self.set_manager = self.lookup('sqliteSetManager', 'SetManager')
 
+        self.set_action("create-book", self.create_book, "browser")
+        session = self.get_session()
+        session.register_mimetype_action("book", "open", self.open_book)
+        session.register_mimetype_action("book", "delete", self.delete_book)
+
     def create_book(self, name):
         with self.conn:
             c = self.conn.execute(
@@ -18,7 +24,7 @@ class SqliteBookManager(BookManager):
             last_id = c.lastrowid
 
             c.execute(
-                'insert into file_map (parent_key,child_key,position) select ?,c.file_key,c.position from current_set c',
+                'insert into file_map (parent_key,child_key,position) select ?,c.file_key,c.position from current_set c where c.position>=0',
                 (last_id,))
 
             self.set_manager.add_to_set('*', last_id)

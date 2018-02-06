@@ -1,7 +1,7 @@
-from modules.core.entity import Entity
+from cobiv.modules.core.component import Component
 
 
-class BookManager(Entity):
+class BookManager(Component):
 
     def create_book(self,name):
         pass

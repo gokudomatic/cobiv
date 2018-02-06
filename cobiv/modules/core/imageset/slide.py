@@ -23,10 +23,7 @@ class Slide(Image):
 
     is_loaded = True
 
-    def __init__(self, session=None, load_mode=SlideMode.NORMAL, **kwargs):
-        filename = kwargs.pop('filename')
-        ext = kwargs.pop('ext')
-        repo_key = kwargs.pop('repo_key')
+    def __init__(self, session=None, load_mode=SlideMode.NORMAL, cursor=None, **kwargs):
         super(Slide, self).__init__(**kwargs)
         self.load_mode = load_mode
         self.bind(width=self.on_width)
@@ -34,10 +31,10 @@ class Slide(Image):
         self.bind(mode=self.on_mode)
         self.bind(texture_size=self.on_texture_size)
 
-        file_fs = session.get_filesystem(repo_key)
-        memory_data = file_fs.getbytes(filename)
+        file_fs = session.get_filesystem(cursor.repo_key)
+        memory_data = file_fs.getbytes(cursor.filename)
 
-        im = CoreImage(io.BytesIO(memory_data), ext=ext)
+        im = CoreImage(io.BytesIO(memory_data), ext=cursor.get_tag(0, 'ext',0))
 
         self.texture = im.texture
 

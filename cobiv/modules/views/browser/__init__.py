@@ -1,1 +1,1 @@
-__all__=["Browser","VerticalLoadEffect"]
+__all__=["Browser","VerticalLoadEffect","ThumbnailImage"]

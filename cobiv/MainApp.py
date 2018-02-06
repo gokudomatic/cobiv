@@ -2,12 +2,10 @@ import os
 
 import logging
 
-from cobiv.MainContainer import MainContainer
-from cobiv.modules.core.gestures.gesture import Gesture
-from modules.core.sets.setmanager import SetManager
 
 logging.basicConfig(level=logging.DEBUG)
 
+from cobiv.MainContainer import MainContainer
 
 import kivy
 import yaml
@@ -20,6 +18,9 @@ from cobiv.modules.core.hud import Hud
 from cobiv.modules.core.view import View
 from cobiv.modules.database.datasources.datasource import Datasource
 from cobiv.modules.io.reader.tagreader import TagReader
+from cobiv.modules.core.book.book_manager import BookManager
+from cobiv.modules.core.gestures.gesture import Gesture
+from cobiv.modules.core.sets.setmanager import SetManager
 
 kivy.require('1.9.1')
 
@@ -43,6 +44,7 @@ class Cobiv(App):
             "TagReader": TagReader,
             "Datasource": Datasource,
             "SetManager": SetManager,
+            "BookManager": BookManager,
             "Gesture": Gesture
         })
 

@@ -843,20 +843,20 @@ class SQLiteCursorTest(unittest.TestCase):
 
         self.add_files(1)
         c = self.search()
-        self.assertCountEqual(c.get_tags(), [])
+        self.assertCountEqual(c.get_tags(), [(0, 'file_type', None)])
 
         c.add_tag("one")
-        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one"), (0, 'file_type', None)])
         c.add_tag("two")
-        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two"), (0, 'file_type', None)])
         c.remove_tag("one")
-        self.assertCountEqual(c.get_tags(), [(1, 'tag', "two")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "two"), (0, 'file_type', None)])
         c.add_tag("three")
-        self.assertCountEqual(c.get_tags(), [(1, 'tag', "two"), (1, 'tag', "three")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "two"), (1, 'tag', "three"), (0, 'file_type', None)])
         c.remove_tag("three", "two")
-        self.assertCountEqual(c.get_tags(), [])
+        self.assertCountEqual(c.get_tags(), [(0, 'file_type', None)])
         c.add_tag("one", "two")
-        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "one"), (1, 'tag', "two"), (0, 'file_type', None)])
 
         self.add_files(3)
         c = self.search()
@@ -865,10 +865,10 @@ class SQLiteCursorTest(unittest.TestCase):
         c.go_previous()
         c.add_tag("1", "2")
         c.go_first()
-        self.assertCountEqual(c.get_tags(), [])
+        self.assertCountEqual(c.get_tags(), [(0, 'file_type', None)])
         c.go_next()
         c.go_next()
-        self.assertCountEqual(c.get_tags(), [(1, 'tag', "a")])
+        self.assertCountEqual(c.get_tags(), [(1, 'tag', "a"), (0, 'file_type', None)])
 
         app.stop()
 
@@ -881,19 +881,19 @@ class SQLiteCursorTest(unittest.TestCase):
             c.go_next()
 
         c.go_first()
-        self.assertCountEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z")])
+        self.assertCountEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z"), (0, 'file_type', None)])
 
         c.sort("abc")
         c.go_first()
-        self.assertCountEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
+        self.assertCountEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a"), (0, 'file_type', None)])
 
         c.sort("#idx")
         c.go_first()
-        self.assertCountEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z")])
+        self.assertCountEqual(c.get_tags(), [(1, 'idx', "0"), (1, 'abc', "z"), (0, 'file_type', None)])
 
         c.sort("-#idx")
         c.go_first()
-        self.assertCountEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a")])
+        self.assertCountEqual(c.get_tags(), [(1, 'idx', "25"), (1, 'abc', "a"), (0, 'file_type', None)])
 
         c.sort("file_date")
 

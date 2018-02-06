@@ -1,0 +1,8 @@
+[Core]
+Name = sqlite_book_manager
+Module = sqlite_book_manager
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = A sqlite book manager

@@ -15,10 +15,9 @@ class ThumbnailImage(AsyncImage):
 
     file_exists = False
 
-    def __init__(self, **kwargs):
-        source = kwargs.pop('source', "")
+    def __init__(self, source=None, mipmap=True, allow_stretch=True, keep_ratio=True, **kwargs):
         self.file_exists = os.path.exists(source)
-        super().__init__(source=source, **kwargs)
+        super().__init__(source=source, mipmap=mipmap, allow_stretch=allow_stretch, keep_ratio=keep_ratio, **kwargs)
 
         if self.source != "" and self.source is not None and not self.file_exists:
             Clock.schedule_once(self.retry_load, 1)

@@ -108,7 +108,7 @@ class SqliteCursor(CursorInterface):
         start_pos = self.pos - (1 if self_included else 0)
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name,f.repo_key from current_set c, file f where f.id=c.file_key and c.position>=0 and c.position>? and c.position<=? order by position',
+            'select c.file_key,c.position,f.name,f.repo_key,f.file_type from current_set c, file f where f.id=c.file_key and c.position>=0 and c.position>? and c.position<=? order by position',
             (start_pos, start_pos + amount)).fetchall()
         return rows
 
@@ -117,7 +117,7 @@ class SqliteCursor(CursorInterface):
             return []
 
         rows = self.con.execute(
-            'select c.file_key,c.position,f.name,f.repo_key from current_set c, file f where f.id=c.file_key and c.position>=0 and c.position<? and c.position>=? order by position desc',
+            'select c.file_key,c.position,f.name,f.repo_key,f.file_type from current_set c, file f where f.id=c.file_key and c.position>=0 and c.position<? and c.position>=? order by position desc',
             (self.pos, self.pos - amount)).fetchall()
         return rows
 
@@ -284,6 +284,10 @@ class SqliteCursor(CursorInterface):
         if row is not None:
             for t in self.core_tags:
                 tags.append((0, t, row[t]))
+
+        row = self.con.execute('select file_type from file where id=?', (self.file_id,)).fetchone()
+        if row is not None:
+            tags.append((0,'file_type',row[0]))
 
         return tags
 
