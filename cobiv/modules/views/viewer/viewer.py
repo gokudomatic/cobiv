@@ -104,11 +104,11 @@ class Viewer(View, ScrollView):
         app.register_event_observer('on_stop_gesture_swipe', self.on_stop_swipe)
 
     def on_switch(self):
-        self.cursor.bind(filename=self.on_cursor_change)
+        self.cursor.bind(file_id=self.on_cursor_change)
         self.load_set()
 
     def on_switch_lose_focus(self):
-        self.cursor.unbind(filename=self.on_cursor_change)
+        self.cursor.unbind(file_id=self.on_cursor_change)
 
     def load_set(self):
         self.load_slide()

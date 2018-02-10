@@ -5,4 +5,4 @@ Module = book_browser_thumbnail
 [Documentation]
 Author = Edwin Cox
 Version = 0.1
-Description = A sqlite book manager
+Description = thumbnail for books

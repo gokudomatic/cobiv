@@ -38,6 +38,7 @@ class SqliteCursor(CursorInterface):
     current_set = True
 
     def __init__(self, row=None, backend=None, current=True, search_manager=None):
+        super(SqliteCursor,self).__init__()
         self.con = backend
         self.current_set = current
         self.search_manager = search_manager
@@ -53,7 +54,7 @@ class SqliteCursor(CursorInterface):
         else:
             self.pos = row['position']
             row1 = self.con.execute('select name, repo_key from file where id=?', (row['file_key'],)).fetchone()
-            self.filename = row1['name'] if row is not None else None
+            self.filename = row1['name'] if row1 is not None else None
             self.file_id = row['file_key']
             self.repo_key = row1['repo_key']
 

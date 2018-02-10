@@ -1,0 +1,8 @@
+[Core]
+Name = book_slide
+Module = book_slide
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = slide for books

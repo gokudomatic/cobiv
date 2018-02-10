@@ -22,7 +22,6 @@ class SqliteBookManager(BookManager):
             c = self.conn.execute(
                 'insert into file(repo_key,name,searchable,file_type) values (?,?,?,?)', (0, name, 1, 'book'))
             last_id = c.lastrowid
-
             c.execute(
                 'insert into file_map (parent_key,child_key,position) select ?,c.file_key,c.position from current_set c where c.position>=0',
                 (last_id,))
