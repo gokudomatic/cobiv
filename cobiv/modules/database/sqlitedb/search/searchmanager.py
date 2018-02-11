@@ -4,21 +4,25 @@ from cobiv.modules.database.sqlitedb.search.customtablestrategy import CustomTab
 from cobiv.modules.database.sqlitedb.search.defaultstrategy import DefaultSearchStrategy
 from cobiv.modules.database.sqlitedb.search.sqlitefunctions import SqliteFunctions
 from cobiv.libs.templite import Templite
+from cobiv.modules.core.entity import Entity
 
 TEMP_SORT_TABLE = 'temp_sort_table'
 TEMP_PRESORT_TABLE = 'temp_presort_table'
 
 
-class SearchManager(object):
+class SearchManager(Entity):
     """
         Class for generating SQL queries to search and sort in the Sqlite database.
     """
     logger = logging.getLogger(__name__)
 
-    def __init__(self, session):
+    def __init__(self):
         super(SearchManager, self).__init__()
 
-        self.session = session
+
+
+    def ready(self):
+        self.session = self.get_session()
         self.functions = SqliteFunctions(self.session)
 
         self.strategies = []

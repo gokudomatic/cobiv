@@ -43,7 +43,11 @@ class BookSlide(BoxLayout):
         self.load_content()
 
     def load_content(self):
-        book_mgr=self.session.lookup()
+        impl_name='sqlite_book_manager'
+        book_mgr=self.session.lookup(impl_name,'BookManager')
+        print(book_mgr)
+
+
 
     def reset_zoom(self):
         pass

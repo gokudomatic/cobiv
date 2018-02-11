@@ -1,5 +1,4 @@
 from cobiv.modules.core.book.book_manager import BookManager
-from cobiv.modules.core.entity import Entity
 
 
 class SqliteBookManager(BookManager):

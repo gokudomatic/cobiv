@@ -100,7 +100,8 @@ class Cobiv(App):
             plugin.plugin_object.on_application_quit()
 
     def lookup(self, name, category):
-        return self.plugin_manager.getPluginByName(name, category=category).plugin_object
+        plugin=self.plugin_manager.getPluginByName(name, category=category)
+        return plugin.plugin_object if plugin is not None else None
 
     def lookups(self,category):
         return [plugin.plugin_object for plugin in self.plugin_manager.getPluginsOfCategory(category)]

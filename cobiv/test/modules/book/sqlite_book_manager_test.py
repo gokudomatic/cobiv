@@ -17,12 +17,6 @@ from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.widget import Widget
 
-class X(object):
-    pass
-
-class Y(X):
-    pass
-
 class TestMainWidget(Widget):
     def execute_cmd(self, *args):
         pass

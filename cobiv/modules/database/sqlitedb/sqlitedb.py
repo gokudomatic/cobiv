@@ -11,7 +11,7 @@ from kivy.factory import Factory
 
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import CursorInterface
-from cobiv.modules.database.sqlitedb.search.searchmanager import SearchManager, TEMP_SORT_TABLE, TEMP_PRESORT_TABLE
+from cobiv.modules.database.sqlitedb.search.searchmanager import TEMP_SORT_TABLE, TEMP_PRESORT_TABLE
 
 SUPPORTED_IMAGE_FORMATS = ["jpg", "gif", "png"]
 CURRENT_SET_NAME = '_current'
@@ -392,7 +392,7 @@ class SqliteDb(Entity):
             self.conn.execute('create temporary table marked (file_key int)')
             self.conn.execute('create temporary table if not exists current_set as select * from set_detail where 1=2')
 
-        self.search_manager = SearchManager(self.session)
+        self.search_manager = self.lookup('sqliteSearchManager', 'Entity')
 
         # open file systems
         c = self.conn.execute('select id,path from repository')
@@ -413,7 +413,7 @@ class SqliteDb(Entity):
         self.session = self.get_session()
 
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
-        self.search_manager = SearchManager(self.session)
+        self.search_manager = self.lookup('sqliteSearchManager', 'Entity')
 
         self.set_manager = self.lookup('sqliteSetManager', 'SetManager')
 
