@@ -36,18 +36,21 @@ class BookSlide(BoxLayout):
     def __init__(self, session=None, cursor=None, load_mode=None, **kwargs):
         super(BookSlide, self).__init__(**kwargs)
 
+        self.file_id=cursor.file_id
         self.session = session
-        self.title=cursor.filename
-        self.image_path=os.path.join(os.path.dirname(sys.argv[0]), "resources", "icons", "book.png")
+        self.title = cursor.filename
+        self.image_path = os.path.join(os.path.dirname(sys.argv[0]), "resources", "icons", "book.png")
 
         self.load_content()
 
     def load_content(self):
-        impl_name='sqlite_book_manager'
-        book_mgr=self.session.lookup(impl_name,'BookManager')
-        print(book_mgr)
-
-
+        impl_name = 'sqlite_book_manager'
+        book_mgr = self.session.lookup(impl_name, 'BookManager')
+        details=book_mgr.get_list_detail(self.file_id)
+        description=""
+        for file_id,name,position in details:
+            description+="{}. {}\r\n".format(position,name)
+        self.description=description
 
     def reset_zoom(self):
         pass

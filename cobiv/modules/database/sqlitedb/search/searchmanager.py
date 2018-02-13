@@ -19,8 +19,6 @@ class SearchManager(Entity):
     def __init__(self):
         super(SearchManager, self).__init__()
 
-
-
     def ready(self):
         self.session = self.get_session()
         self.functions = SqliteFunctions(self.session)

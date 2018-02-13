@@ -90,7 +90,7 @@ class TestApp(App):
 class SQLiteCursorTest(unittest.TestCase):
 
     def setUp(self):
-        self.search_manager = SearchManager(None)
+        self.search_manager = SearchManager()
         self.conn = ds.get_connection()
         self.clear_data()
 
@@ -100,6 +100,7 @@ class SQLiteCursorTest(unittest.TestCase):
             self.conn.execute('delete from file_map').execute('delete from file where file_type="book"')
 
     def _create_set_mgr(self):
+        self.search_manager.ready()
         mgr = SqliteBookManager()
         mgr.ready()
         mgr.set_manager.ready()

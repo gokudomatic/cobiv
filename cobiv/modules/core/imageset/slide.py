@@ -34,7 +34,7 @@ class Slide(Image):
         file_fs = session.get_filesystem(cursor.repo_key)
         memory_data = file_fs.getbytes(cursor.filename)
 
-        im = CoreImage(io.BytesIO(memory_data), ext=cursor.get_tag(0, 'ext',0))
+        im = CoreImage(io.BytesIO(memory_data), ext=cursor.get_tag(0, 'ext', 0))
 
         self.texture = im.texture
 

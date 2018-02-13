@@ -41,3 +41,10 @@ class SqliteBookManager(BookManager):
                 'create temporary table current_set as select 0 as set_head_key, position, child_key as file_key from file_map where parent_key=? order by position',
                 (book_id,))
             c.execute('create index cs_index1 on current_set(file_key)')
+
+    def get_list_detail(self,book_id):
+        result=[]
+        with self.conn:
+            c=self.conn.execute('select child_key,name,position from file_map inner join file on id=child_key where parent_key=? order by position',(book_id,))
+            result=[(r[0],r[1],r[2]) for r in c.fetchall()]
+        return result

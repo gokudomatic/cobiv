@@ -3,6 +3,7 @@ import logging
 from kivy.app import App
 
 from modules.database.datasources.sqlite.sqliteds import Sqliteds
+from modules.database.sqlitedb.search.searchmanager import SearchManager
 from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
 from test.AbstractApp import AbstractApp
 
@@ -37,6 +38,7 @@ class TestMainWidget(Widget):
 class TestApp(AbstractApp):
 
     session=None
+    searchManager=None
 
     def __init__(self, **kwargs):
         super(TestApp, self).__init__(**kwargs)
@@ -57,6 +59,8 @@ class TestApp(AbstractApp):
             return self.ds
         elif name=='session':
             return self.session
+        elif name=='sqliteSearchManager':
+            return self.searchManager
 
 class SQLiteDbTest(unittest.TestCase):
     def get_user_path(self, *args):
@@ -64,6 +68,7 @@ class SQLiteDbTest(unittest.TestCase):
 
     def setUp(self):
         self.session = Session()
+        self.searchManager=SearchManager()
 
         f_path = self.get_user_path('images', 'test.jpg')
         if os.path.exists(f_path):
@@ -78,9 +83,12 @@ class SQLiteDbTest(unittest.TestCase):
 
     def init_db(self):
         App.get_running_app().session = self.session
+        App.get_running_app().searchManager=self.searchManager
+        self.searchManager.ready()
         db = SqliteDb()
         db.init_test_db(self.session)
         db.session = self.session
+
 
         return db
 

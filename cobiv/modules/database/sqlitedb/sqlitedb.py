@@ -55,8 +55,8 @@ class SqliteCursor(CursorInterface):
             self.pos = row['position']
             row1 = self.con.execute('select name, repo_key from file where id=?', (row['file_key'],)).fetchone()
             self.filename = row1['name'] if row1 is not None else None
-            self.file_id = row['file_key']
             self.repo_key = row1['repo_key']
+            self.file_id = row['file_key']
 
     def clone(self):
         """

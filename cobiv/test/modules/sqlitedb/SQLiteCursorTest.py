@@ -35,10 +35,16 @@ class TestApp(App):
         else:
             return ""
 
+    def lookup(self,name,category):
+        if name=='session':
+            return None
+        else:
+            return None
+
 
 class SQLiteCursorTest(unittest.TestCase):
     def setUp(self):
-        self.search_manager = SearchManager(None)
+        self.search_manager = SearchManager()
 
         self.conn = sqlite3.connect(':memory:', check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
@@ -101,6 +107,8 @@ class SQLiteCursorTest(unittest.TestCase):
                 set_name)
 
     def search(self, *args):
+        self.search_manager.ready()
+
         if len(args) == 0:
             self.copy_set_to_current('*')
         else:
