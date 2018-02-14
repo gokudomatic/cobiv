@@ -15,16 +15,27 @@ Builder.load_string('''
 #:import win kivy.core.window
 
 <BookSlide>:
+    padding: 10
     orientation: 'vertical'
     BoxLayout:
+        height: 64
+        size_hint_y: None
         orientation: 'horizontal'
         Image:
             source: root.image_path
+            width: self.height
+            size_hint_x: None
         Label:
             font_size: self.height - dp(15)
             text: root.title
+            text_size: self.size
+            halign: 'left'
     Label:
         text: root.description
+        halign: 'left'
+        valign: 'top'
+        text_size: self.size
+        font_size: sp(20)
 ''')
 
 
