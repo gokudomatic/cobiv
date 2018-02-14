@@ -131,6 +131,7 @@ class Browser(View, FloatLayout):
                 {'key': '103', 'binding': 'first'},
                 {'key': '103', 'binding': 'last', 'modifiers': 1},
                 {'key': '32', 'binding': 'mark'},
+                {'key': '111', 'binding': 'open'},
                 {'key': '13', 'binding': 'switch-view viewer'},
                 {'key': '97', 'binding': 'mark-all'},
                 {'key': '105', 'binding': 'mark-invert'},
@@ -768,6 +769,6 @@ class Browser(View, FloatLayout):
     def open_current_file(self):
         if self.cursor.file_id is not None:
             mimetype = self.cursor.get_tag(0, 'file_type', 0)
-            fn=self.session.get_mimetype_action(mimetype,'open')
+            fn=self.get_session().get_mimetype_action(mimetype,'open')
             if fn is not None:
                 fn(self.cursor.file_id)

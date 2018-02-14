@@ -15,6 +15,7 @@ browser:
   - {binding: mark-invert, key: '105'}
   - {binding: cut-marked, key: '120'}
   - {binding: paste-marked, key: '112'}
+  - {binding: open, key: '111'}
   grid:
     icon_size: 120
   sidebar:

@@ -41,6 +41,7 @@ class SqliteBookManager(BookManager):
                 'create temporary table current_set as select 0 as set_head_key, position, child_key as file_key from file_map where parent_key=? order by position',
                 (book_id,))
             c.execute('create index cs_index1 on current_set(file_key)')
+        self.get_app().fire_event("on_current_set_change")
 
     def get_list_detail(self,book_id):
         result=[]
