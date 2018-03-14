@@ -30,7 +30,7 @@ Builder.load_string('''
         font_size: root.font_size
     ActionMeterWidget:
         id: meter
-        value: root.value / root.max_value
+        value: 0 if root.max_value==0 else root.value / root.max_value
 ''')
 
 

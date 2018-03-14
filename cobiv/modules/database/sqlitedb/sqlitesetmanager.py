@@ -1,10 +1,14 @@
+import logging
+
 from cobiv.modules.core.sets.setmanager import SetManager
 
 
 class SqliteSetManager(SetManager):
+    logger = logging.getLogger(__name__)
 
     def ready(self):
         super().ready()
+
         self.conn = self.lookup('sqlite_ds', 'Datasource').get_connection()
 
         session = self.get_session()
@@ -14,6 +18,11 @@ class SqliteSetManager(SetManager):
         session.set_action("set-mv", self.rename)
         session.set_action("set-append", self.add_to_current)
         session.set_action("set-substract", self.remove_from_current)
+
+        view_context=session.get_context('sql')
+        view_context['fn'] = self.replay_query
+        view_context['args']['current_set_query'] = None
+        view_context['args']['current_set_id'] = None
 
     def remove(self, id):
         with self.conn:
@@ -46,16 +55,6 @@ class SqliteSetManager(SetManager):
     def rename(self, id, new_id):
         with self.conn:
             self.conn.execute('update set_head set name=? where name=?', (new_id, id))
-
-    def load(self, id):
-        with self.conn:
-            c = self.conn.execute('drop table if exists current_set')
-            c.execute(
-                'create temporary table current_set as select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? order by d.position',
-                (id,))
-            c.execute('create index cs_index1 on current_set(file_key)')
-
-        self.get_app().fire_event("on_current_set_change")
 
     def add_to_current(self, id):
         with self.conn:
@@ -109,6 +108,12 @@ class SqliteSetManager(SetManager):
             c.execute("drop table map_filekey_pos")
 
     def query_to_current_set(self, query):
+        view_context = self.get_session().get_context('sql')
+        view_context['args']['current_id'] = self.get_session().cursor.file_id
+        self.get_session().push_context('sql')
+        view_context['args']['current_set_query'] = query
+        view_context['args']['current_set_id'] = None
+
         c = self.conn.cursor()
 
         c.execute("create temporary table map_filekey_pos as " + query)
@@ -121,6 +126,30 @@ class SqliteSetManager(SetManager):
         c.execute("drop table map_filekey_pos")
 
         self.get_app().fire_event("on_current_set_change")
+
+    def load(self, id):
+        view_context = self.get_session().get_context('sql')
+        view_context['args']['current_id'] = self.get_session().cursor.file_id
+        self.get_session().push_context('sql')
+        view_context['args']['current_set_query'] = None
+        view_context['args']['current_set_id'] = id
+
+        with self.conn:
+            c = self.conn.execute('drop table if exists current_set')
+            c.execute(
+                'create temporary table current_set as select d.* from set_detail d,set_head h where d.set_head_key=h.id and h.name=? order by d.position',
+                (id,))
+            c.execute('create index cs_index1 on current_set(file_key)')
+
+        self.get_app().fire_event("on_current_set_change")
+
+    def replay_query(self, current_set_query, current_set_id):
+        if current_set_query is not None:
+            self.query_to_current_set(query=current_set_query)
+        elif current_set_id is not None:
+            self.load(id=current_set_id)
+        else:
+            self.logger.error("current_set_query and current_set_id should not be both None!")
 
     def test(self):
         with self.conn:

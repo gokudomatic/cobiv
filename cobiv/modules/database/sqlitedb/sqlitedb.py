@@ -666,7 +666,6 @@ class SqliteDb(Entity):
             self.set_manager.load('*')
         else:
             query = self.search_manager.generate_search_query(*args)
-            self.logger.debug(query)
             self.set_manager.query_to_current_set(query)
 
     def on_current_set_change(self):

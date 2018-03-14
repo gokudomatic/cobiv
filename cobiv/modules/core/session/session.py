@@ -1,4 +1,8 @@
+from collections import deque
 from datetime import datetime
+
+import copy
+
 from cobiv.libs.templite import Templite
 from cobiv.modules.core.entity import Entity
 from cobiv.modules.core.session.cursor import Cursor
@@ -72,6 +76,12 @@ class Session(Entity):
     cmd_hotkeys = {}
     mimetype_actions = {}
 
+    view_context = {}
+    view_category = None
+    view_category_history = deque()
+    view_history = deque()
+    max_view_history_size=20
+
     def __init__(self):
         self.cursor = Cursor()
         CoreVariables(self)
@@ -127,3 +137,15 @@ class Session(Entity):
                 return self.mimetype_actions[mimetype][action]
             else:
                 return default
+
+    def get_context(self, category):
+        return self.view_context.setdefault(category,{"fn":None,"args":{}})
+
+    def push_context(self, category):
+        self.view_category_history.append(category)
+        self.view_history.append(copy.copy(self.view_context[category]))
+
+    def pop_context(self):
+        if len(self.view_history)>0:
+            view_category=self.view_category_history.pop()
+            self.view_context[view_category]=self.view_history.pop()

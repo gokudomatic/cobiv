@@ -35,13 +35,8 @@ class SqliteBookManager(BookManager):
             c.execute('delete from set_detail where file_key=?', (book_id,))
 
     def open_book(self, book_id):
-        with self.conn:
-            c = self.conn.execute('drop table if exists current_set')
-            c.execute(
-                'create temporary table current_set as select 0 as set_head_key, position, child_key as file_key from file_map where parent_key=? order by position',
-                (book_id,))
-            c.execute('create index cs_index1 on current_set(file_key)')
-        self.get_app().fire_event("on_current_set_change")
+        query="select child_key as id from file_map where parent_key="+str(book_id)+" order by position"
+        self.set_manager.query_to_current_set(query)
 
     def get_list_detail(self,book_id):
         result=[]

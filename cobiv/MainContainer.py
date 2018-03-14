@@ -36,7 +36,7 @@ class MainContainer(FloatLayout):
         self._set_cmd_visible(False)
 
     def ready(self):
-        self.session=App.get_running_app().lookup("session", "Entity")
+        self.session = App.get_running_app().lookup("session", "Entity")
         print("session found : {}".format(self.session))
         self.gesture_manager = App.get_running_app().lookup("gesture_manager", "Entity")
         self.ids.touch_switcher.ready()
@@ -48,6 +48,9 @@ class MainContainer(FloatLayout):
         self.session.set_action("memory", self.memory)
         self.session.set_action("set-command", self.set_command)
 
+        view_context = self.session.get_context("view")
+        view_context['fn'] = self.switch_view
+        view_context['args'] = {'view_name': None}
 
     def memory(self):
         import os
@@ -59,11 +62,14 @@ class MainContainer(FloatLayout):
         if len(self.current_view.children) > 0:
             self.current_view.children[0].on_switch_lose_focus()
 
+        session=App.get_running_app().lookup("session", "Entity")
+
         self.current_view.clear_widgets()
         if view_name in self.available_views.keys():
             view = self.available_views[view_name]
             self.current_view.add_widget(view)
             view.on_switch()
+            session.get_context("view")['args']['view_name'] = view_name
 
     def get_view(self):
         return self.current_view.children[0] if len(self.current_view.children) > 0 else None
@@ -189,6 +195,7 @@ class MainContainer(FloatLayout):
 
     def quit(self, *args):
         if len(self.current_view.children) > 0:
+            self.session.push_context("view")
             self.current_view.children[0].on_switch_lose_focus()
         App.get_running_app().stop()
 
@@ -227,18 +234,19 @@ class MainContainer(FloatLayout):
         self.notification_hud_layout.notify(text=message, error=is_error)
 
     @mainthread
-    def show_status(self,key=None, renderer=None, **kwargs):
+    def show_status(self, key=None, renderer=None, **kwargs):
         if renderer is None:
-            render_class=Factory.NotificationLabel
+            render_class = Factory.NotificationLabel
         else:
-            render_class=Factory.get(renderer)
-        self.notification_hud_layout.notify(key,render_class,**kwargs)
+            render_class = Factory.get(renderer)
+        self.notification_hud_layout.notify(key, render_class, **kwargs)
 
     def read_yaml_main_config(self, config):
         session = App.get_running_app().lookup("session", "Entity")
         if 'main' in config:
             for hotkey_config in config['main'].get('hotkeys', []):
-                session.set_hotkey(int(hotkey_config['key']), hotkey_config['binding'], hotkey_config.get('modifiers', 0))
+                session.set_hotkey(int(hotkey_config['key']), hotkey_config['binding'],
+                                   hotkey_config.get('modifiers', 0))
 
         if 'aliases' in config:
             aliases = config['aliases']
@@ -266,10 +274,10 @@ class MainContainer(FloatLayout):
             if self.gesture_manager is not None:
                 self.gesture_manager.on_touch_down(touch)
 
-                if self.gesture_manager.get_touch_count()>=2:
+                if self.gesture_manager.get_touch_count() >= 2:
                     return True
 
-        touch_switcher=self.ids.touch_switcher
+        touch_switcher = self.ids.touch_switcher
         if not touch_switcher.active or touch_switcher.collide_point(*touch.pos):
             return super(MainContainer, self).on_touch_down(touch)
 
@@ -287,7 +295,7 @@ class MainContainer(FloatLayout):
             touch.ungrab(self)
             if self.gesture_manager is not None:
                 self.gesture_manager.on_touch_up(touch)
-                if self.gesture_manager.get_touch_count()>=1:
+                if self.gesture_manager.get_touch_count() >= 1:
                     return True
 
         return super(MainContainer, self).on_touch_up(touch)
