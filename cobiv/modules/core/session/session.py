@@ -47,8 +47,8 @@ class CoreVariables:
     def get_image_size(self):
         if self.session.cursor.file_id is not None:
             tags = self.session.cursor.get_tags()
-            width,height=None,None
-            if tags[0]['file_type'][0]=='file':
+            width, height = None, None
+            if tags[0]['file_type'][0] == 'file':
                 width = tags[0]['width'][0]
                 height = tags[0]['height'][0]
             if width is not None and height is not None:
@@ -68,6 +68,20 @@ class CoreVariables:
         return "%.1f %s%s" % (num, 'Y', suffix)
 
 
+class HistoryContext:
+
+    def __init__(self):
+        self.fn = None
+        self.args = {}
+        self.category = None
+
+    def clone(self):
+        clone=HistoryContext()
+        clone.fn=self.fn
+        clone.args=copy.deepcopy(self.args)
+        clone.category=self.category
+        return clone
+
 class Session(Entity):
     cursor = None
     fields = {}
@@ -80,7 +94,8 @@ class Session(Entity):
     view_category = None
     view_category_history = deque()
     view_history = deque()
-    max_view_history_size=20
+    max_view_history_size = 20
+    skip_push_context=False
 
     def __init__(self):
         self.cursor = Cursor()
@@ -128,10 +143,10 @@ class Session(Entity):
 
         return False
 
-    def register_mimetype_action(self,mimetype,action,fn):
-        self.mimetype_actions.setdefault(mimetype,{})[action]=fn
+    def register_mimetype_action(self, mimetype, action, fn):
+        self.mimetype_actions.setdefault(mimetype, {})[action] = fn
 
-    def get_mimetype_action(self,mimetype,action,default=None):
+    def get_mimetype_action(self, mimetype, action, default=None):
         if mimetype in self.mimetype_actions:
             if action in self.mimetype_actions[mimetype]:
                 return self.mimetype_actions[mimetype][action]
@@ -139,13 +154,18 @@ class Session(Entity):
                 return default
 
     def get_context(self, category):
-        return self.view_context.setdefault(category,{"fn":None,"args":{}})
+        return self.view_context.setdefault(category, HistoryContext())
 
     def push_context(self, category):
-        self.view_category_history.append(category)
-        self.view_history.append(copy.copy(self.view_context[category]))
+        if not self.skip_push_context:
+            self.view_category_history.append(category)
+            self.view_context[category].category=category
+            self.view_history.append(self.view_context[category].clone())
 
     def pop_context(self):
-        if len(self.view_history)>0:
-            view_category=self.view_category_history.pop()
-            self.view_context[view_category]=self.view_history.pop()
+        if len(self.view_history) > 0:
+            view_category = self.view_category_history.pop()
+            self.view_context[view_category] = self.view_history.pop()
+            return self.view_context[view_category]
+        else:
+            return None

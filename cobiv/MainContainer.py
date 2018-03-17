@@ -47,10 +47,10 @@ class MainContainer(FloatLayout):
         self.session.set_action("hello", self.hello)
         self.session.set_action("memory", self.memory)
         self.session.set_action("set-command", self.set_command)
+        self.session.set_action("back", self.go_history_back)
 
         view_context = self.session.get_context("view")
-        view_context['fn'] = self.switch_view
-        view_context['args'] = {'view_name': None}
+        view_context.fn = self.switch_view
 
     def memory(self):
         import os
@@ -61,15 +61,16 @@ class MainContainer(FloatLayout):
     def switch_view(self, view_name):
         if len(self.current_view.children) > 0:
             self.current_view.children[0].on_switch_lose_focus()
+            self.session.push_context("view")
 
-        session=App.get_running_app().lookup("session", "Entity")
+        session = App.get_running_app().lookup("session", "Entity")
 
         self.current_view.clear_widgets()
         if view_name in self.available_views.keys():
             view = self.available_views[view_name]
             self.current_view.add_widget(view)
             view.on_switch()
-            session.get_context("view")['args']['view_name'] = view_name
+            session.get_context("view").args['view_name'] = view_name
 
     def get_view(self):
         return self.current_view.children[0] if len(self.current_view.children) > 0 else None
@@ -195,7 +196,6 @@ class MainContainer(FloatLayout):
 
     def quit(self, *args):
         if len(self.current_view.children) > 0:
-            self.session.push_context("view")
             self.current_view.children[0].on_switch_lose_focus()
         App.get_running_app().stop()
 
@@ -299,3 +299,13 @@ class MainContainer(FloatLayout):
                     return True
 
         return super(MainContainer, self).on_touch_up(touch)
+
+    def go_history_back(self):
+        view_context = self.session.pop_context()
+        if view_context is not None:
+            self.session.skip_push_context=True
+            fn = view_context.fn
+            args = view_context.args
+            if fn is not None:
+                fn(**args)
+            self.session.skip_push_context=False

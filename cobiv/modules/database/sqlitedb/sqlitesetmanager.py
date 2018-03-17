@@ -1,4 +1,7 @@
 import logging
+from functools import partial
+
+from kivy.clock import Clock
 
 from cobiv.modules.core.sets.setmanager import SetManager
 
@@ -19,10 +22,10 @@ class SqliteSetManager(SetManager):
         session.set_action("set-append", self.add_to_current)
         session.set_action("set-substract", self.remove_from_current)
 
-        view_context=session.get_context('sql')
-        view_context['fn'] = self.replay_query
-        view_context['args']['current_set_query'] = None
-        view_context['args']['current_set_id'] = None
+        view_context = session.get_context('sql')
+        view_context.fn = self.replay_query
+        view_context.args['current_set_query'] = None
+        view_context.args['current_set_id'] = None
 
     def remove(self, id):
         with self.conn:
@@ -109,10 +112,11 @@ class SqliteSetManager(SetManager):
 
     def query_to_current_set(self, query):
         view_context = self.get_session().get_context('sql')
-        view_context['args']['current_id'] = self.get_session().cursor.file_id
-        self.get_session().push_context('sql')
-        view_context['args']['current_set_query'] = query
-        view_context['args']['current_set_id'] = None
+        if view_context.args['current_set_query'] is not None or view_context.args['current_set_id'] is not None:
+            view_context.args['current_id'] = self.get_session().cursor.file_id
+            self.get_session().push_context('sql')
+        view_context.args['current_set_query'] = query
+        view_context.args['current_set_id'] = None
 
         c = self.conn.cursor()
 
@@ -129,10 +133,11 @@ class SqliteSetManager(SetManager):
 
     def load(self, id):
         view_context = self.get_session().get_context('sql')
-        view_context['args']['current_id'] = self.get_session().cursor.file_id
-        self.get_session().push_context('sql')
-        view_context['args']['current_set_query'] = None
-        view_context['args']['current_set_id'] = id
+        if view_context.args['current_set_query'] is not None or view_context.args['current_set_id'] is not None:
+            view_context.args['current_id'] = self.get_session().cursor.file_id
+            self.get_session().push_context('sql')
+        view_context.args['current_set_query'] = None
+        view_context.args['current_set_id'] = id
 
         with self.conn:
             c = self.conn.execute('drop table if exists current_set')
@@ -143,13 +148,17 @@ class SqliteSetManager(SetManager):
 
         self.get_app().fire_event("on_current_set_change")
 
-    def replay_query(self, current_set_query, current_set_id):
+    def replay_query(self, current_set_query, current_set_id, current_id):
         if current_set_query is not None:
             self.query_to_current_set(query=current_set_query)
         elif current_set_id is not None:
             self.load(id=current_set_id)
         else:
             self.logger.error("current_set_query and current_set_id should not be both None!")
+
+        # if current_id is not None:
+        #     Clock.schedule_once(lambda dt: self.get_session().cursor.go(idx=current_id, force=True), 0.1)
+            # self.get_session().cursor.go(current_id, force=True)
 
     def test(self):
         with self.conn:
