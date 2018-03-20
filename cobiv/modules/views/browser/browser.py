@@ -2,6 +2,8 @@ import math
 import os
 from collections import deque
 
+import time
+
 from cobiv.modules.core.component import Component
 from kivy.app import App
 from kivy.clock import Clock
@@ -116,7 +118,7 @@ class Browser(View, FloatLayout):
         self.set_action("paste-marked", self.paste_marked)
         self.set_action("tg_sidebar", self.toggle_side_bar)
         self.set_action("sort", self.sort)
-        self.set_action("open",self.open_current_file)
+        self.set_action("open", self.open_current_file)
 
     def get_name(self=None):
         return "browser"
@@ -313,11 +315,11 @@ class Browser(View, FloatLayout):
 
     def get_image(self, file_id, filename, image_full_path, repo_key, file_type):
         if not os.path.exists(filename):
-            self.thumb_loader.append((file_id, image_full_path, repo_key,file_type))
+            self.thumb_loader.append((file_id, image_full_path, repo_key, file_type))
         name = self.thumb_loader.get_filename_caption(image_full_path)
-        default_thumb_classname='ThumbnailImage'
-        if file_type =='book':
-            default_thumb_classname='BookBrowserThumbnail'
+        default_thumb_classname = 'ThumbnailImage'
+        if file_type == 'book':
+            default_thumb_classname = 'BookBrowserThumbnail'
         thumb_classname = self.get_config_value(key='thumbnail.classmap.' + file_type, default=default_thumb_classname)
 
         img = Factory.get(thumb_classname)(source=filename)
@@ -395,11 +397,13 @@ class Browser(View, FloatLayout):
         if self.cursor.filename is not None or self.cursor.is_eol():
             self.thumb_loader.clear_cache()
             self.cursor.go_first()
+            self.ids.scroll_view.scroll_y = 1
 
     def select_last(self):
         if self.cursor.filename is not None or self.cursor.is_eol():
             self.thumb_loader.clear_cache()
             self.cursor.go_last()
+            self.ids.scroll_view.scroll_y=0
 
     def select_custom(self, position=None):
         if (self.cursor.filename is not None or self.cursor.is_eol) and position is not None:
@@ -532,12 +536,13 @@ class Browser(View, FloatLayout):
             self.stop_progress()
 
     def _recenter_auto_page(self):
+        t1 = time.time()
         pos = self.cursor.pos - self.page_cursor.pos
         nb_cols = self.grid.cols
-        if pos >= len(self.grid.children) - nb_cols:
-            self.load_more()
-        elif pos <= nb_cols:
+        if pos <= nb_cols:
             self.load_more(direction_next=False)
+        elif pos >= len(self.grid.children) - nb_cols:
+            self.load_more()
 
     def do_next_action(self, immediat=False, timeout=0):
         if len(self.pending_actions) > 0:
@@ -655,8 +660,9 @@ class Browser(View, FloatLayout):
                 item.set_marked(item.file_id in mapping)
 
     def refresh_info(self):
-        for toolbar in self.toolbars:
-            toolbar.refresh_widgets()
+        if self.right_sidebar_size > 0:
+            for toolbar in self.toolbars:
+                toolbar.refresh_widgets()
 
     def cut_marked(self):
         if self.cursor.get_marked_count() == 0:
@@ -731,12 +737,14 @@ class Browser(View, FloatLayout):
     def paste_marked(self):
         if self.cursor.pos is None:
             return
+        clipboard_size = self.cursor.get_clipboard_size()
+        if clipboard_size == 0:
+            return
 
         was_empty = len(self.cursor) == 0
 
         current_pos = self.cursor.pos
 
-        clipboard_size = self.cursor.get_clipboard_size()
         # to_load = min(clipboard_size, self.max_items() - self.cursor.pos + self.page_cursor.pos)
 
         pos_to_send = self.cursor.pos
@@ -758,6 +766,13 @@ class Browser(View, FloatLayout):
             visibility = self.right_sidebar_size == 0
         else:
             visibility = value
+
+        for toolbar in self.toolbars:
+            if visibility:
+                toolbar.bind_cursor()
+            else:
+                toolbar.unbind_cursor()
+
         self.right_sidebar_size = self.right_sidebar_full_size if visibility else 0
         self.on_size_change(None, 0)
 
@@ -769,6 +784,6 @@ class Browser(View, FloatLayout):
     def open_current_file(self):
         if self.cursor.file_id is not None:
             mimetype = self.cursor.get_tag(0, 'file_type', 0)
-            fn=self.get_session().get_mimetype_action(mimetype,'open')
+            fn = self.get_session().get_mimetype_action(mimetype, 'open')
             if fn is not None:
                 fn(self.cursor.file_id)

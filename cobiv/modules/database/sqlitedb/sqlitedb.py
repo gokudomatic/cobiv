@@ -42,21 +42,26 @@ class SqliteCursor(CursorInterface):
         self.con = backend
         self.current_set = current
         self.search_manager = search_manager
-        self.init_row(row)
+
+        if row is not None:
+            file_key, position=row
+        else:
+            file_key, position=None, None
+        self.init_row(file_key, position)
         self.thumbs_path = App.get_running_app().get_config_value('thumbnails.path')
 
-    def init_row(self, row):
-        if row is None:
+    def init_row(self, file_key=None, position=None):
+        if position is None:
             self.pos = None
             self.filename = ''
             self.file_id = None
             self.repo_key = None
         else:
-            self.pos = row['position']
-            row1 = self.con.execute('select name, repo_key from file where id=?', (row['file_key'],)).fetchone()
+            self.pos = position
+            row1 = self.con.execute('select name, repo_key from file where id=?', (file_key,)).fetchone()
             self.filename = row1['name'] if row1 is not None else None
             self.repo_key = row1['repo_key']
-            self.file_id = row['file_key']
+            self.file_id = file_key
 
     def clone(self):
         """
@@ -98,7 +103,7 @@ class SqliteCursor(CursorInterface):
     def get(self, idx):
         if self.pos is None:
             return None
-        row = self.con.execute('select rowid,* from current_set where position=?',
+        row = self.con.execute('select file_key,position from current_set where position=?',
                                (idx,)).fetchone()
         return row
 
@@ -125,10 +130,11 @@ class SqliteCursor(CursorInterface):
     def go(self, idx):
         if self.pos is None:
             return None
-        row = self.con.execute('select rowid,* from current_set where position>=0 and position=?',
+        row = self.con.execute('select file_key,position from current_set where position>=0 and position=?',
                                (idx,)).fetchone()
         if row is not None:
-            self.init_row(row)
+            file_key, position=row
+            self.init_row(file_key,position)
         return self if row is not None else None
 
     def mark(self, value=None):
@@ -167,13 +173,19 @@ class SqliteCursor(CursorInterface):
         if next is None:
             next = self.get(self.pos - 1)
             new_pos = self.pos - 1
+
+        if next is None:
+            file_key, position = None,None
+        else:
+            file_key, position = next
+
         with self.con:
             self.con.execute('delete from current_set where file_key=?', (self.file_id,))
             self.con.execute('delete from marked where file_key=?', (self.file_id,))
             self.con.execute('update current_set set position=position-1 where position>?',
                              (self.pos,))
 
-        self.init_row(next)
+        self.init_row(file_key, position)
 
         self.pos = new_pos
 
@@ -662,6 +674,7 @@ class SqliteDb(Entity):
         return to_add
 
     def search_tag(self, *args):
+        self.session.cursor.mark_dirty()
         if len(args) == 0:
             self.set_manager.load('*')
         else:
@@ -670,10 +683,11 @@ class SqliteDb(Entity):
 
     def on_current_set_change(self):
         row = self.conn.execute(
-            'select rowid, * from current_set where position=0 order by position limit 1').fetchone()
+            'select file_key,position from current_set where position=0 order by position limit 1').fetchone()
         self.session.cursor.set_implementation(
             None if row is None else SqliteCursor(row=row, backend=self.conn, search_manager=self.search_manager))
 
+        self.session.cursor.mark_dirty()
         self.execute_cmd("load-set")
 
     def add_tag(self, *args):

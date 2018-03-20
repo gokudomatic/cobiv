@@ -206,6 +206,7 @@ class Cursor(EventDispatcher):
     file_id = NumericProperty(None, allownone=True)
     eol_implementation = None
     tags = None
+    size = None
 
     def __init__(self, **kwargs):
         super(Cursor, self).__init__(**kwargs)
@@ -226,6 +227,7 @@ class Cursor(EventDispatcher):
         new_cursor.repo_key = self.repo_key
         new_cursor.eol_implementation = self.eol_implementation
         new_cursor.tags = self.tags
+        new_cursor.size=self.size
         return new_cursor
 
     def get_app(self):
@@ -247,6 +249,7 @@ class Cursor(EventDispatcher):
             self.filename = None
             self.repo_key = None
             self.file_id = None
+            self.size = None
             self.pos = self.eol_implementation.pos
             self.implementation.bind(pos=self.on_pos_change)
         elif instance is not None:
@@ -268,6 +271,7 @@ class Cursor(EventDispatcher):
             self.repo_key = None
             self.file_id = None
             self.pos = None
+            self.size = None
 
     def set_eol_implementation(self, last_cursor):
         if not isinstance(last_cursor, CursorInterface) and last_cursor is not None:
@@ -369,9 +373,9 @@ class Cursor(EventDispatcher):
                 self.tags[int(cat)][kind].append(value)
         return self.tags
 
-    def get_tag(self,category,kind,index):
-        results=self.get_tag_list(category=category,kind=kind)
-        return results[index] if len(results)>index else None
+    def get_tag(self, category, kind, index):
+        results = self.get_tag_list(category=category, kind=kind)
+        return results[index] if len(results) > index else None
 
     def get_tag_list(self, category, kind):
         if self.implementation is None:
@@ -402,7 +406,9 @@ class Cursor(EventDispatcher):
         return self.implementation.remove()
 
     def __len__(self):
-        return self.implementation.__len__() if self.implementation is not None else 0
+        if self.size is None:
+            self.size = self.implementation.__len__() if self.implementation is not None else 0
+        return self.size
 
     def get_cursor_by_pos(self, pos):
         c = self.clone()
@@ -442,6 +448,7 @@ class Cursor(EventDispatcher):
     def cut_marked(self):
         if self.implementation is not None:
             if self.implementation.get_marked_count() > 0:
+                self.size = None
                 self.implementation.cut_marked()
                 self.go(min(self.pos, len(self)), force=True)
                 if self.is_eol():
@@ -450,6 +457,7 @@ class Cursor(EventDispatcher):
 
     def paste_marked(self, new_pos=None, append=False, update_cursor=True):
         if self.implementation is not None:
+            self.size = None
             self.implementation.paste_marked(new_pos=new_pos, append=append)
             if update_cursor:
                 self.go(self.pos, force=True)
@@ -481,3 +489,6 @@ class Cursor(EventDispatcher):
     def sort(self, *fields):
         if self.implementation is not None:
             self.implementation.sort(*fields)
+
+    def mark_dirty(self):
+        self.size=None

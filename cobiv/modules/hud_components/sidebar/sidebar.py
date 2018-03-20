@@ -23,8 +23,16 @@ class Sidebar(Hud, ScrollView):
     def __init__(self, **kwargs):
         super(Sidebar, self).__init__(**kwargs)
         self.session = self.get_session()
+        # if self.session is not None:
+        #     self.session.cursor.bind(file_id=self.on_file_id_change)
+
+    def bind_cursor(self):
         if self.session is not None:
             self.session.cursor.bind(file_id=self.on_file_id_change)
+
+    def unbind_cursor(self):
+        if self.session is not None:
+            self.session.cursor.unbind(file_id=self.on_file_id_change)
 
     def on_file_id_change(self, instance, value):
         self.refresh_widgets()

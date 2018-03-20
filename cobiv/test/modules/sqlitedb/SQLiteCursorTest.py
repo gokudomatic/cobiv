@@ -130,7 +130,7 @@ class SQLiteCursorTest(unittest.TestCase):
             query += ' order by CAST(f.name as INTEGER)'
             self.regenerate_set("default", query)
 
-        row = self.conn.execute('select rowid, * from current_set where position=0 limit 1').fetchone()
+        row = self.conn.execute('select file_key, position from current_set where position=0 limit 1').fetchone()
         return SqliteCursor(row=row, backend=self.conn, search_manager=self.search_manager)
 
     def add_files(self, amount):

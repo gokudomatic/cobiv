@@ -50,5 +50,10 @@ class StatusBar(Component, BoxLayout):
         for cfg_item in config_items:
             self.add_label(**cfg_item)
 
+    def bind_cursor(self):
+        pass
+
+    def unbind_cursor(self):
+        pass
 
 Factory.register('SimpleStatusBar', cls=StatusBar)
