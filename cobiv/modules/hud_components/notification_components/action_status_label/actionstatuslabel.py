@@ -3,7 +3,7 @@ from kivy.factory import Factory
 from kivy.lang import Builder
 from kivy.uix.label import Label
 
-from modules.core.hud import Hud
+from cobiv.modules.core.hud import Hud
 
 Builder.load_string('''
 <ActionStatusLabel>:
@@ -15,13 +15,17 @@ Builder.load_string('''
 class ActionStatusLabel(Hud, Label):
     def __init__(self, key=None, **kwargs):
         super().__init__(**kwargs)
+
         self.color = self.get_config_value("color", (1, 1, 1, 1))
         self.outline_color = self.get_config_value("outline_color", (0, 0, 0, 1))
         self.outline_width = self.get_config_value("outline_width", 1)
         self.font_size = self.get_config_value("font_size", "60sp")
         self.key = key
         self.anim = None
-        self.reset_animation()
+
+    def start(self):
+        if self.parent is not None:
+            self.reset_animation()
 
     def update(self, text=None, **kwargs):
         if text is not None:

@@ -2,9 +2,9 @@ import logging
 
 from kivy.app import App
 
-from modules.database.datasources.sqlite.sqliteds import Sqliteds
-from modules.database.sqlitedb.search.searchmanager import SearchManager
-from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
+from cobiv.modules.database.datasources.sqlite.sqliteds import Sqliteds
+from cobiv.modules.database.sqlitedb.search.searchmanager import SearchManager
+from cobiv.modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
 from test.AbstractApp import AbstractApp
 
 logging.basicConfig(level=logging.DEBUG)

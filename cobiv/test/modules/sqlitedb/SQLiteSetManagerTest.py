@@ -1,8 +1,8 @@
 import logging
 
-from modules.core.session.session import Session
-from modules.database.datasources.datasource import Datasource
-from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
+from cobiv.modules.core.session.session import Session
+from cobiv.modules.database.datasources.datasource import Datasource
+from cobiv.modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
 
 logging.basicConfig(level=logging.DEBUG)
 

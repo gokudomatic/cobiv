@@ -10,7 +10,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 
-from modules.core.hud import Hud
+from cobiv.modules.core.hud import Hud
 
 Builder.load_string('''
 <ActionMeterWidget>:
@@ -72,11 +72,13 @@ class ActionStatusMeter(Hud, BoxLayout):
 
     def __init__(self, key=None, value=0, max_value=100, **kwargs):
         super().__init__(**kwargs)
+        self.anim = None
         self.max_value = max_value
         self.value = value
         self.key=key
         self.font_size=self.get_config_value('font_size','40sp')
-        self.anim = None
+
+    def start(self):
         self.reset_animation()
 
     def update(self, value=None, **kwargs):

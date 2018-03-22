@@ -2,9 +2,7 @@ import os
 
 import logging
 
-import time
-
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 from cobiv.MainContainer import MainContainer
 
@@ -26,7 +24,7 @@ import cProfile
 
 kivy.require('1.9.1')
 
-Builder.load_file('main.kv')
+Builder.load_file('cobiv/main.kv')
 
 
 class Cobiv(App):
@@ -39,7 +37,7 @@ class Cobiv(App):
         super(Cobiv, self).__init__(**kwargs)
 
         self.plugin_manager = PluginManager()
-        self.plugin_manager.setPluginPlaces(["modules"])
+        self.plugin_manager.setPluginPlaces(["cobiv/modules"])
         self.plugin_manager.setCategoriesFilter({
             "View": View,
             "Entity": Entity,
@@ -131,6 +129,9 @@ class Cobiv(App):
         return os.path.join(os.path.expanduser('~'), '.cobiv', *args)
 
     def get_config_value(self, key, default=None):
+        if self.root is None:
+            return default
+
         keys = key.split('.')
         cfg = self.root.configuration
         for k in keys:
@@ -139,7 +140,3 @@ class Cobiv(App):
             else:
                 return default
         return cfg
-
-
-if __name__ == '__main__':
-    Cobiv().run()

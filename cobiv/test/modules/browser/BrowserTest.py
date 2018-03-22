@@ -15,9 +15,9 @@ from cobiv.modules.database.sqlitedb.sqlitedb import SqliteDb
 from cobiv.modules.views.browser.browser import Browser
 from cobiv.modules.views.browser.eolitem import EOLItem
 from cobiv.modules.hud_components.sidebar.sidebar import Sidebar
-from modules.database.datasources.sqlite.sqliteds import Sqliteds
-from modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
-from modules.views.browser.thumbnail_image import ThumbnailImage
+from cobiv.modules.database.datasources.sqlite.sqliteds import Sqliteds
+from cobiv.modules.database.sqlitedb.sqlitesetmanager import SqliteSetManager
+from cobiv.modules.views.browser.thumbnail_image import ThumbnailImage
 from test.AbstractApp import AbstractApp
 
 

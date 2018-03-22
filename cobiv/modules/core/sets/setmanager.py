@@ -1,4 +1,4 @@
-from modules.core.entity import Entity
+from cobiv.modules.core.entity import Entity
 
 
 class SetManager(Entity):

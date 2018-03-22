@@ -1,1 +1,1 @@
-__all__ = ["MainApp","MainContainer","viewlist"]
+__all__ = ["MainApp","MainContainer"]

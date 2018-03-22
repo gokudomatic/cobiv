@@ -39,9 +39,11 @@ class NotificationHUD(BaseHUD):
             return
         if key is None:
             if renderer is None:
-                self.add_widget(Factory.NotificationLabel(**kwargs))
+                instance=Factory.NotificationLabel(**kwargs)
             else:
-                self.add_widget(renderer(**kwargs))
+                instance=renderer(**kwargs)
+            self.add_widget(instance)
+            instance.start()
         else:
             if key in self.renderers:
                 self.renderers[key].update(**kwargs)
@@ -52,6 +54,7 @@ class NotificationHUD(BaseHUD):
                     instance = renderer(key=key,**kwargs)
                 self.renderers[key] = instance
                 self.add_widget(instance)
+                instance.start()
 
     def on_notification_complete(self, key, instance):
         if key in self.renderers:
