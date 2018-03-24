@@ -1,0 +1,8 @@
+[Core]
+Name = sqlite_backup
+Module = Sqlitedb_backup
+
+[Documentation]
+Author = Edwin Cox
+Version = 0.1
+Description = A Plugin to backup and load in JSON format the image tags
