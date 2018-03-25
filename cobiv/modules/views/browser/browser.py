@@ -329,7 +329,9 @@ class Browser(View, FloatLayout):
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
         if queue_len > 0:
-            marked_list = self.page_cursor.get_all_marked()
+            marked_list = self.page_cursor.get_all_marked(
+                offset=self.page_cursor.pos - (0 if self.append_queue else queue_len + 1),
+                limit=self.max_items() + queue_len + 1)
 
             for i in range(queue_len):
                 thumb_filename, file_id, pos, image_filename, repo_key, file_type = self.image_queue.popleft()
@@ -403,7 +405,7 @@ class Browser(View, FloatLayout):
         if self.cursor.filename is not None or self.cursor.is_eol():
             self.thumb_loader.clear_cache()
             self.cursor.go_last()
-            self.ids.scroll_view.scroll_y=0
+            self.ids.scroll_view.scroll_y = 0
 
     def select_custom(self, position=None):
         if (self.cursor.filename is not None or self.cursor.is_eol) and position is not None:
@@ -654,7 +656,7 @@ class Browser(View, FloatLayout):
             self.cursor.mark(value)
 
     def refresh_mark(self):
-        mapping = self.cursor.get_all_marked()
+        mapping = self.cursor.get_all_marked(self.page_cursor.pos, self.max_items() + 1)
         for item in self.grid.children:
             if not isinstance(item, EOLItem):
                 item.set_marked(item.file_id in mapping)

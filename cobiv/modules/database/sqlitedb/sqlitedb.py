@@ -144,15 +144,17 @@ class SqliteCursor(CursorInterface):
             if self.get_mark() and value is None or value == False:
                 self.con.execute('delete from marked where file_key=?', (self.file_id,))
             else:
-                self.con.execute('insert into marked values (?)', (self.file_id,))
+                self.con.execute('insert into marked values (?,?)', (self.file_id, self.pos))
 
     def get_mark(self):
         if self.pos is None:
             return False
         return self.con.execute('select count(*) from marked where file_key=?', (self.file_id,)).fetchone()[0] > 0
 
-    def get_all_marked(self):
-        return [r[0] for r in self.con.execute('select file_key from marked', ).fetchall()]
+    def get_all_marked(self,offset=0,limit=1000):
+        rows=self.con.execute('select file_key from marked where position>=? order by position limit ?',(offset, limit)).fetchall()
+        data=[r[0] for r in rows]
+        return data
 
     def get_marked_count(self):
         return self.con.execute('select count(*) from marked', ).fetchone()[0]
@@ -237,7 +239,7 @@ class SqliteCursor(CursorInterface):
 
             self.con.execute('delete from marked')
             if value:
-                self.con.execute('insert into marked (file_key) select file_key from current_set where position>=0')
+                self.con.execute('insert into marked (file_key,position) select file_key,position from current_set where position>=0')
 
     def _get_tag_key_value(self, tag):
         key = "tag"
@@ -251,10 +253,10 @@ class SqliteCursor(CursorInterface):
     def invert_marked(self):
         with self.con:
             self.con.execute(
-                'create temporary table marked1 as select cs.file_key from current_set cs left join marked m on m.file_key=cs.file_key' +
+                'create temporary table marked1 as select cs.file_key,cs.position from current_set cs left join marked m on m.file_key=cs.file_key' +
                 ' where m.file_key is null and cs.position>=0')
             self.con.execute('delete from marked')
-            self.con.execute('insert into marked select file_key from marked1')
+            self.con.execute('insert into marked select file_key,position from marked1')
             self.con.execute('drop table marked1')
 
     def add_tag(self, *args):
@@ -401,7 +403,7 @@ class SqliteDb(Entity):
 
         self.create_database(sameThread=True)
         with self.conn:
-            self.conn.execute('create temporary table marked (file_key int)')
+            self.conn.execute('create temporary table marked (file_key int, position int PRIMARY KEY)')
             self.conn.execute('create temporary table if not exists current_set as select * from set_detail where 1=2')
 
         self.search_manager = self.lookup('sqliteSearchManager', 'Entity')
@@ -454,7 +456,7 @@ class SqliteDb(Entity):
         if must_initialize:
             self.create_database()
         with self.conn:
-            self.conn.execute('create temporary table marked (file_key int)')
+            self.conn.execute('create temporary table marked (file_key int, position int PRIMARY KEY)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
 
         # open file systems

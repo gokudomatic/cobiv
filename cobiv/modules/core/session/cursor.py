@@ -48,7 +48,7 @@ class CursorInterface(EventDispatcher):
     def get_marked_count(self):
         return 0
 
-    def get_all_marked(self):
+    def get_all_marked(self,offset=0,limit=0):
         return False
 
     def remove(self):
@@ -130,11 +130,11 @@ class EOLCursor(CursorInterface):
         else:
             return self.last_cursor.get_previous_ids(amount)
 
-    def get_all_marked(self):
+    def get_all_marked(self,offset,limit):
         if self.last_cursor is None:
             return None
         else:
-            return self.last_cursor.get_all_marked()
+            return self.last_cursor.get_all_marked(offset,limit)
 
     def get_marked_count(self):
         if self.last_cursor is None:
@@ -396,8 +396,8 @@ class Cursor(EventDispatcher):
     def get_mark(self):
         return self.implementation.get_mark()
 
-    def get_all_marked(self):
-        return self.implementation.get_all_marked()
+    def get_all_marked(self,offset=0,limit=0):
+        return self.implementation.get_all_marked(offset,limit)
 
     def get_marked_count(self):
         return self.implementation.get_marked_count()
