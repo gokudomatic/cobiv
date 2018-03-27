@@ -22,7 +22,7 @@ class CustomTableStrategy(DefaultSearchStrategy):
 
         self.operator_functions = {
             'in': [self.prepare_in, self.parse_in, self.join_query_core_tags],
-            '%': [self.prepare_in, self.parse_partial, self.join_query_core_tags],
+            '%': [self.prepare_in, self.parse_partial, self.join_in_query_core_tags],
             '>': [self.prepare_greater_than, self.parse_greater_than, self.join_query_core_tags],
             '<': [self.prepare_lower_than, self.parse_lower_than, self.join_query_core_tags],
             '>=': [self.prepare_greater_than, self.parse_greater_equals, self.join_query_core_tags],

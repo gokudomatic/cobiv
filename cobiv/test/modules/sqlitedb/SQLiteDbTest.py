@@ -36,9 +36,8 @@ class TestMainWidget(Widget):
 
 
 class TestApp(AbstractApp):
-
-    session=None
-    searchManager=None
+    session = None
+    searchManager = None
 
     def __init__(self, **kwargs):
         super(TestApp, self).__init__(**kwargs)
@@ -47,20 +46,21 @@ class TestApp(AbstractApp):
             'repositories': ['osfs://images'],
             'thumbnails.path': self.get_user_path('thumbs')
         }
-        self.ds=Sqliteds()
+        self.ds = Sqliteds()
 
     def build(self):
         return TestMainWidget()
 
-    def lookup(self,name,category):
-        if name=='sqliteSetManager':
+    def lookup(self, name, category):
+        if name == 'sqliteSetManager':
             return SqliteSetManager()
-        elif name=='sqlite_ds':
+        elif name == 'sqlite_ds':
             return self.ds
-        elif name=='session':
+        elif name == 'session':
             return self.session
-        elif name=='sqliteSearchManager':
+        elif name == 'sqliteSearchManager':
             return self.searchManager
+
 
 class SQLiteDbTest(unittest.TestCase):
     def get_user_path(self, *args):
@@ -68,7 +68,7 @@ class SQLiteDbTest(unittest.TestCase):
 
     def setUp(self):
         self.session = Session()
-        self.searchManager=SearchManager()
+        self.searchManager = SearchManager()
 
         f_path = self.get_user_path('images', 'test.jpg')
         if os.path.exists(f_path):
@@ -83,12 +83,11 @@ class SQLiteDbTest(unittest.TestCase):
 
     def init_db(self):
         App.get_running_app().session = self.session
-        App.get_running_app().searchManager=self.searchManager
+        App.get_running_app().searchManager = self.searchManager
         self.searchManager.ready()
         db = SqliteDb()
         db.init_test_db(self.session)
         db.session = self.session
-
 
         return db
 
@@ -107,7 +106,7 @@ class SQLiteDbTest(unittest.TestCase):
         return db
 
     def init_db_with_categorized_tags(self):
-        db=self.init_db()
+        db = self.init_db()
 
         db.search_tag()
         c = self.session.cursor
@@ -118,7 +117,7 @@ class SQLiteDbTest(unittest.TestCase):
         self.assertEqual("/0002.jpg", c.filename)
         c.add_tag("cat2:two", "o", "t")
         c.go_next()
-        self.assertEqual("/0003.jpg", c.filename)
+        self.assertEqual("/subfolder/0003.jpg", c.filename)
         c.add_tag("cat1:three", "letter:t", "r", "e", "cat1:3")
 
         return db
@@ -135,13 +134,13 @@ class SQLiteDbTest(unittest.TestCase):
         self.assertEqual("/0002.jpg", c.filename)
         c.add_tag("modification_date:1503845435.0", "width:39", "height:81")  # time=2017.08.27
         c.go_next()
-        self.assertEqual("/0003.jpg", c.filename)
+        self.assertEqual("/subfolder/0003.jpg", c.filename)
         c.add_tag("modification_date:1458169200.0", "width:60", "height:60")  # time=2016.03.17
 
         return db
 
     def _test_initialization(self, app, *args):
-        db=self.init_db()
+        db = self.init_db()
 
         db.close_db()
 
@@ -159,7 +158,7 @@ class SQLiteDbTest(unittest.TestCase):
         c.go_next()
         self.assertEqual("/0002.jpg", c.filename)
         c.go_next()
-        self.assertEqual("/0003.jpg", c.filename)
+        self.assertEqual("/subfolder/0003.jpg", c.filename)
 
         db.close_db()
         app.stop()
@@ -190,7 +189,7 @@ class SQLiteDbTest(unittest.TestCase):
 
         new_filename = self.get_user_path('images', 'test.jpg')
 
-        shutil.copy(self.get_user_path('images', '0003.jpg'), new_filename)
+        shutil.copy(self.get_user_path('images', 'subfolder', '0003.jpg'), new_filename)
         self.assertTrue(os.path.exists(new_filename))
         db.updatedb(sameThread=True)
         db.search_tag()
@@ -207,7 +206,7 @@ class SQLiteDbTest(unittest.TestCase):
     def _test_update_tags(self, app, *args):
 
         new_filename = self.get_user_path('images', 'test.jpg')
-        shutil.copy(self.get_user_path('images', '0003.jpg'), new_filename)
+        shutil.copy(self.get_user_path('images', 'subfolder', '0003.jpg'), new_filename)
 
         db = self.init_db_with_tags()
         c = self.session.cursor
@@ -224,7 +223,8 @@ class SQLiteDbTest(unittest.TestCase):
         c.go_last()
         c.get_tags()
         self.assertEqual(os.path.getsize(new_filename), c.get_tags()[0]['size'][0])
-        self.assertEqual(os.path.getsize(self.get_user_path('images', '0003.jpg')), c.get_tags()[0]['size'][0])
+        self.assertEqual(os.path.getsize(self.get_user_path('images', 'subfolder', '0003.jpg')),
+                         c.get_tags()[0]['size'][0])
 
         # test when file content changed
         shutil.copy(self.get_user_path('images', '0001.jpg'), new_filename)
@@ -252,7 +252,7 @@ class SQLiteDbTest(unittest.TestCase):
 
         db.search_tag("cat1:*", "-one")
         self.assertEqual(1, len(c))
-        self.assertEqual("/0003.jpg", c.filename)
+        self.assertEqual("/subfolder/0003.jpg", c.filename)
 
         db.search_tag("t", "-letter:")
         self.assertEqual(1, len(c))
@@ -419,6 +419,11 @@ class SQLiteDbTest(unittest.TestCase):
     def _test_search_core_tags(self, app, *args):
         db = self.init_db()
         c = self.session.cursor
+
+        # test path
+        db.search_tag("path:%:%sub%")
+        self.assertEqual(1, len(c))
+        self.assertEqual("/subfolder/0003.jpg", c.filename)
 
         # test extension
         db.search_tag("ext:jpg")

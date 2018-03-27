@@ -90,8 +90,8 @@ class ActionStatusMeter(Hud, BoxLayout):
         if self.anim is not None:
             self.anim.cancel(self)
             self.opacity=1
-        self.anim = Animation(duration=1.) + Animation(opacity=0,
-                                                       duration=self.get_config_value("duration", 0.5))
+        self.anim = Animation(duration=self.get_config_value("duration", 1.)) + Animation(opacity=0,
+                                                       duration=self.get_config_value("fading", 0.5))
         self.anim.bind(on_complete=lambda instance, value: self.parent.on_notification_complete(self.key, self))
         self.anim.start(self)
 

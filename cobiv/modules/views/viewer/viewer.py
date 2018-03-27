@@ -1,8 +1,6 @@
 import os
 
-from kivy.app import App
 from kivy.core.window import Window
-from kivy.effects.dampedscroll import DampedScrollEffect
 from kivy.factory import Factory
 from kivy.vector import Vector
 
@@ -11,32 +9,10 @@ from kivy.lang import Builder
 from kivy.properties import ObjectProperty, Clock
 from kivy.uix.scrollview import ScrollView
 
-from cobiv.modules.core.imageset.slide import SlideMode, Slide
+from cobiv.modules.core.imageset.slide import SlideMode
 from cobiv.modules.core.view import View
 
 Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'viewer.kv')))
-
-
-class HorizontalSidebarEffect(DampedScrollEffect):
-    overscroll_limit = 50
-
-    def __init__(self, **kwargs):
-        super(HorizontalSidebarEffect, self).__init__(**kwargs)
-        self.trigger_navigate_right = Clock.create_trigger(lambda dt: self.navigate(True), 0.5)
-        self.trigger_navigate_left = Clock.create_trigger(lambda dt: self.navigate(False), 0.5)
-
-    def on_overscroll(self, *args):
-        super(HorizontalSidebarEffect, self).on_overscroll(*args)
-        if self.overscroll < -self.overscroll_limit:
-            self.trigger_navigate_right()
-        elif self.overscroll > self.overscroll_limit:
-            self.trigger_navigate_left()
-
-    def navigate(self, go_right):
-        if go_right:
-            App.get_running_app().root.get_view().load_next()
-        else:
-            App.get_running_app().root.get_view().load_previous()
 
 
 class Viewer(View, ScrollView):
@@ -140,7 +116,10 @@ class Viewer(View, ScrollView):
         self.show_status(key="viewer_load", renderer="ActionStatusMeter",
                          value=self.session.fields['currentset_position'](),
                          max_value=self.session.fields['currentset_count'](),
-                         pos_hint={'center_x': 0.5, 'center_y': 0.5}, size_hint=(0.5, None))
+                         pos_hint={'center_x': self.get_config_value(key='status_meter.pos_x', default=0.5),
+                                   'center_y': self.get_config_value(key='status_meter.pos_y', default=0.1)},
+                         size_hint=(self.get_config_value(key='status_meter.width', default=0.5),
+                                    self.get_config_value(key='status_meter.height', default=None)))
 
     def load_next(self):
         if not self.cursor.go_next():
