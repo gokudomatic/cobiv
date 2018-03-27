@@ -30,7 +30,7 @@ class SqliteCursor(CursorInterface):
 
     """
 
-    core_tags = ["path", "size", "file_date", "ext"]
+    core_tags = ["path", "size", "file_date", "ext", "filename"]
     logger = logging.getLogger(__name__)
 
     con = None
@@ -583,17 +583,17 @@ class SqliteDb(Entity):
                 modified_date = time.mktime(file_info.modified.timetuple())
                 query_tag_to_add.append(
                     (repo_id, f, file_info.size, modified_date, os.path.splitext(f)[1][1:],
-                     os.path.dirname(f)))
+                     os.path.dirname(f),os.path.splitext(os.path.basename(f))[0]))
 
                 self.tick_progress()
 
             c.executemany('insert into file(repo_key, name,searchable,file_type) values(?,?,?,?)', query_to_add)
 
-            c.execute('create temporary table t1(repo int,file text,size int,cdate float,ext text, path text)')
+            c.execute('create temporary table t1(repo int,file text,size int,cdate float,ext text, path text, filename text)')
 
-            c.executemany('insert into t1(repo,file,size,cdate,ext,path) values(?,?,?,?,?,?)', query_tag_to_add)
+            c.executemany('insert into t1(repo,file,size,cdate,ext,path, filename) values(?,?,?,?,?,?,?)', query_tag_to_add)
             c.execute(
-                'insert into core_tags (file_key, path, size, file_date, ext) select f.rowid,t.path,t.size,t.cdate,t.ext from file f,t1 t where f.repo_key=t.repo and f.name=t.file')
+                'insert into core_tags (file_key, path, size, file_date, ext, filename) select f.rowid,t.path,t.size,t.cdate,t.ext,t.filename from file f,t1 t where f.repo_key=t.repo and f.name=t.file')
 
             c.execute('drop table t1')
             self.tick_progress()
@@ -617,9 +617,9 @@ class SqliteDb(Entity):
             for file_id, filename in modified_file_ids:
                 file_info = repo_fs.getdetails(filename)
 
-                c.execute('update core_tags set size=?,file_date=?,ext=?,path=? where file_key=?',
+                c.execute('update core_tags set size=?,file_date=?,ext=?,path=?,filename=? where file_key=?',
                           (file_info.size, file_info.modified, os.path.splitext(filename)[1][1:],
-                           os.path.dirname(filename), file_id))
+                           os.path.dirname(filename),os.path.splitext(os.path.basename(filename))[0], file_id))
 
                 tags_to_add = self.read_tags(file_id, filename, repo_fs=repo_fs)
 

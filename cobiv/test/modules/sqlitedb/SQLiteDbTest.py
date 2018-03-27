@@ -421,9 +421,21 @@ class SQLiteDbTest(unittest.TestCase):
         c = self.session.cursor
 
         # test path
-        db.search_tag("path:%:%sub%")
+        db.search_tag("path:%sub%")
         self.assertEqual(1, len(c))
         self.assertEqual("/subfolder/0003.jpg", c.filename)
+
+        # test filename
+        db.search_tag("filename:0002")
+        self.assertEqual(1, len(c))
+        self.assertEqual("/0002.jpg", c.filename)
+
+        db.search_tag("filename:%3")
+        self.assertEqual(1, len(c))
+        self.assertEqual("/subfolder/0003.jpg", c.filename)
+
+        db.search_tag("filename:%000%")
+        self.assertEqual(3, len(c))
 
         # test extension
         db.search_tag("ext:jpg")
