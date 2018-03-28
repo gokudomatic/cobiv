@@ -6,7 +6,7 @@ from kivy.vector import Vector
 
 from cobiv.modules.core.component import Component
 from kivy.lang import Builder
-from kivy.properties import ObjectProperty, Clock
+from kivy.properties import ObjectProperty, Clock, BooleanProperty
 from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.core.imageset.slide import SlideMode
@@ -19,6 +19,8 @@ class Viewer(View, ScrollView):
     fit_mode = ObjectProperty(SlideMode.FIT_SCREEN)
     session = None
     cursor = None
+
+    marked = BooleanProperty(False)
 
     swipe_event = None
     swipe_frequency = 0
@@ -108,6 +110,8 @@ class Viewer(View, ScrollView):
 
             image_class = Factory.get(slide_classname)
             image = image_class(session=self.session, load_mode=self.fit_mode, cursor=self.cursor)
+
+        self.marked=self.cursor.get_mark()
 
         self.clear_widgets()
         if image:
@@ -216,6 +220,7 @@ class Viewer(View, ScrollView):
 
     def mark(self):
         self.cursor.mark()
+        self.marked=not self.marked
 
     def print_mark(self):
         is_marked = self.cursor.get_mark()

@@ -2,5 +2,12 @@
 #:import win kivy.core.window
 
 <Viewer>:
+    canvas.after:
+        Color:
+            rgba: 0.25,0.8,1,0.7 if root.marked else 0
+        Line:
+            width: 10.
+            rectangle: (self.x, self.y, self.width, self.height)
+
     size: win.Window.size
     size_hint: 1, 1
