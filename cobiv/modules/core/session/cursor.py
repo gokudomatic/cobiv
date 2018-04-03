@@ -81,7 +81,13 @@ class CursorInterface(EventDispatcher):
     def add_tag(self, *args):
         pass
 
+    def add_tag_to_marked(self, *args):
+        pass
+
     def remove_tag(self, *args):
+        pass
+
+    def remove_tag_to_marked(self, *args):
         pass
 
     def get_tags(self):
@@ -475,9 +481,19 @@ class Cursor(EventDispatcher):
             self.implementation.add_tag(*args)
             self.tags = None
 
+    def add_tag_to_marked(self, *args):
+        if self.implementation is not None:
+            self.implementation.add_tag_to_marked(*args)
+            self.tags = None
+
     def remove_tag(self, *args):
         if self.implementation is not None:
             self.implementation.remove_tag(*args)
+            self.tags = None
+
+    def remove_tag_to_marked(self, *args):
+        if self.implementation is not None:
+            self.implementation.remove_tag_to_marked(*args)
             self.tags = None
 
     def get_clipboard_size(self):

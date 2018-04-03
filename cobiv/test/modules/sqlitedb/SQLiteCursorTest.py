@@ -35,8 +35,8 @@ class TestApp(App):
         else:
             return ""
 
-    def lookup(self,name,category):
-        if name=='session':
+    def lookup(self, name, category):
+        if name == 'session':
             return None
         else:
             return None
@@ -52,16 +52,16 @@ class SQLiteCursorTest(unittest.TestCase):
         self.conn.execute('PRAGMA locking_mode = EXCLUSIVE')
 
         with self.conn:
-            fd=open('../../../resources/sql/sqlite_db.sql')
-            script=fd.read()
+            fd = open('../../../resources/sql/sqlite_db.sql')
+            script = fd.read()
             self.conn.executescript(script)
             fd.close()
 
             self.conn.execute("insert into catalog (name) values(?) ", ("default",))
             self.conn.execute('insert into repository (catalog_key,path,recursive) values (?,?,?)',
-                                  ('default', 'memory', 0))
+                              ('default', 'memory', 0))
 
-            self.conn.execute('create temporary table marked (file_key int)')
+            self.conn.execute('create temporary table marked (file_key int,position int)')
             self.conn.execute('create temporary table current_set as select * from set_detail where 1=2')
 
     def tearDown(self):
@@ -911,6 +911,42 @@ class SQLiteCursorTest(unittest.TestCase):
 
         app.stop()
 
+    def _test_add_marked_tags(self, app, *args):
+        c = self.search()
+        c.mark_all()
+        c.add_tag_to_marked("one")
+        self.assertCountEqual(c.get_tags(), [])
+
+        self.add_files(10)
+        c = self.search()
+        c.mark_all()
+        c.add_tag_to_marked("one")
+
+        sql = self.conn.cursor()
+        self.assertEqual(10, sql.execute("select count(*) from tag where value='one'").fetchone()[0])
+
+        c.go_first()
+        c.mark(False)
+        c.add_tag_to_marked("2")
+        self.assertEqual(9, sql.execute("select count(*) from tag where value='2'").fetchone()[0])
+
+        c.mark_all(False)
+        c.go_first()
+        for i in range(4):
+            c.mark(True)
+            c.go_next()
+        c.add_tag_to_marked("a")
+        self.assertEqual(4, sql.execute("select count(*) from tag where value='a'").fetchone()[0])
+
+        c.mark_all()
+        c.add_tag_to_marked("a")
+        self.assertEqual(10, sql.execute("select count(*) from tag where value='a'").fetchone()[0])
+
+        c.remove_tag_to_marked("a")
+        self.assertEqual(0, sql.execute("select count(*) from tag where value='a'").fetchone()[0])
+
+        app.stop()
+
     def call_test(self, func):
         a = TestApp()
         p = partial(func, a)
@@ -991,6 +1027,9 @@ class SQLiteCursorTest(unittest.TestCase):
 
     def test_get_sort(self):
         self.call_test(self._test_sort)
+
+    def test_add_marked_tags(self):
+        self.call_test(self._test_add_marked_tags)
 
 
 if __name__ == "__main__":

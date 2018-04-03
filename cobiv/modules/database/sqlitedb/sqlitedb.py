@@ -38,15 +38,15 @@ class SqliteCursor(CursorInterface):
     current_set = True
 
     def __init__(self, row=None, backend=None, current=True, search_manager=None):
-        super(SqliteCursor,self).__init__()
+        super(SqliteCursor, self).__init__()
         self.con = backend
         self.current_set = current
         self.search_manager = search_manager
 
         if row is not None:
-            file_key, position=row
+            file_key, position = row
         else:
-            file_key, position=None, None
+            file_key, position = None, None
         self.init_row(file_key, position)
         self.thumbs_path = App.get_running_app().get_config_value('thumbnails.path')
 
@@ -133,8 +133,8 @@ class SqliteCursor(CursorInterface):
         row = self.con.execute('select file_key,position from current_set where position>=0 and position=?',
                                (idx,)).fetchone()
         if row is not None:
-            file_key, position=row
-            self.init_row(file_key,position)
+            file_key, position = row
+            self.init_row(file_key, position)
         return self if row is not None else None
 
     def mark(self, value=None):
@@ -151,9 +151,10 @@ class SqliteCursor(CursorInterface):
             return False
         return self.con.execute('select count(*) from marked where file_key=?', (self.file_id,)).fetchone()[0] > 0
 
-    def get_all_marked(self,offset=0,limit=1000):
-        rows=self.con.execute('select file_key from marked where position>=? order by position limit ?',(offset, limit)).fetchall()
-        data=[r[0] for r in rows]
+    def get_all_marked(self, offset=0, limit=1000):
+        rows = self.con.execute('select file_key from marked where position>=? order by position limit ?',
+                                (offset, limit)).fetchall()
+        data = [r[0] for r in rows]
         return data
 
     def get_marked_count(self):
@@ -177,7 +178,7 @@ class SqliteCursor(CursorInterface):
             new_pos = self.pos - 1
 
         if next is None:
-            file_key, position = None,None
+            file_key, position = None, None
         else:
             file_key, position = next
 
@@ -239,7 +240,8 @@ class SqliteCursor(CursorInterface):
 
             self.con.execute('delete from marked')
             if value:
-                self.con.execute('insert into marked (file_key,position) select file_key,position from current_set where position>=0')
+                self.con.execute(
+                    'insert into marked (file_key,position) select file_key,position from current_set where position>=0')
 
     def _get_tag_key_value(self, tag):
         key = "tag"
@@ -276,6 +278,33 @@ class SqliteCursor(CursorInterface):
                     c.execute('update tag set value=? where category=0 and kind=? and file_key=?',
                               (value, key, self.file_id))
 
+    def add_tag_to_marked(self, *args):
+        if len(args) == 0 or self.file_id is None:
+            return
+
+        with self.con:
+            for tag in args:
+                key, value = self._get_tag_key_value(tag)
+                c = self.con.execute(
+                    'select t.category from tag t, marked m where t.kind=? and (t.value=? or t.category=0) and t.file_key=m.file_key limit 1',
+                    (key, value))
+                row = c.fetchone()
+                if row is None:
+                    c.execute('insert into tag select file_key,?,?,?,? from marked', (1, key, 0, value))
+                elif row[0] == 0:
+                    # if update mode, update and then insert the remaining
+
+                    c.execute(
+                        'update tag set value=? where category=0 and kind=? and file_key in (select file_key from marked)',
+                        (value, key))
+                    c.execute(
+                        'insert into tag select m.file_key,?,?,?,? from marked m left outer join tag t on m.file_key=t.file_key and t.kind=? where t.file_key is null',
+                        (1, key, 0, value, key))
+                else:
+                    c.execute(
+                        'insert into tag select m.file_key,?,?,?,? from marked m left outer join tag t on m.file_key=t.file_key and t.value=? and t.kind=? where t.file_key is null',
+                        (1, key, 1, value,value,key))
+
     def remove_tag(self, *args):
         if len(args) == 0 or self.file_id is None:
             return
@@ -285,6 +314,18 @@ class SqliteCursor(CursorInterface):
                 key, value = self._get_tag_key_value(tag)
                 self.con.execute('delete from tag where file_key=? and category=1 and kind=? and value=?',
                                  (self.file_id, key, value))
+
+    def remove_tag_to_marked(self, *args):
+        if len(args) == 0 or self.file_id is None:
+            return
+
+        with self.con:
+            for tag in args:
+                key, value = self._get_tag_key_value(tag)
+                self.con.execute('delete from tag where file_key in (select file_key from marked) and category=1 and kind=? and value=?',
+                                 (key, value))
+
+
 
     def get_tags(self):
         if self.file_id is None:
@@ -302,7 +343,7 @@ class SqliteCursor(CursorInterface):
 
         row = self.con.execute('select file_type from file where id=?', (self.file_id,)).fetchone()
         if row is not None:
-            tags.append((0,'file_type',row[0]))
+            tags.append((0, 'file_type', row[0]))
 
         return tags
 
@@ -578,20 +619,22 @@ class SqliteDb(Entity):
             for f in to_add:
                 if self.cancel_operation:
                     return
-                query_to_add.append((repo_id, f,1,"file"))
+                query_to_add.append((repo_id, f, 1, "file"))
                 file_info = repo_fs.getdetails(f)
                 modified_date = time.mktime(file_info.modified.timetuple())
                 query_tag_to_add.append(
                     (repo_id, f, file_info.size, modified_date, os.path.splitext(f)[1][1:],
-                     os.path.dirname(f),os.path.splitext(os.path.basename(f))[0]))
+                     os.path.dirname(f), os.path.splitext(os.path.basename(f))[0]))
 
                 self.tick_progress()
 
             c.executemany('insert into file(repo_key, name,searchable,file_type) values(?,?,?,?)', query_to_add)
 
-            c.execute('create temporary table t1(repo int,file text,size int,cdate float,ext text, path text, filename text)')
+            c.execute(
+                'create temporary table t1(repo int,file text,size int,cdate float,ext text, path text, filename text)')
 
-            c.executemany('insert into t1(repo,file,size,cdate,ext,path, filename) values(?,?,?,?,?,?,?)', query_tag_to_add)
+            c.executemany('insert into t1(repo,file,size,cdate,ext,path, filename) values(?,?,?,?,?,?,?)',
+                          query_tag_to_add)
             c.execute(
                 'insert into core_tags (file_key, path, size, file_date, ext, filename) select f.rowid,t.path,t.size,t.cdate,t.ext,t.filename from file f,t1 t where f.repo_key=t.repo and f.name=t.file')
 
@@ -619,7 +662,7 @@ class SqliteDb(Entity):
 
                 c.execute('update core_tags set size=?,file_date=?,ext=?,path=?,filename=? where file_key=?',
                           (file_info.size, file_info.modified, os.path.splitext(filename)[1][1:],
-                           os.path.dirname(filename),os.path.splitext(os.path.basename(filename))[0], file_id))
+                           os.path.dirname(filename), os.path.splitext(os.path.basename(filename))[0], file_id))
 
                 tags_to_add = self.read_tags(file_id, filename, repo_fs=repo_fs)
 
@@ -694,6 +737,10 @@ class SqliteDb(Entity):
 
     def add_tag(self, *args):
         self.session.cursor.add_tag(*args)
+        self.execute_cmd("refresh-info")
+
+    def add_tag_to_marked(self, *args):
+        # self.session.cursor.add_tag(*args)
         self.execute_cmd("refresh-info")
 
     def remove_tag(self, *args):
