@@ -2,7 +2,7 @@ import os
 
 import logging
 
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 from cobiv.MainContainer import MainContainer
 
@@ -91,6 +91,8 @@ class Cobiv(App):
             self.logger.debug("plugin ready : " + str(plugin.name))
 
         self.root.switch_view(self.get_config_value('startview', 'help'))
+
+        self.title="COBIV"
 
         self.root.ready()
 

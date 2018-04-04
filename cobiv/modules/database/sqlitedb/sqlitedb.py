@@ -477,6 +477,10 @@ class SqliteDb(Entity):
         self.session.set_action("search", self.search_tag, "browser")
         self.session.set_action("add-tag", self.add_tag, "viewer")
         self.session.set_action("add-tag", self.add_tag, "browser")
+        self.session.set_action("add-tag-mark", self.add_tag_to_marked)
+        self.session.set_action("rm-tag-mark", self.remove_tag_to_marked)
+        self.session.set_action("+tag", self.add_tag_to_marked, "browser")
+        self.session.set_action("-tag", self.remove_tag_to_marked, "browser")
         self.session.set_action("rm-tag", self.remove_tag, "viewer")
         self.session.set_action("rm-tag", self.remove_tag, "browser")
         self.session.set_action("ls-tag", self.list_tags, "viewer")
@@ -740,11 +744,15 @@ class SqliteDb(Entity):
         self.execute_cmd("refresh-info")
 
     def add_tag_to_marked(self, *args):
-        # self.session.cursor.add_tag(*args)
+        self.session.cursor.add_tag_to_marked(*args)
         self.execute_cmd("refresh-info")
 
     def remove_tag(self, *args):
         self.session.cursor.remove_tag(*args)
+        self.execute_cmd("refresh-info")
+
+    def remove_tag_to_marked(self, *args):
+        self.session.cursor.remove_tag_to_marked(*args)
         self.execute_cmd("refresh-info")
 
     def list_tags(self):
