@@ -574,7 +574,7 @@ class SqliteDb(Entity):
                     repo_fs = open_fs(repo_path)
 
                 self._update_dir(repo_id, repo_fs, to_add, to_remove)
-                if len(to_add)>0:
+                if len(to_add) > 0:
                     self.update_tags(repo_id, repo_fs, to_add)
                 if self.cancel_operation:
                     break
@@ -619,7 +619,7 @@ class SqliteDb(Entity):
                 self.tick_progress()
 
             # add new ones
-            if len(to_add)>0:
+            if len(to_add) > 0:
                 query_to_add = []
                 query_tag_to_add = []
                 for f in to_add:
@@ -648,7 +648,8 @@ class SqliteDb(Entity):
                 self.tick_progress()
                 tags_to_add = []
                 for f in to_add:
-                    id = c.execute('select id from file where repo_key=? and name=? limit 1', (repo_id, f)).fetchone()[0]
+                    id = c.execute('select id from file where repo_key=? and name=? limit 1', (repo_id, f)).fetchone()[
+                        0]
                     lines = self.read_tags(id, f, repo_fs)
                     if len(lines) > 0:
                         tags_to_add.extend(lines)
@@ -706,18 +707,24 @@ class SqliteDb(Entity):
         to_add = []
 
         data = repo_fs.getbytes(name)
-        img = Image.open(io.BytesIO(data))
+        try:
+            img = Image.open(io.BytesIO(data))
 
-        to_add.append((node_id, 0, 'width', 1, str(img.size[0])))
-        to_add.append((node_id, 0, 'height', 1, str(img.size[1])))
-        to_add.append((node_id, 0, 'format', 0, img.format))
+            to_add.append((node_id, 0, 'width', 1, str(img.size[0])))
+            to_add.append((node_id, 0, 'height', 1, str(img.size[1])))
+            to_add.append((node_id, 0, 'format', 0, img.format))
 
-        if img.info:
-            for i, v in img.info.items():
-                if i == "tags":
-                    tag_list = v.split(",")
-                    for tag in tag_list:
-                        to_add.append((node_id, 1, 'tag', 0, tag.strip()))
+            if img.info:
+                for i, v in img.info.items():
+                    if i == "tags":
+                        tag_list = v.split(",")
+                        for tag in tag_list:
+                            to_add.append((node_id, 1, 'tag', 0, tag.strip()))
+        except OSError as e:
+            self.logger.error("Could not open file {}!".format(name))
+            self.logger.error(e, exc_info=True)
+        except:
+            pass
 
         for reader in self.get_app().lookups("TagReader"):
             reader.read_file_tags(node_id, data, to_add)
