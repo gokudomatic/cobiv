@@ -2,7 +2,7 @@ import os
 
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 from cobiv.MainContainer import MainContainer
 
@@ -23,6 +23,10 @@ from cobiv.modules.core.sets.setmanager import SetManager
 import cProfile
 
 kivy.require('1.9.1')
+
+
+from kivy import Config
+Config.set('graphics','multisamples','0')
 
 Builder.load_file('cobiv/main.kv')
 
