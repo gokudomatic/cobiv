@@ -303,7 +303,7 @@ class SqliteCursor(CursorInterface):
                 else:
                     c.execute(
                         'insert into tag select m.file_key,?,?,?,? from marked m left outer join tag t on m.file_key=t.file_key and t.value=? and t.kind=? where t.file_key is null',
-                        (1, key, 1, value,value,key))
+                        (1, key, 1, value, value, key))
 
     def remove_tag(self, *args):
         if len(args) == 0 or self.file_id is None:
@@ -322,10 +322,9 @@ class SqliteCursor(CursorInterface):
         with self.con:
             for tag in args:
                 key, value = self._get_tag_key_value(tag)
-                self.con.execute('delete from tag where file_key in (select file_key from marked) and category=1 and kind=? and value=?',
-                                 (key, value))
-
-
+                self.con.execute(
+                    'delete from tag where file_key in (select file_key from marked) and category=1 and kind=? and value=?',
+                    (key, value))
 
     def get_tags(self):
         if self.file_id is None:
@@ -551,18 +550,18 @@ class SqliteDb(Entity):
         self.start_progress("Initializing update...")
         c = self.conn.execute('select id, path, recursive from repository')
         differences = []
-        thread_max_files = 0
+        thread_max_files = 1
 
         rows = c.fetchall()
         self.set_progress_max_count(len(rows))
         for repo_id, repo_path, recursive in rows:
             to_add, to_remove = self._update_get_diff(repo_id, repo_path, recursive)
             differences.append((repo_id, repo_path, to_add, to_remove))
-            thread_max_files += len(to_add) + len(to_remove) + 1 if len(to_add) > 0 else 0 + 1 if len(
-                to_remove) > 0 else 0
+            thread_max_files += len(to_add) * 2 + len(to_remove) + (2 if len(to_add) > 0 else 0)
             self.tick_progress()
 
         if thread_max_files > 0:
+
             self.reset_progress("Updating files...")
             self.set_progress_max_count(thread_max_files)
 
@@ -575,13 +574,15 @@ class SqliteDb(Entity):
                     repo_fs = open_fs(repo_path)
 
                 self._update_dir(repo_id, repo_fs, to_add, to_remove)
-                self.update_tags(repo_id, repo_fs, to_add)
+                if len(to_add)>0:
+                    self.update_tags(repo_id, repo_fs, to_add)
                 if self.cancel_operation:
                     break
 
             if repo_fs is not None:
                 repo_fs.close()
 
+            self.tick_progress(caption="Regenerate default set...")
             self.set_manager.regenerate_default()
 
         self.stop_progress()
@@ -592,7 +593,7 @@ class SqliteDb(Entity):
 
         if recursive:
 
-            result = [path for path in repo_fs.walk.files(filter=['*.jpg', '*.png'])]
+            result = [path for path in repo_fs.walk.files(filter=['*.jpg', '*.jpeg', '*.png'])]
         else:
             result = [f for f in repo_fs.listdir('/') if
                       repo_fs.getinfo(f, namespaces=['details']).is_file and f.split('.')[
@@ -617,44 +618,45 @@ class SqliteDb(Entity):
                 self.conn.executemany('delete from file where name=?', query_to_rem)
                 self.tick_progress()
 
-            query_to_add = []
-            query_tag_to_add = []
             # add new ones
-            for f in to_add:
-                if self.cancel_operation:
-                    return
-                query_to_add.append((repo_id, f, 1, "file"))
-                file_info = repo_fs.getdetails(f)
-                modified_date = time.mktime(file_info.modified.timetuple())
-                query_tag_to_add.append(
-                    (repo_id, f, file_info.size, modified_date, os.path.splitext(f)[1][1:],
-                     os.path.dirname(f), os.path.splitext(os.path.basename(f))[0]))
+            if len(to_add)>0:
+                query_to_add = []
+                query_tag_to_add = []
+                for f in to_add:
+                    if self.cancel_operation:
+                        return
+                    query_to_add.append((repo_id, f, 1, "file"))
+                    file_info = repo_fs.getdetails(f)
+                    modified_date = time.mktime(file_info.modified.timetuple())
+                    query_tag_to_add.append(
+                        (repo_id, f, file_info.size, modified_date, os.path.splitext(f)[1][1:],
+                         os.path.dirname(f), os.path.splitext(os.path.basename(f))[0]))
 
+                    self.tick_progress()
+
+                c.executemany('insert into file(repo_key, name,searchable,file_type) values(?,?,?,?)', query_to_add)
+
+                c.execute(
+                    'create temporary table t1(repo int,file text,size int,cdate float,ext text, path text, filename text)')
+
+                c.executemany('insert into t1(repo,file,size,cdate,ext,path, filename) values(?,?,?,?,?,?,?)',
+                              query_tag_to_add)
+                c.execute(
+                    'insert into core_tags (file_key, path, size, file_date, ext, filename) select f.rowid,t.path,t.size,t.cdate,t.ext,t.filename from file f,t1 t where f.repo_key=t.repo and f.name=t.file')
+
+                c.execute('drop table t1')
                 self.tick_progress()
+                tags_to_add = []
+                for f in to_add:
+                    id = c.execute('select id from file where repo_key=? and name=? limit 1', (repo_id, f)).fetchone()[0]
+                    lines = self.read_tags(id, f, repo_fs)
+                    if len(lines) > 0:
+                        tags_to_add.extend(lines)
+                    self.tick_progress()
 
-            c.executemany('insert into file(repo_key, name,searchable,file_type) values(?,?,?,?)', query_to_add)
-
-            c.execute(
-                'create temporary table t1(repo int,file text,size int,cdate float,ext text, path text, filename text)')
-
-            c.executemany('insert into t1(repo,file,size,cdate,ext,path, filename) values(?,?,?,?,?,?,?)',
-                          query_tag_to_add)
-            c.execute(
-                'insert into core_tags (file_key, path, size, file_date, ext, filename) select f.rowid,t.path,t.size,t.cdate,t.ext,t.filename from file f,t1 t where f.repo_key=t.repo and f.name=t.file')
-
-            c.execute('drop table t1')
-            self.tick_progress()
-            tags_to_add = []
-            for f in to_add:
-                id = c.execute('select id from file where repo_key=? and name=? limit 1', (repo_id, f)).fetchone()[0]
-                lines = self.read_tags(id, f, repo_fs)
-                if len(lines) > 0:
-                    tags_to_add.extend(lines)
-                self.tick_progress()
-
-            if len(tags_to_add) > 0:
-                c.executemany('insert into tag values (?,?,?,?,?)', tags_to_add)
-                self.tick_progress()
+                if len(tags_to_add) > 0:
+                    c.executemany('insert into tag values (?,?,?,?,?)', tags_to_add)
+                    self.tick_progress()
 
     def update_tags(self, repo_id, repo_fs, to_ignore=[]):
         with self.conn:
