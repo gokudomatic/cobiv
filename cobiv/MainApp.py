@@ -25,8 +25,8 @@ import cProfile
 kivy.require('1.9.1')
 
 
-from kivy import Config
-Config.set('graphics','multisamples','0')
+# from kivy import Config
+# Config.set('graphics','multisamples','0')
 
 Builder.load_file('cobiv/main.kv')
 

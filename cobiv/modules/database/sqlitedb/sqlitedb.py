@@ -646,14 +646,24 @@ class SqliteDb(Entity):
 
                 c.execute('drop table t1')
                 self.tick_progress()
+
+                name_mapping={}
+                for file_key,name in c.execute('select id,name from file where repo_key=?', (repo_id, )).fetchall():
+                    name_mapping[name]=file_key
+
                 tags_to_add = []
+                invalid_images=[]
                 for f in to_add:
-                    id = c.execute('select id from file where repo_key=? and name=? limit 1', (repo_id, f)).fetchone()[
-                        0]
+                    id = name_mapping[f]
                     lines = self.read_tags(id, f, repo_fs)
-                    if len(lines) > 0:
+                    if lines==-1:
+                        invalid_images.append((id,))
+                    elif len(lines) > 0:
                         tags_to_add.extend(lines)
                     self.tick_progress()
+
+                if len(invalid_images) > 0:
+                    c.executemany('delete from file where id=?', invalid_images)
 
                 if len(tags_to_add) > 0:
                     c.executemany('insert into tag values (?,?,?,?,?)', tags_to_add)
@@ -723,6 +733,7 @@ class SqliteDb(Entity):
         except OSError as e:
             self.logger.error("Could not open file {}!".format(name))
             self.logger.error(e, exc_info=True)
+            return -1
         except:
             pass
 
