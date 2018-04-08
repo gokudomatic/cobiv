@@ -17,7 +17,9 @@ from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.core.view import View
 from cobiv.modules.views.browser.eolitem import EOLItem
-from cobiv.modules.views.browser.item import Item, Thumb
+from cobiv.modules.views.browser.draggable_item import DraggableItem
+from cobiv.modules.views.browser.item import SimpleItem
+from cobiv.modules.views.browser.thumb import Thumb
 
 Builder.load_file(os.path.abspath(os.path.join(os.path.dirname(__file__), 'browser.kv')))
 
@@ -313,19 +315,6 @@ class Browser(View, FloatLayout):
             self.reset_progress()
             self.do_next_action()
 
-    def get_image(self, file_id, filename, image_full_path, repo_key, file_type):
-        if not os.path.exists(filename):
-            self.thumb_loader.append((file_id, image_full_path, repo_key, file_type))
-        name = self.thumb_loader.get_filename_caption(image_full_path)
-        default_thumb_classname = 'ThumbnailImage'
-        if file_type == 'book':
-            default_thumb_classname = 'BookBrowserThumbnail'
-        thumb_classname = self.get_config_value(key='thumbnail.classmap.' + file_type, default=default_thumb_classname)
-
-        img = Factory.get(thumb_classname)(source=filename)
-        thumb = Thumb(image=img, cell_size=self.thumb_loader.cell_size, caption=name, selected=False)
-        return thumb
-
     def _load_process(self, dt):
         queue_len = len(self.image_queue)
         if queue_len > 0:
@@ -341,9 +330,23 @@ class Browser(View, FloatLayout):
                     self.grid.add_widget(e)
                 else:
 
-                    thumb = self.get_image(file_id, thumb_filename, image_filename, repo_key, file_type)
+                    # create Thumb object
+                    if not os.path.exists(thumb_filename):
+                        self.thumb_loader.append((file_id, image_filename, repo_key, file_type))
+                    name = self.thumb_loader.get_filename_caption(image_filename)
+                    default_thumb_classname = 'ThumbnailImage'
+                    if file_type == 'book':
+                        default_thumb_classname = 'BookBrowserThumbnail'
+                    thumb_classname = self.get_config_value(key='thumbnail.classmap.' + file_type,
+                                                            default=default_thumb_classname)
 
-                    item = Item(thumb=thumb, container=self,
+                    img = Factory.get(thumb_classname)(source=thumb_filename)
+                    thumb = Thumb(image=img, cell_size=self.thumb_loader.cell_size, caption=name, selected=False)
+
+                    # create Item
+                    item_classname=self.get_config_value(key='item.class',default='SimpleItem')
+
+                    item = Factory.get(item_classname)(thumb=thumb, container=self,
                                 cell_size=self.cell_size, file_id=file_id, position=pos, duration=0)
 
                     if file_id == self.cursor.file_id:
