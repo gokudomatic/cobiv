@@ -92,7 +92,7 @@ class Browser(View, FloatLayout):
     def __init__(self, **kwargs):
         super(Browser, self).__init__(**kwargs)
 
-        self.toolbars = []
+        self.toolbars = {}
 
         self.image_queue = deque()
         self.pending_actions = deque()
@@ -161,7 +161,7 @@ class Browser(View, FloatLayout):
         self.right_sidebar_full_size = self.get_config_value('sidebar.right.width', 200)
         right_sidebar_name = self.get_config_value('sidebar.right.class', 'SimpleSidebar')
         sidebar_instance = Factory.get(right_sidebar_name)()
-        self.toolbars.append(sidebar_instance)
+        self.toolbars['right_sidebar']=sidebar_instance
         self.right_sidebar.add_widget(sidebar_instance)
 
         right_item_list = self.right_sidebar.children[0].item_list
@@ -186,7 +186,7 @@ class Browser(View, FloatLayout):
                 if 'height' in barcfg:
                     kwargs['height'] = barcfg['height']
                 instance = Factory.get(barcfg.get('class'))()
-                self.toolbars.append(instance)
+                self.toolbars['statusbar']=instance
                 if 'items' in barcfg:
                     for cfg_item in barcfg.get('items'):
                         instance.add_label(**cfg_item)
@@ -662,9 +662,10 @@ class Browser(View, FloatLayout):
                 item.set_marked(item.file_id in mapping)
 
     def refresh_info(self):
-        if self.right_sidebar_size > 0:
-            for toolbar in self.toolbars:
+        for toolbar in self.toolbars.values():
+            if toolbar.enabled:
                 toolbar.refresh_widgets()
+
 
     def cut_marked(self):
         if self.cursor.get_marked_count() == 0:
@@ -769,11 +770,7 @@ class Browser(View, FloatLayout):
         else:
             visibility = value
 
-        for toolbar in self.toolbars:
-            if visibility:
-                toolbar.bind_cursor()
-            else:
-                toolbar.unbind_cursor()
+        self.toolbars['right_sidebar'].enabled=visibility
 
         self.right_sidebar_size = self.right_sidebar_full_size if visibility else 0
         self.on_size_change(None, 0)

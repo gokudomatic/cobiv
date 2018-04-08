@@ -1,6 +1,6 @@
 from kivy.factory import Factory
 from kivy.lang import Builder
-from kivy.properties import ObjectProperty
+from kivy.properties import ObjectProperty, BooleanProperty
 from kivy.uix.scrollview import ScrollView
 
 from cobiv.modules.core.hud import Hud
@@ -19,16 +19,23 @@ Builder.load_string('''
 
 class Sidebar(Hud, ScrollView):
     item_list = ObjectProperty(None)
+    enabled = BooleanProperty(False)
 
     def __init__(self, **kwargs):
         super(Sidebar, self).__init__(**kwargs)
         self.session = self.get_session()
-        # if self.session is not None:
-        #     self.session.cursor.bind(file_id=self.on_file_id_change)
+        self.bind(enabled=self.set_enabled)
+
+    def set_enabled(self, instance, value):
+        if value:
+            self.bind_cursor()
+        else:
+            self.unbind_cursor()
 
     def bind_cursor(self):
         if self.session is not None:
             self.session.cursor.bind(file_id=self.on_file_id_change)
+            self.refresh_widgets()
 
     def unbind_cursor(self):
         if self.session is not None:

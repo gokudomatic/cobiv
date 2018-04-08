@@ -1,5 +1,5 @@
 from kivy.factory import Factory
-from kivy.properties import NumericProperty
+from kivy.properties import NumericProperty, BooleanProperty
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 
@@ -22,6 +22,7 @@ class StatusLabel(Component, Label):
 
 
 class StatusBar(Component, BoxLayout):
+    enabled = BooleanProperty(True)
 
     def __init__(self, **kwargs):
         height = kwargs.pop('height', 20)
@@ -29,6 +30,13 @@ class StatusBar(Component, BoxLayout):
         self.session = self.get_session()
         if self.session is not None:
             self.session.cursor.bind(file_id=self.on_file_id_change)
+        self.bind(enabled=self.set_enabled)
+
+    def set_enabled(self, instance, value):
+        if value:
+            self.bind_cursor()
+        else:
+            self.unbind_cursor()
 
     def on_file_id_change(self, instance, value):
         self.refresh_widgets()
