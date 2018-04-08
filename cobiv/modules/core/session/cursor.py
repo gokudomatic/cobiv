@@ -48,7 +48,7 @@ class CursorInterface(EventDispatcher):
     def get_marked_count(self):
         return 0
 
-    def get_all_marked(self,offset=0,limit=0):
+    def get_all_marked(self, offset=0, limit=0):
         return False
 
     def remove(self):
@@ -136,11 +136,11 @@ class EOLCursor(CursorInterface):
         else:
             return self.last_cursor.get_previous_ids(amount)
 
-    def get_all_marked(self,offset,limit):
+    def get_all_marked(self, offset, limit):
         if self.last_cursor is None:
             return None
         else:
-            return self.last_cursor.get_all_marked(offset,limit)
+            return self.last_cursor.get_all_marked(offset, limit)
 
     def get_marked_count(self):
         if self.last_cursor is None:
@@ -233,7 +233,7 @@ class Cursor(EventDispatcher):
         new_cursor.repo_key = self.repo_key
         new_cursor.eol_implementation = self.eol_implementation
         new_cursor.tags = self.tags
-        new_cursor.size=self.size
+        new_cursor.size = self.size
         return new_cursor
 
     def get_app(self):
@@ -259,6 +259,7 @@ class Cursor(EventDispatcher):
             self.pos = self.eol_implementation.pos
             self.implementation.bind(pos=self.on_pos_change)
         elif instance is not None:
+            self.size = self.size if self.size > 0 else None
             if instance.pos is not None:
                 c = instance.clone()
                 c.go_last()
@@ -271,6 +272,7 @@ class Cursor(EventDispatcher):
             self.repo_key = self.implementation.repo_key
             self.filename = self.implementation.filename
             self.file_id = self.implementation.file_id
+
         else:
             self.set_eol_implementation(None)
             self.filename = None
@@ -402,8 +404,8 @@ class Cursor(EventDispatcher):
     def get_mark(self):
         return self.implementation.get_mark()
 
-    def get_all_marked(self,offset=0,limit=0):
-        return self.implementation.get_all_marked(offset,limit)
+    def get_all_marked(self, offset=0, limit=0):
+        return self.implementation.get_all_marked(offset, limit)
 
     def get_marked_count(self):
         return self.implementation.get_marked_count()
@@ -507,4 +509,5 @@ class Cursor(EventDispatcher):
             self.implementation.sort(*fields)
 
     def mark_dirty(self):
-        self.size=None
+        self.size = None
+        self.pos = 0

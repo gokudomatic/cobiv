@@ -18,7 +18,8 @@ class CoreVariables:
         session.fields['file_date'] = self.get_file_date
         session.fields['filename'] = lambda: self.session.cursor.filename
         session.fields['currentset_position'] = lambda: (
-                self.session.cursor.pos + 1) if self.session.cursor.pos is not None else "0"
+            (self.session.cursor.pos + 1) if self.session.cursor.pos is not None else "0"
+        ) if not self.session.cursor.is_eol() else "EOL"
         session.fields['currentset_count'] = lambda: len(
             self.session.cursor) if self.session.cursor.pos is not None else "0"
 
@@ -76,11 +77,12 @@ class HistoryContext:
         self.category = None
 
     def clone(self):
-        clone=HistoryContext()
-        clone.fn=self.fn
-        clone.args=copy.deepcopy(self.args)
-        clone.category=self.category
+        clone = HistoryContext()
+        clone.fn = self.fn
+        clone.args = copy.deepcopy(self.args)
+        clone.category = self.category
         return clone
+
 
 class Session(Entity):
     cursor = None
@@ -95,7 +97,7 @@ class Session(Entity):
     view_category_history = deque()
     view_history = deque()
     max_view_history_size = 20
-    skip_push_context=False
+    skip_push_context = False
 
     def __init__(self):
         self.cursor = Cursor()
@@ -159,7 +161,7 @@ class Session(Entity):
     def push_context(self, category):
         if not self.skip_push_context:
             self.view_category_history.append(category)
-            self.view_context[category].category=category
+            self.view_context[category].category = category
             self.view_history.append(self.view_context[category].clone())
 
     def pop_context(self):
