@@ -24,10 +24,6 @@ import cProfile
 
 kivy.require('1.9.1')
 
-
-# from kivy import Config
-# Config.set('graphics','multisamples','0')
-
 Builder.load_file('cobiv/main.kv')
 
 
@@ -101,15 +97,15 @@ class Cobiv(App):
         return self.root
 
     def on_start(self):
-        self.profile = cProfile.Profile()
-        self.profile.enable()
+        # self.profile = cProfile.Profile()
+        # self.profile.enable()
         pass
 
     def on_stop(self):
         for plugin in self.plugin_manager.getAllPlugins():
             plugin.plugin_object.on_application_quit()
-        self.profile.disable()
-        self.profile.dump_stats('cobiv.profile')
+        # self.profile.disable()
+        # self.profile.dump_stats('cobiv.profile')
 
     def lookup(self, name, category):
         plugin = self.plugin_manager.getPluginByName(name, category=category)

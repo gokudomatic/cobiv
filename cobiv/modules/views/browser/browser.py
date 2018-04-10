@@ -103,6 +103,10 @@ class Browser(View, FloatLayout):
         self.tg_select_previous = Clock.create_trigger(self.select_previous, 0.1)
         self.tg_select_up = Clock.create_trigger(self.select_up, 0.1)
         self.tg_select_down = Clock.create_trigger(self.select_down, 0.1)
+        self.tg_move_next = Clock.create_trigger(self.move_cursor_right, 0.1)
+        self.tg_move_previous = Clock.create_trigger(self.move_cursor_left, 0.1)
+        self.tg_move_up = Clock.create_trigger(self.move_cursor_up, 0.1)
+        self.tg_move_down = Clock.create_trigger(self.move_cursor_down, 0.1)
         self.tg_load_set = Clock.create_trigger(self.trigger_load_set, 0.1)
 
         self.set_action("load-set", self.load_set)
@@ -110,6 +114,10 @@ class Browser(View, FloatLayout):
         self.set_action("down", self.tg_select_down)
         self.set_action("previous", self.tg_select_previous)
         self.set_action("up", self.tg_select_up)
+        self.set_action("move_next", self.tg_move_next)
+        self.set_action("move_down", self.tg_move_down)
+        self.set_action("move_previous", self.tg_move_previous)
+        self.set_action("move_up", self.tg_move_up)
         self.set_action("mark", self.mark_current)
         self.set_action("refresh-marked", self.refresh_mark)
         self.set_action("refresh-info", self.refresh_info)
@@ -132,6 +140,10 @@ class Browser(View, FloatLayout):
                 {'key': '274', 'binding': 'down'},
                 {'key': '275', 'binding': 'next'},
                 {'key': '276', 'binding': 'previous'},
+                {'key': '105', 'binding': 'move_up'},
+                {'key': '107', 'binding': 'move_down'},
+                {'key': '108', 'binding': 'move_next'},
+                {'key': '106', 'binding': 'move_previous'},
                 {'key': '103', 'binding': 'first'},
                 {'key': '103', 'binding': 'last', 'modifiers': 1},
                 {'key': '32', 'binding': 'mark'},
@@ -183,12 +195,13 @@ class Browser(View, FloatLayout):
     def _init_statusbars(self):
         statusbar_cfg = self.get_config_value('statusbar')
         if statusbar_cfg is not None:
+            idx=0
             for barcfg in statusbar_cfg:
                 kwargs = {}
                 if 'height' in barcfg:
                     kwargs['height'] = barcfg['height']
                 instance = Factory.get(barcfg.get('class'))()
-                self.toolbars['statusbar']=instance
+                self.toolbars['statusbar'+str(idx)]=instance
                 if 'items' in barcfg:
                     for cfg_item in barcfg.get('items'):
                         instance.add_label(**cfg_item)
@@ -197,6 +210,7 @@ class Browser(View, FloatLayout):
                     self.ids.main_layout_vertical.add_widget(instance, len(self.ids.main_layout_vertical.children))
                 elif barcfg.get('position') == 'bottom':
                     self.ids.main_layout_vertical.add_widget(instance)
+                idx+=1
 
     def ready(self):
         Component.ready(self)
@@ -422,7 +436,6 @@ class Browser(View, FloatLayout):
         pos = self.cursor.pos - self.page_cursor.pos
 
         nb_cols = self.grid.cols
-
         linenr = pos // nb_cols
         colnr = pos % nb_cols
         new_pos = colnr + (linenr + diff) * nb_cols
@@ -470,6 +483,48 @@ class Browser(View, FloatLayout):
             c.move_to(idx + self.page_cursor.pos)
             self.refresh_positions()
         self.cursor.go(c.pos)
+
+    def move_cursor(self,index_diff):
+        if self.cursor.file_id is None:
+            return
+
+        c = self.cursor.clone()
+        position = max(0, min(c.pos+index_diff, len(self.cursor)))
+        if position != self.cursor.pos:
+            c.move_to(position)
+
+            idx=position-self.page_cursor.pos
+
+            self.grid.remove_widget(self.selected_image)
+            self.refresh_positions()
+
+            i = int(len(self.grid.children) - idx)
+
+            if i > 0:
+                self.grid.add_widget(self.selected_image, i)
+            else:
+                last_child = self.grid.children[0]
+                if isinstance(last_child, EOLItem):
+                    self.grid.add_widget(self.selected_image, 1)
+                else:
+                    self.grid.add_widget(self.selected_image)
+
+            self.cursor.go(c.pos)
+            self._recenter_auto_page()
+            self._scroll_to_current()
+            self.refresh_info()
+
+    def move_cursor_left(self, dt):
+        self.move_cursor(-1)
+
+    def move_cursor_right(self, dt):
+        self.move_cursor(1)
+
+    def move_cursor_up(self, dt):
+        self.move_cursor(-self.grid.cols)
+
+    def move_cursor_down(self, dt):
+        self.move_cursor(self.grid.cols)
 
     def refresh_positions(self):
         list_id = [item.file_id for item in self.grid.children]
@@ -541,7 +596,6 @@ class Browser(View, FloatLayout):
             self.stop_progress()
 
     def _recenter_auto_page(self):
-        t1 = time.time()
         pos = self.cursor.pos - self.page_cursor.pos
         nb_cols = self.grid.cols
         if pos <= nb_cols:
