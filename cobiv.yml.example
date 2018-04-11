@@ -16,6 +16,10 @@ browser:
   - {binding: cut-marked, key: '120'}
   - {binding: paste-marked, key: '112'}
   - {binding: open, key: '111'}
+  - {binding: move_up, key: '273', modifiers: 2}
+  - {binding: move_down, key: '274', modifiers: 2}
+  - {binding: move_next, key: '275', modifiers: 2}
+  - {binding: move_previous, key: '276', modifiers: 2}
   grid:
     icon_size: 120
   sidebar:
